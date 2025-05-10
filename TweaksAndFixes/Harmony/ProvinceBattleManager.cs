@@ -10,7 +10,7 @@ using Il2CppSystem.Linq;
 
 namespace TweaksAndFixes
 {
-    //[HarmonyPatch(typeof(ProvinceBattleManager))]
+    [HarmonyPatch(typeof(ProvinceBattleManager))]
     internal class Patch_ProvinceBattleManager
     {
         private static readonly List<Province> _AttackerProvs = new List<Province>();
@@ -140,6 +140,16 @@ namespace TweaksAndFixes
                     }
                 }
             }
+            return false;
+        }
+
+
+
+        [HarmonyPatch(nameof(ProvinceBattleManager.TryGenerateSmallerNationsBattle))]
+        [HarmonyPrefix]
+        internal static bool Prefix_TryGenerateSmallerNationsBattle()
+        {
+            Melon<TweaksAndFixes>.Logger.Msg("Skipped attempt to generate minor nation battle.");
             return false;
         }
     }
