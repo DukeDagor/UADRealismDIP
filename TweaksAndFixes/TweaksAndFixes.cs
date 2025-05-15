@@ -6,7 +6,7 @@ using HarmonyLib;
 using Il2Cpp;
 
 [assembly: MelonGame("Game Labs", "Ultimate Admiral Dreadnoughts")]
-[assembly: MelonInfo(typeof(TweaksAndFixes.TweaksAndFixes), "TweaksAndFixes", "3.16.7", "NathanKell")]
+[assembly: MelonInfo(typeof(TweaksAndFixes.TweaksAndFixes), "TweaksAndFixes", "3.16.9", "NathanKell & DukeDagor")]
 [assembly: MelonColor(255, 220, 220, 0)]
 //[assembly: VerifyLoaderVersion(0, 6, 4, false)]
 [assembly: HarmonyDontPatchAll]

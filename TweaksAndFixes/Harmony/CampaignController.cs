@@ -8,6 +8,7 @@ using UnityEngine.UI;
 using Il2CppCoffee.UIExtensions;
 using Il2CppTMPro;
 using System.Collections;
+using static Il2Cpp.CampaignController;
 
 #pragma warning disable CS8602
 #pragma warning disable CS8604
@@ -17,6 +18,72 @@ namespace TweaksAndFixes
     [HarmonyPatch(typeof(CampaignController))]
     internal class Patch_CampaignController
     {
+        [HarmonyPatch(nameof(CampaignController.CheckTension))]
+        [HarmonyPrefix]
+        internal static bool Prefix_CheckTension()
+        {
+            if (Config.USER_CONFIG.Fleet_Tension.Disable)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg("Skipping tension check...");
+                return false;
+            }
+            return true;
+        }
+
+
+        [HarmonyPatch(nameof(CampaignController.FinishCampaign))]
+        [HarmonyPrefix]
+        internal static bool Prefix_FinishCampaign(CampaignController __instance, Player loser, FinishCampaignType finishType)
+        {
+            // WIP
+            return true;
+
+            // Ignore all other campaign ending types
+            if (finishType != FinishCampaignType.Retirement)
+            {
+                return true;
+            }
+
+            // If the year is less than the deisred retirement year, block the function
+            if (__instance.CurrentDate.AsDate().Year < Config.USER_CONFIG.Campagin_End_Date.Campaign_End_Date)
+            {
+                return false;
+            }
+
+            // If the year is equal or greter than the desired retirement date, let it run
+            return true;
+        }
+
+        [HarmonyPatch(nameof(CampaignController.DisplaySpecialEvents))]
+        [HarmonyPrefix]
+        internal static void Prefix_DisplaySpecialEvents(Player player, EventData data, EventX ev)
+        {
+            Melon<TweaksAndFixes>.Logger.Msg("Special event: [" + player.Name(false) + "] :ID: " + data.Id + " :NAME: " + data.name + " :TEXT: " + data.text);
+        }
+
+
+        [HarmonyPatch(nameof(CampaignController.CheckForCampaignEnd))]
+        [HarmonyPostfix]
+        internal static void Postfix_CheckForCampaignEnd(CampaignController __instance)
+        {
+            // If the year is equal or greter than the desired retirement date force game end
+            if (__instance.CurrentDate.AsDate().Year >= Config.USER_CONFIG.Campagin_End_Date.Campaign_End_Date)
+            {
+                // Melon<TweaksAndFixes>.Logger.Error("Ending campaign!");
+
+                Player MainPlayer = ExtraGameData.MainPlayer();
+
+                // sanity check
+                if (MainPlayer == null)
+                {
+                    Melon<TweaksAndFixes>.Logger.Error("Could not find MainPlayer in [CheckForCampaignEnd]. Default behavior will be used.");
+                    return;
+                }
+
+                __instance.FinishCampaign(MainPlayer, FinishCampaignType.Retirement);
+            }
+        }
+
         internal static CampaignController._AiManageFleet_d__201? _AiManageFleet = null;
 
         [HarmonyPatch(nameof(CampaignController.Init))]

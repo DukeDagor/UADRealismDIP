@@ -2,8 +2,14 @@
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
-using System.Collections.Generic;
+using Il2CppSystem.Collections.Generic;
+using Il2CppSystem.Reflection;
+using Il2CppSystem.Runtime;
 using UnityEngine.UI;
+using TweaksAndFixes.Harmony;
+using static MelonLoader.MelonLogger;
+using Il2CppSystem.Linq;
+using System.Xml.Linq;
 
 namespace TweaksAndFixes
 {
@@ -14,6 +20,28 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_Init(CampaignPolitics_ElementUI __instance)
         {
+            __instance.NavalInvasion.OnEnter(new System.Action(() =>
+            {
+                // Dont ask why this is neccesary, because I've got no god-damn clue
+                int max_depth = 100;
+                int current_depth = 0;
+
+                foreach (Il2CppSystem.Collections.Generic.KeyValuePair<Player, CampaignPolitics_ElementUI> entry in __instance.campaignPoliticsWindow.createdElements)
+                {
+                    if (current_depth >= max_depth) break;
+
+                    // After matching the value, cache the key for use in the Naval Incasion Popup UI
+                    if (entry.value == __instance)
+                    {
+                        Patch_CampaignNavalInvasionPopupUi.NavalInvasionUiNation = entry.key;
+
+                        break;
+                    }
+
+                    current_depth++;
+                }
+            }));
+
             var rt = __instance.RelationsRoot.GetComponent<RectTransform>();
             MelonCoroutines.Start(FixAnchor(rt));
         }
