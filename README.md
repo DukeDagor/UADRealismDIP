@@ -1,8 +1,8 @@
 # NEW MANAGEMENT!
-NathanKell is taking an extended hiatus, and until they return I will continue supporting TAF.
+NathanKell is taking a break from development with an unknown return date. Until they return I'll be supporting future TAF development.
 
 ## TAF
-My development is specifically geared toward Brother Munro's [Dreadnought Improvement Project](https://www.nexusmods.com/ultimateadmiraldreadnoughts/mods/7?tab=description). If you encounter any bugs while using TAF, please report them in as much detail as possible. Sugestions are closed for the time being (I have a very long list already).
+My development will be focused around Brother Munro's [Dreadnought Improvement Project](https://www.nexusmods.com/ultimateadmiraldreadnoughts/mods/7?tab=description), though TAF will still be usable as a standalone mod. If you encounter any bugs while using TAF, please report them in as much detail as possible. Suggestions are closed for the time being (I have a very long list already).
 
 ## UAD Realism
 I have no plans for UAD Realism, as extending TAF will be more than enough work for me to handle. 
