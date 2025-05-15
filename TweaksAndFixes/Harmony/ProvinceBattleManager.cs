@@ -149,8 +149,24 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_TryGenerateSmallerNationsBattle()
         {
-            Melon<TweaksAndFixes>.Logger.Msg("Skipped attempt to generate minor nation battle.");
-            return false;
+            if (Config.USER_CONFIG.Minor_And_Medium_Nation_Land_Invasions.Disable_Minor_Nation_Invasions)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg("Skipped attempt to generate minor nation battle.");
+                return false;
+            }
+            return true;
+        }
+
+        [HarmonyPatch(nameof(ProvinceBattleManager.GenerateBattlesForMediumNations))]
+        [HarmonyPrefix]
+        internal static bool Prefix_GenerateBattlesForMediumNationse()
+        {
+            if (Config.USER_CONFIG.Minor_And_Medium_Nation_Land_Invasions.Disable_Medium_Nation_Invasions)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg("Skipped attempt to generate medium nation battle.");
+                return false;
+            }
+            return true;
         }
     }
 }
