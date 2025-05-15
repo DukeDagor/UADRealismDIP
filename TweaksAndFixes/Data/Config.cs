@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using MelonLoader;
+using static TweaksAndFixes.Config;
 
 #pragma warning disable CS8601
 #pragma warning disable CS8604
@@ -81,6 +82,68 @@ namespace TweaksAndFixes
 
     public class Config
     {
+        public static int CURRENT_USER_CONFIG_VERSION = 1000;
+
+        public class UserConfig
+        {
+            public class ConfigNavalInvasionTonnage
+            {
+                public int Minimum_Tonnage { get; set; }
+
+                public ConfigNavalInvasionTonnage()
+                {
+                    Minimum_Tonnage = 25_000;
+                }
+            }
+
+            public class ConfigFleetTension
+            {
+                public bool Disable { get; set; }
+
+                public ConfigFleetTension()
+                {
+                    Disable = true;
+                }
+            }
+
+            public class ConfigCampaginEndDate
+            {
+                public int Campaign_End_Date { get; set; }
+
+                public ConfigCampaginEndDate()
+                {
+                    Campaign_End_Date = 1965;
+                }
+            }
+
+            public class ConfigMinorAndMediumNationLandInvasions
+            {
+                public bool Disable_Minor_Nation_Invasions { get; set; }
+                public bool Disable_Medium_Nation_Invasions { get; set; }
+
+                public ConfigMinorAndMediumNationLandInvasions()
+                {
+                    Disable_Minor_Nation_Invasions = true;
+                    Disable_Medium_Nation_Invasions = true;
+                }
+            }
+
+            public int Version { get; set; }
+            public ConfigNavalInvasionTonnage Naval_Invasion_Minimum_Area_Tonnage { get; set; }
+            public ConfigFleetTension Fleet_Tension { get; set; }
+            public ConfigCampaginEndDate Campagin_End_Date { get; set; }
+            public ConfigMinorAndMediumNationLandInvasions Minor_And_Medium_Nation_Land_Invasions { get; set; }
+
+            public UserConfig()
+            {
+                Version = -1;
+                Naval_Invasion_Minimum_Area_Tonnage = new ConfigNavalInvasionTonnage();
+                Fleet_Tension = new ConfigFleetTension();
+                Campagin_End_Date = new ConfigCampaginEndDate();
+                Minor_And_Medium_Nation_Land_Invasions = new ConfigMinorAndMediumNationLandInvasions();
+            }
+        }
+        
         [System.AttributeUsage(System.AttributeTargets.Field | System.AttributeTargets.Property, AllowMultiple = false)]
         public class ConfigParse : System.Attribute
         {
@@ -115,6 +178,8 @@ namespace TweaksAndFixes
         public static int MaxTorpBarrels = 5;
 
         public static int StartingYear = 1890;
+
+        public static UserConfig USER_CONFIG;
 
         internal static readonly string _BasePath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
         internal const string _DataDir = "TAFData";
@@ -238,6 +303,41 @@ namespace TweaksAndFixes
                 if (shouldLog)
                     Melon<TweaksAndFixes>.Logger.Msg($"{attrib._name}: {(f.FieldType.IsEnum ? f.GetValue(null) : ((bool)(f.GetValue(null)) ? "Enabled" : "Disabled"))}");
             }
+
+            Melon<TweaksAndFixes>.Logger.Msg("************************************************** Loading user config:");
+
+            USER_CONFIG = new UserConfig();
+
+            // An error might occur past this point, can't catch it for some reason tho
+            USER_CONFIG = Serializer.JSON.LoadJsonFile<UserConfig>("TweaksAndFixes.cfg");
+
+            // Melon<TweaksAndFixes>.Logger.Msg(Serializer.JSON.LoadJsonFile<UserConfig>("TweaksAndFixes.cfg"));
+
+            if (USER_CONFIG == null || USER_CONFIG.Version == -1)
+            {
+                Melon<TweaksAndFixes>.Logger.Warning("Failed to load [TweaksAndFixes.cfg]. Using defaults.");
+            
+                USER_CONFIG = new UserConfig();
+            }
+
+            if (USER_CONFIG.Version < CURRENT_USER_CONFIG_VERSION && USER_CONFIG.Version != -1)
+            {
+                Melon<TweaksAndFixes>.Logger.Warning("TweaksAndFixes.config is out of date. Please check the GitHub for an up-to-date version. Using defaults.");
+
+                USER_CONFIG = new UserConfig();
+            }
+            
+            Melon<TweaksAndFixes>.Logger.Msg("TweaksAndFixes.cfg:");
+            Melon<TweaksAndFixes>.Logger.Msg("Version:                                : " + USER_CONFIG.Version);
+            Melon<TweaksAndFixes>.Logger.Msg("Naval_Invasion_Minimum_Area_Tonnage");
+            Melon<TweaksAndFixes>.Logger.Msg(" |.Minimum_Tonnage                      : " + USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage);
+            Melon<TweaksAndFixes>.Logger.Msg("Fleet_Tension");
+            Melon<TweaksAndFixes>.Logger.Msg(" |.Disable                              : " + (USER_CONFIG.Fleet_Tension.Disable ? "DISABLED" : "ENABLED"));
+            Melon<TweaksAndFixes>.Logger.Msg("Campagin_End_Date");
+            Melon<TweaksAndFixes>.Logger.Msg(" |.Campaign_End_Date                    : " + USER_CONFIG.Campagin_End_Date.Campaign_End_Date);
+            Melon<TweaksAndFixes>.Logger.Msg("Minor_And_Medium_Nation_Land_Invasions");
+            Melon<TweaksAndFixes>.Logger.Msg(" |.Disable_Minor_Nation_Invasions       : " + USER_CONFIG.Minor_And_Medium_Nation_Land_Invasions.Disable_Minor_Nation_Invasions);
+            Melon<TweaksAndFixes>.Logger.Msg(" |.Disable_Medium_Nation_Invasions      : " + USER_CONFIG.Minor_And_Medium_Nation_Land_Invasions.Disable_Medium_Nation_Invasions);
         }
 
         public static float Param(string name, float defValue = 0f)
