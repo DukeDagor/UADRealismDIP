@@ -1,7 +1,16 @@
+# NEW MANAGEMENT!
+NathanKell is taking an extended hiatus, and until they return I will continue supporting TAF.
+
+## TAF
+My development is specifically geared toward Brother Munro's [Dreadnought Improvement Project](https://www.nexusmods.com/ultimateadmiraldreadnoughts/mods/7?tab=description). If you encounter any bugs while using TAF, please report them in as much detail as possible. Sugestions are closed for the time being (I have a very long list already).
+
+## UAD Realism
+I have no plans for UAD Realism, as extending TAF will be more than enough work for me to handle. 
+
 # Tweaks And Fixes
 A collection of tweaks, fixes, and moddability support features for Ultimate Admiral: Dreadnoughts.
 
-## Supported UAD Version: 1.6.1.4
+## Supported UAD Version: 1.7.0.0
 
 ## Installation
 * [Download MelonLoader 0.6.6](https://github.com/LavaGang/MelonLoader/releases/download/v0.6.6/MelonLoader.x64.zip) and unzip it to your UAD folder.
@@ -44,6 +53,9 @@ Stock has some minor bugs in its peace treaty offering checks. These are fixed, 
 ## Modder Features
 ### Replace/Extend/Override assets with CSV files
 TAF can replace existing data with csv files, override data with csv files, or do both. TAF will look in the Mods folder (where its dll lives) for any csv files named the same as game data TextAssets (for example parts.csv or shipTypes.csv). If such a file exists, it will be loaded rather than the data in resource.assets. This allows modders to distribute just text files rather than an entire resource.assets file. In addition, TAF will look for files named assetname_override.csv (for example parts_override.csv). Data in these files will override and extend the existing data (which was loaded either from resource.assets or from csv). Any lines with the name column matching an original entry will override that entry; other lines will be appended to the end of the asset before loading. Note that the "default" line can also be overridden in this way, since it has a valid name. Note that all filenames are case sensitive!
+
+### NEW: Config file for changing TAF behavior
+Set minimum tonnage for naval invasions, disable fleet tension, set the game end date (WIP), with plenty more to come! The .cfg file is included with each release. Please ensure your .cfg file is up-to-date or the configurations will be ignored!
 
 ### Replace Language file lines
 TAF will look in the Mods folder for files matching the languages that UAD loads (English.lng plus whatever the current language is). Any lines in these files will override the respective languages ingame. Note that only the changed lines need to be placed in these files, since they override one line at a time (like the xxx_override.csv files as described above).
