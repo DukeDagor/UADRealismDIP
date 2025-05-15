@@ -4,6 +4,8 @@ using System.Text;
 using Il2Cpp;
 using System.Collections;
 using MelonLoader;
+using System.Text.Json;
+using static TweaksAndFixes.Config;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8601
@@ -162,7 +164,7 @@ namespace TweaksAndFixes
                     if (line.Length > 0)
                         charCount += line.Length + 1; // the extra \n
                     string key = GetKey(line);
-                    if(key == null)
+                    if (key == null)
                         continue;
                     lineLookup[key] = i;
                 }
@@ -516,7 +518,7 @@ namespace TweaksAndFixes
             {
                 if (!file.VerifyOrLog())
                     return false;
-                
+
                 var text = File.ReadAllText(file.path);
                 return Read<TList, TItem>(text, output, useComments);
             }
@@ -1218,7 +1220,7 @@ namespace TweaksAndFixes
 
                     object key = keyObj;
                     object obj = dict[key];
-                    
+
                     string keyStr = key.ToString(); // it might already be a string, but eh.
                     foreach (var fieldData in _fields)
                     {
@@ -1263,7 +1265,7 @@ namespace TweaksAndFixes
                     _StringBuilder.Append(key._fieldName);
                 }
 
-                foreach(var fieldData in _fields)
+                foreach (var fieldData in _fields)
                 {
                     if (fieldData == key || !fieldData._attrib.writeable)
                         continue;
@@ -1488,7 +1490,7 @@ namespace TweaksAndFixes
 
             public static Il2CppSystem.Collections.Generic.Dictionary<int, T> HumanListToIndexedDictParsed<T>(string input, Il2CppSystem.Collections.Generic.Dictionary<int, T> dict = null)
             {
-                if(dict == null)
+                if (dict == null)
                     dict = new Il2CppSystem.Collections.Generic.Dictionary<int, T>();
 
                 int parenL = input.IndexOf('(');
@@ -1755,16 +1757,78 @@ namespace TweaksAndFixes
             }
         }
 
-        public class JSON
+        public static class Assets
         {
-            public class JSONObject
+            // TODO: Find a away to do this
+            public static Mesh LoadMeshFromPath(string relitiveFilePath)
             {
+                if (!Directory.Exists(Config._BasePath))
+                    return null;
+
+                string filePath = Path.Combine(Config._BasePath, relitiveFilePath);
+                if (!File.Exists(filePath))
+                    return null;
+
+                Mesh mesh = Resources.Load<Mesh>(filePath);
+
+                return mesh;
+            }
+        }
+
+        public static class JSON
+        {
+            public static T LoadJsonFile<T>(string relitiveFilePath)
+            {
+                if (!Directory.Exists(Config._BasePath))
+                {
+                    Melon<TweaksAndFixes>.Logger.Error("Base path [" + Config._BasePath + "] does not exist.");
+                    return default(T);
+                }
+
+                string filePath = Path.Combine(Config._BasePath, relitiveFilePath);
+                if (!File.Exists(filePath))
+                {
+                    Melon<TweaksAndFixes>.Logger.Error("Could not find file at path [" + filePath + "].");
+                    return default(T);
+                }
+                
+                try
+                {
+                    T ret = JsonSerializer.Deserialize<T>(File.ReadAllText(filePath));
+                    return ret;
+                }
+                catch(Exception e)
+                {
+                    Melon<TweaksAndFixes>.Logger.Error("Failed to parse JSON file with exception:\n" + e.Message);
+                    return default(T);
+                }
             }
 
-            public interface ISaveLoad
+            public static bool SaveJsonFile<T>(string relitiveFilePath, T jsonObject)
             {
-                bool Load(JSONObject obj);
-                bool Save(JSONObject obj);
+                if (!Directory.Exists(Config._BasePath))
+                {
+                    Melon<TweaksAndFixes>.Logger.Error("Base path [" + Config._BasePath + "] does not exist.");
+                    return false;
+                }
+
+                string filePath = Path.Combine(Config._BasePath, relitiveFilePath);
+                if (!File.Exists(filePath))
+                {
+                    Melon<TweaksAndFixes>.Logger.Error("Could not find file at path [" + filePath + "].");
+                    return false;
+                }
+
+                try
+                {
+                    File.WriteAllText(filePath, JsonSerializer.Serialize<T>(jsonObject));
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    Melon<TweaksAndFixes>.Logger.Error("Failed to save JSON file with exception:\n" + e.Message);
+                    return false;
+                }
             }
         }
 

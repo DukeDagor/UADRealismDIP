@@ -17,6 +17,22 @@ using System.Globalization;
 
 namespace TweaksAndFixes
 {
+    public static class ExtraGameData
+    {
+        public static Player? MainPlayer()
+        {
+            foreach (Player entry in CampaignController.Instance.CampaignData.Players)
+            {
+                if (entry.isMain)
+                {
+                    return entry;
+                }
+            }
+
+            return null;
+        }
+    }
+
     public static class ModUtils
     {
         // Due to an Il2Cpp interop issue, you can't actually pass null nullables, you have to pass
