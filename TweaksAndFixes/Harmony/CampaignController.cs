@@ -15,6 +15,22 @@ using static Il2Cpp.CampaignController;
 
 namespace TweaksAndFixes
 {
+
+    [HarmonyPatch(typeof(MessageBoxUI), "Show")]
+    public class foo
+    {
+        static bool Prefix(string header, string text)
+        {
+            if (text == "Retirement")
+            {
+                return false;
+            }
+            // Melon<TweaksAndFixes>.Logger.Msg("Event popup: " + header + " : " + text);
+            return true;
+        }
+    }
+
+
     [HarmonyPatch(typeof(CampaignController))]
     internal class Patch_CampaignController
     {
@@ -35,9 +51,6 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_FinishCampaign(CampaignController __instance, Player loser, FinishCampaignType finishType)
         {
-            // WIP
-            return true;
-
             // Ignore all other campaign ending types
             if (finishType != FinishCampaignType.Retirement)
             {
@@ -54,12 +67,12 @@ namespace TweaksAndFixes
             return true;
         }
 
-        [HarmonyPatch(nameof(CampaignController.DisplaySpecialEvents))]
-        [HarmonyPrefix]
-        internal static void Prefix_DisplaySpecialEvents(Player player, EventData data, EventX ev)
-        {
-            Melon<TweaksAndFixes>.Logger.Msg("Special event: [" + player.Name(false) + "] :ID: " + data.Id + " :NAME: " + data.name + " :TEXT: " + data.text);
-        }
+        // [HarmonyPatch(nameof(CampaignController.DisplaySpecialEvents))]
+        // [HarmonyPrefix]
+        // internal static void Prefix_DisplaySpecialEvents(Player player, EventData data, EventX ev)
+        // {
+        //     Melon<TweaksAndFixes>.Logger.Msg("Special event: [" + player.Name(false) + "] :ID: " + data.Id + " :NAME: " + data.name + " :TEXT: " + data.text);
+        // }
 
 
         [HarmonyPatch(nameof(CampaignController.CheckForCampaignEnd))]
@@ -69,7 +82,14 @@ namespace TweaksAndFixes
             // If the year is equal or greter than the desired retirement date force game end
             if (__instance.CurrentDate.AsDate().Year >= Config.USER_CONFIG.Campagin_End_Date.Campaign_End_Date)
             {
-                // Melon<TweaksAndFixes>.Logger.Error("Ending campaign!");
+                // Check for month interval
+                int monthsSinceFirstRequest = __instance.CurrentDate.AsDate().Month + (__instance.CurrentDate.AsDate().Year - 1890) * 12;
+
+                if (Config.USER_CONFIG.Campagin_End_Date.Prompt_Player_About_Retirement_Every_X_Months != 0 && monthsSinceFirstRequest % Config.USER_CONFIG.Campagin_End_Date.Prompt_Player_About_Retirement_Every_X_Months != 0)
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg("Skipping retirement request.");
+                    return;
+                }
 
                 Player MainPlayer = ExtraGameData.MainPlayer();
 
@@ -80,8 +100,20 @@ namespace TweaksAndFixes
                     return;
                 }
 
-                __instance.FinishCampaign(MainPlayer, FinishCampaignType.Retirement);
+                MessageBoxUI.MessageBoxQueue queue = new MessageBoxUI.MessageBoxQueue();
+                queue.Header = "Considering Retirement";
+                queue.Text = "After " + (__instance.CurrentDate.AsDate().Year - 1890) + " long years of service to your country, perhaps its time to step down.\nWould you like to end the campaign here? If you decline, you will be asked again in " + Config.USER_CONFIG.Campagin_End_Date.Prompt_Player_About_Retirement_Every_X_Months + " months.";
+                queue.Ok = "Yes";
+                queue.Cancel = "No";
+                queue.canBeClosed = false;
+                queue.OnConfirm = new System.Action(() =>
+                {
+                    __instance.FinishCampaign(MainPlayer, FinishCampaignType.Retirement);
+                });
+                MessageBoxUI.Messages.Enqueue(queue);
             }
+
+            // Melon<TweaksAndFixes>.Logger.Msg(ModUtils.DumpHierarchy(G.ui.WorldMapWindow));
         }
 
         internal static CampaignController._AiManageFleet_d__201? _AiManageFleet = null;

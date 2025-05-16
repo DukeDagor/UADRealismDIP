@@ -88,7 +88,7 @@ namespace TweaksAndFixes
         {
             public class ConfigNavalInvasionTonnage
             {
-                public int Minimum_Tonnage { get; set; }
+                public uint Minimum_Tonnage { get; set; }
 
                 public ConfigNavalInvasionTonnage()
                 {
@@ -108,11 +108,15 @@ namespace TweaksAndFixes
 
             public class ConfigCampaginEndDate
             {
-                public int Campaign_End_Date { get; set; }
+                public uint Campaign_End_Date { get; set; }
+
+                public uint Prompt_Player_About_Retirement_Every_X_Months { get; set; }
 
                 public ConfigCampaginEndDate()
                 {
                     Campaign_End_Date = 1965;
+
+                    Prompt_Player_About_Retirement_Every_X_Months = 6;
                 }
             }
 
@@ -311,8 +315,6 @@ namespace TweaksAndFixes
             // An error might occur past this point, can't catch it for some reason tho
             USER_CONFIG = Serializer.JSON.LoadJsonFile<UserConfig>("TweaksAndFixes.cfg");
 
-            // Melon<TweaksAndFixes>.Logger.Msg(Serializer.JSON.LoadJsonFile<UserConfig>("TweaksAndFixes.cfg"));
-
             if (USER_CONFIG == null || USER_CONFIG.Version == -1)
             {
                 Melon<TweaksAndFixes>.Logger.Warning("Failed to load [TweaksAndFixes.cfg]. Using defaults.");
@@ -332,9 +334,10 @@ namespace TweaksAndFixes
             Melon<TweaksAndFixes>.Logger.Msg("Naval_Invasion_Minimum_Area_Tonnage");
             Melon<TweaksAndFixes>.Logger.Msg(" |.Minimum_Tonnage                      : " + USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage);
             Melon<TweaksAndFixes>.Logger.Msg("Fleet_Tension");
-            Melon<TweaksAndFixes>.Logger.Msg(" |.Disable                              : " + (USER_CONFIG.Fleet_Tension.Disable ? "DISABLED" : "ENABLED"));
+            Melon<TweaksAndFixes>.Logger.Msg(" |.Disable                              : " + USER_CONFIG.Fleet_Tension.Disable);
             Melon<TweaksAndFixes>.Logger.Msg("Campagin_End_Date");
             Melon<TweaksAndFixes>.Logger.Msg(" |.Campaign_End_Date                    : " + USER_CONFIG.Campagin_End_Date.Campaign_End_Date);
+            Melon<TweaksAndFixes>.Logger.Msg(" |.Request_Retirement_Every_X_Months    : " + USER_CONFIG.Campagin_End_Date.Prompt_Player_About_Retirement_Every_X_Months);
             Melon<TweaksAndFixes>.Logger.Msg("Minor_And_Medium_Nation_Land_Invasions");
             Melon<TweaksAndFixes>.Logger.Msg(" |.Disable_Minor_Nation_Invasions       : " + USER_CONFIG.Minor_And_Medium_Nation_Land_Invasions.Disable_Minor_Nation_Invasions);
             Melon<TweaksAndFixes>.Logger.Msg(" |.Disable_Medium_Nation_Invasions      : " + USER_CONFIG.Minor_And_Medium_Nation_Land_Invasions.Disable_Medium_Nation_Invasions);
