@@ -194,12 +194,12 @@ namespace TweaksAndFixes.Harmony
 
             if (ValidInvasionTargetCount == 0)
             {
-                text.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasionInsufficientTonnage"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"));
+                text.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_InsufficientTonnage"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"));
                 // text.text = "In order to launch a naval invasion, you require at least [" + Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0") + "] tonnes of naval assets in the sea region of the province you want to invade.";
             }
             else
             {
-                text.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasionSufficientTonnage"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"));
+                text.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_SufficientTonnage"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"));
                 // text.text = "You have naval assets over [" + Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0") + "] tonnes in a sea region containing enemy ports. Ensure you have enough tonnage to secure the province you invade!";
             }
 
@@ -243,7 +243,7 @@ namespace TweaksAndFixes.Harmony
                     {
                         obj.GetComponent<Button>().onClick.AddListener(new System.Action(() =>
                         {
-                            text.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasionConfirmInvasion"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"), __instance.choosenProvince.Name);
+                            text.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_ConfirmInvasion"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"), __instance.choosenProvince.Name);
                             // text.text = "You have naval assets of over [" + Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0") + "] tonnes in the sea region around [" + __instance.choosenProvince.Name + "]. \nDo you want to launch a naval invasion next month?";
 
                             // Set "No" to "Cancel" because it was bothering me
