@@ -77,10 +77,10 @@ namespace TweaksAndFixes
                 }
 
                 MessageBoxUI.MessageBoxQueue queue = new MessageBoxUI.MessageBoxQueue();
-                queue.Header = "Considering Retirement";
-                queue.Text = "After " + (__instance.CurrentDate.AsDate().Year - 1890) + " long years of service to your country, perhaps its time to step down.\nWould you like to end the campaign here? If you decline, you will be asked again in " + Config.USER_CONFIG.Campagin_End_Date.Prompt_Player_About_Retirement_Every_X_Months + " months.";
-                queue.Ok = "Yes";
-                queue.Cancel = "No";
+                queue.Header = LocalizeManager.Localize("$TAF_Ui_Retirement_Header");
+                queue.Text = String.Format(LocalizeManager.Localize("$TAF_Ui_Retirement_Body"), __instance.CurrentDate.AsDate().Year - 1890, Config.USER_CONFIG.Campagin_End_Date.Prompt_Player_About_Retirement_Every_X_Months);
+                queue.Ok = LocalizeManager.Localize("$Ui_Popup_Generic_Yes");
+                queue.Cancel = LocalizeManager.Localize("$Ui_Popup_Generic_No");
                 queue.canBeClosed = false;
                 queue.OnConfirm = new System.Action(() =>
                 {
