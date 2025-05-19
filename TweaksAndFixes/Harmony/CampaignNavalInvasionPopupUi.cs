@@ -26,15 +26,21 @@ namespace TweaksAndFixes.Harmony
         {
             Il2CppSystem.Collections.Generic.List<Province> provinces = new Il2CppSystem.Collections.Generic.List<Province>();
 
-            Il2CppSystem.Collections.Generic.List<string> provincesUnderAttack = new Il2CppSystem.Collections.Generic.List<string>();
+            Il2CppSystem.Collections.Generic.List<Province> provincesUnderAttack = new Il2CppSystem.Collections.Generic.List<Province>();
 
-            // Melon<TweaksAndFixes>.Logger.Msg("\nProvinces Under Attack:");
+            // Melon<TweaksAndFixes>.Logger.Msg("Provinces Under Attack:");
 
-            // Find all provinces currently under naval invasion
-            foreach (CampaignConquestEvent.Store store in CampaignController.Instance.GetStore().ColonialConquestEvents)
+            // Get the list of provinces with naval invasions
+            foreach (BaseCampaignSpecialEvent specialEvent in CampaignController.Instance.CampaignData.SpecialEvents)
             {
-                provincesUnderAttack.Add(store.EnemyProvince.ToLower());
-                // Melon<TweaksAndFixes>.Logger.Msg(store.Name + " -> " + store.EnemyProvince);
+                if (specialEvent.EventType == BaseCampaignSpecialEvent.SpecialEventType.NavalInvasion)
+                {
+                    CampaignConquestEvent campaignConquestEvent = new CampaignConquestEvent(specialEvent.Pointer);
+
+                    // Melon<TweaksAndFixes>.Logger.Msg("  " + campaignConquestEvent.Id + " : " + campaignConquestEvent.Name + " -> " + campaignConquestEvent.EnemyProvince.Name + " (" + campaignConquestEvent.EnemyPort.Name + ")");
+
+                    provincesUnderAttack.Add(campaignConquestEvent.EnemyProvince);
+                }
             }
 
             // Melon<TweaksAndFixes>.Logger.Msg("");
@@ -54,19 +60,15 @@ namespace TweaksAndFixes.Harmony
                         if (!province.HavePort) continue;
 
                         // Check if province is under attack
-                        if (provincesUnderAttack.Contains(province.Name.ToLower())) continue;
+                        if (provincesUnderAttack.Contains(province)) continue;
 
                         // Check if the province is owned by the enemy
-                        if (province.ControllerPlayer != Defender)
-                        {
-                            // Melon<TweaksAndFixes>.Logger.Msg("Skipped: " + area.Name + " -> " + province.Name);
-                            continue;
-                        }
+                        if (province.ControllerPlayer != Defender) continue;
 
                         // Sanity check to ensure we are still at war
                         if (province.ControllerPlayer.AtWarWith().Contains(Attacker))
                         {
-                            // Melon<TweaksAndFixes>.Logger.Msg(area.Name + " -> " + province.Name);
+                            // Melon<TweaksAndFixes>.Logger.Msg("  " + area.Name + " -> " + province.Name);
 
                             provinces.Add(province);
                         }
@@ -84,16 +86,23 @@ namespace TweaksAndFixes.Harmony
         {
             Il2CppSystem.Collections.Generic.List<Province> provinces = new Il2CppSystem.Collections.Generic.List<Province>();
 
-            Il2CppSystem.Collections.Generic.List<string> provincesUnderAttack = new Il2CppSystem.Collections.Generic.List<string>();
+            Il2CppSystem.Collections.Generic.List<Province> provincesUnderAttack = new Il2CppSystem.Collections.Generic.List<Province>();
 
             // Melon<TweaksAndFixes>.Logger.Msg("\nProvinces Under Attack:");
 
-            // Find all provinces currently under naval invasion
-            foreach (CampaignConquestEvent.Store store in CampaignController.Instance.GetStore().ColonialConquestEvents)
+            // Get the list of provinces with naval invasions
+            foreach (BaseCampaignSpecialEvent specialEvent in CampaignController.Instance.CampaignData.SpecialEvents)
             {
-                provincesUnderAttack.Add(store.EnemyProvince.ToLower());
-                // Melon<TweaksAndFixes>.Logger.Msg(store.Name + " -> " + store.EnemyProvince);
+                if (specialEvent.EventType == BaseCampaignSpecialEvent.SpecialEventType.NavalInvasion)
+                {
+                    CampaignConquestEvent campaignConquestEvent = new CampaignConquestEvent(specialEvent.Pointer);
+
+                    // Melon<TweaksAndFixes>.Logger.Msg("  " + campaignConquestEvent.Id + " : " + campaignConquestEvent.Name + " -> " + campaignConquestEvent.EnemyProvince.Name + " (" + campaignConquestEvent.EnemyPort.Name + ")");
+
+                    provincesUnderAttack.Add(campaignConquestEvent.EnemyProvince);
+                }
             }
+
 
             // Melon<TweaksAndFixes>.Logger.Msg("");
 
@@ -112,7 +121,7 @@ namespace TweaksAndFixes.Harmony
                         if (!province.HavePort) continue;
 
                         // Check if province is under attack
-                        if (provincesUnderAttack.Contains(province.Name.ToLower())) continue;
+                        if (provincesUnderAttack.Contains(province)) continue;
 
                         // Check if the province is owned by the enemy
                         if (province.ControllerPlayer != Defender)

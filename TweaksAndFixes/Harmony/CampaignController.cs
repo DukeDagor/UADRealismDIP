@@ -15,22 +15,6 @@ using static Il2Cpp.CampaignController;
 
 namespace TweaksAndFixes
 {
-
-    [HarmonyPatch(typeof(MessageBoxUI), "Show")]
-    public class foo
-    {
-        static bool Prefix(string header, string text)
-        {
-            if (text == "Retirement")
-            {
-                return false;
-            }
-            // Melon<TweaksAndFixes>.Logger.Msg("Event popup: " + header + " : " + text);
-            return true;
-        }
-    }
-
-
     [HarmonyPatch(typeof(CampaignController))]
     internal class Patch_CampaignController
     {
@@ -66,14 +50,6 @@ namespace TweaksAndFixes
             // If the year is equal or greter than the desired retirement date, let it run
             return true;
         }
-
-        // [HarmonyPatch(nameof(CampaignController.DisplaySpecialEvents))]
-        // [HarmonyPrefix]
-        // internal static void Prefix_DisplaySpecialEvents(Player player, EventData data, EventX ev)
-        // {
-        //     Melon<TweaksAndFixes>.Logger.Msg("Special event: [" + player.Name(false) + "] :ID: " + data.Id + " :NAME: " + data.name + " :TEXT: " + data.text);
-        // }
-
 
         [HarmonyPatch(nameof(CampaignController.CheckForCampaignEnd))]
         [HarmonyPostfix]

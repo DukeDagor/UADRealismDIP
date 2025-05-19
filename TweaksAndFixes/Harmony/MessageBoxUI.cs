@@ -91,18 +91,21 @@ namespace TweaksAndFixes
 
         [HarmonyPatch(nameof(MessageBoxUI.Show))]
         [HarmonyPrefix]
-        internal static void Prefix_MessageBoxUI(string header, ref string text, Sprite image, bool backround, string ok, string cancel, Il2CppSystem.Action onConfirm, Il2CppSystem.Action onCancel,
+        internal static bool Prefix_MessageBoxUI(string header, ref string text, Sprite image, bool backround, string ok, string cancel, Il2CppSystem.Action onConfirm, Il2CppSystem.Action onCancel,
             Il2CppSystem.Action<MessageBoxUI> onShow, Il2CppSystem.Action<MessageBoxUI, float> onSliderValueChanged, ref string scrollData, bool canBeClosed, bool skipUiRefresh, bool showShipToolTip, Ship ship)
         {
+            if (text == "Retirement")
+                return false;
             if (scrollData != null || text == null)
-                return;
+                return true;
             int splitIdx = SplitStringIdx(text, out int startIdx);
             if (splitIdx < 0)
-                return;
+                return true;
             string oldText = text;
             text = oldText.Substring(0, splitIdx);
             if (startIdx < oldText.Length)
                 scrollData = oldText.Substring(startIdx);
+            return true;
         }
     }
 }
