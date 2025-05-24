@@ -132,8 +132,19 @@ namespace TweaksAndFixes
                 }
             }
 
+            public class NavalInvasionsPerTurn
+            {
+                public bool Unlimited_Naval_Invasions_Per_Turn { get; set; }
+
+                public NavalInvasionsPerTurn()
+                {
+                    Unlimited_Naval_Invasions_Per_Turn = false;
+                }
+            }
+
             public int Version { get; set; }
             public ConfigNavalInvasionTonnage Naval_Invasion_Minimum_Area_Tonnage { get; set; }
+            public NavalInvasionsPerTurn Naval_Invasions_Per_Turn { get; set; }
             public ConfigFleetTension Fleet_Tension { get; set; }
             public ConfigCampaginEndDate Campagin_End_Date { get; set; }
             public ConfigMinorAndMediumNationLandInvasions Minor_And_Medium_Nation_Land_Invasions { get; set; }
@@ -142,6 +153,7 @@ namespace TweaksAndFixes
             {
                 Version = -1;
                 Naval_Invasion_Minimum_Area_Tonnage = new ConfigNavalInvasionTonnage();
+                Naval_Invasions_Per_Turn = new NavalInvasionsPerTurn();
                 Fleet_Tension = new ConfigFleetTension();
                 Campagin_End_Date = new ConfigCampaginEndDate();
                 Minor_And_Medium_Nation_Land_Invasions = new ConfigMinorAndMediumNationLandInvasions();
@@ -318,7 +330,7 @@ namespace TweaksAndFixes
             if (USER_CONFIG == null || USER_CONFIG.Version == -1)
             {
                 Melon<TweaksAndFixes>.Logger.Warning("Failed to load [TweaksAndFixes.cfg]. Using defaults.");
-            
+
                 USER_CONFIG = new UserConfig();
             }
 
@@ -328,11 +340,13 @@ namespace TweaksAndFixes
 
                 USER_CONFIG = new UserConfig();
             }
-            
+
             Melon<TweaksAndFixes>.Logger.Msg("TweaksAndFixes.cfg:");
             Melon<TweaksAndFixes>.Logger.Msg("Version:                                : " + USER_CONFIG.Version);
             Melon<TweaksAndFixes>.Logger.Msg("Naval_Invasion_Minimum_Area_Tonnage");
             Melon<TweaksAndFixes>.Logger.Msg(" |.Minimum_Tonnage                      : " + USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage);
+            Melon<TweaksAndFixes>.Logger.Msg("Naval_Invasions_Per_Turn");
+            Melon<TweaksAndFixes>.Logger.Msg(" |.Unlimited_Naval_Invasions_Per_Turn   : " + USER_CONFIG.Naval_Invasions_Per_Turn.Unlimited_Naval_Invasions_Per_Turn);
             Melon<TweaksAndFixes>.Logger.Msg("Fleet_Tension");
             Melon<TweaksAndFixes>.Logger.Msg(" |.Disable                              : " + USER_CONFIG.Fleet_Tension.Disable);
             Melon<TweaksAndFixes>.Logger.Msg("Campagin_End_Date");
