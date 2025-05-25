@@ -18,32 +18,8 @@ namespace TweaksAndFixes.Harmony
     [HarmonyPatch(typeof(CampaignPoliticsWindow))]
     internal class Patch_CampaignPoliticsWindow
     {
-        public static bool HasLaunchedNavalInvasionThisTurn = false;
-
-        public static bool HasLaunchedNavalInvasion()
-        {
-            foreach (Il2CppSystem.Collections.Generic.KeyValuePair<Player, CampaignPolitics_ElementUI> element in G.ui.PoliticsWindow.createdElements)
-            {
-                if (element.value == null)
-                {
-                    continue;
-                }
-
-                GameObject child = element.value.NavalInvasion.GetChildren()[0];
-                TMP_Text text = child.GetComponent<TMP_Text>();
-
-                if (text.color.r == 1.0 && text.color.g == 0.0 && text.color.b == 0.0)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         public static void ForceNavalInvasionButtonsActive()
         {
-            HasLaunchedNavalInvasionThisTurn = HasLaunchedNavalInvasion();
-
             // if (!USER_CONFIG.Naval_Invasions_Per_Turn.Unlimited_Naval_Invasions_Per_Turn && HasLaunchedNavalInvasion())
             // {
             //     return;
@@ -57,6 +33,7 @@ namespace TweaksAndFixes.Harmony
                 return;
             }
 
+            // Loop over each countries politics sections
             foreach (Il2CppSystem.Collections.Generic.KeyValuePair<Player, CampaignPolitics_ElementUI> element in G.ui.PoliticsWindow.createdElements)
             {
                 if (element.value == null)
@@ -64,6 +41,7 @@ namespace TweaksAndFixes.Harmony
                     continue;
                 }
 
+                // Get naval invasion text
                 GameObject child = element.value.NavalInvasion.GetChildren()[0];
                 TMP_Text text = child.GetComponent<TMP_Text>();
 
@@ -72,6 +50,7 @@ namespace TweaksAndFixes.Harmony
                 //     continue;
                 // }
 
+                // If we aren't at war, set the color to grey
                 if (!element.key.AtWarWith().Contains(MainPlayer))
                 {
                     text.color = new Color(0.7f, 0.7f, 0.7f, 1);
@@ -79,6 +58,7 @@ namespace TweaksAndFixes.Harmony
                     continue;
                 }
 
+                // If we are at war, set it to interactable and color it white
                 if (element.value.NavalInvasion != null)
                 {
                     // Melon<TweaksAndFixes>.Logger.Msg("CampaignPoliticsWindow: " + element.key.Name(false));

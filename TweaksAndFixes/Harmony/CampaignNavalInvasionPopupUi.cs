@@ -2,15 +2,12 @@
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
-using Il2CppSystem.Collections.Generic;
 using Il2CppSystem.Linq;
 using UnityEngine.UI;
 using Il2CppCoffee.UIExtensions;
 using Il2CppTMPro;
 using Il2CppUiExt;
-using System.Xml.Linq;
 using static TweaksAndFixes.Config;
-using System.Net.Http.Headers;
 
 namespace TweaksAndFixes.Harmony
 {
@@ -20,12 +17,16 @@ namespace TweaksAndFixes.Harmony
         // Track the last "Naval Invasion" button owner we last hovered over (yes, I needed to make it that scuffed)
         public static Player NavalInvasionUiNation;
 
-        // Change message based on the number of valid targets
-        public static int ValidInvasionTargetCount = 0;
-
-        public static Il2CppSystem.Collections.Generic.List<Province> NavalInvasionsThisTurn = new Il2CppSystem.Collections.Generic.List<Province>();
-
         public static Il2CppSystem.Collections.Generic.Dictionary<int, string> TitleIndexes = new Il2CppSystem.Collections.Generic.Dictionary<int, string>();
+
+        // Provinces that can be invaded by the player
+        public static Il2CppSystem.Collections.Generic.List<Province> invadable = new Il2CppSystem.Collections.Generic.List<Province>();
+
+        // Provinces are currently being invaded by the player
+        public static Il2CppSystem.Collections.Generic.List<Province> invading = new Il2CppSystem.Collections.Generic.List<Province>();
+
+        // Provinces that have insufficient tonnage nearby
+        public static Il2CppSystem.Collections.Generic.List<Province> uninvadable = new Il2CppSystem.Collections.Generic.List<Province>();
 
         // Find all current naval invasions
         public static Il2CppSystem.Collections.Generic.List<Province> GetProvinceListOfCurrentNavalInvasions(Player Attacker, Player Defender)
@@ -99,7 +100,7 @@ namespace TweaksAndFixes.Harmony
                         if (province.ControllerPlayer != Defender) continue;
 
                         // Check we are already invading them
-                        if (NavalInvasionsThisTurn.Contains(province)) continue;
+                        if (G.ui.NavalInvasionElement.choosenProvince == province) continue;
 
                         // Sanity check to ensure we are still at war
                         if (province.ControllerPlayer.AtWarWith().Contains(Attacker))
@@ -182,6 +183,23 @@ namespace TweaksAndFixes.Harmony
             return provinces;
         }
 
+        public static void SetButtonUninteractable(Button button, TMP_Text provinceText, TMP_Text tonnageText, Color color)
+        {
+            button.onClick.RemoveAllListeners();
+            button.OnEnter(new System.Action(() =>
+            {
+                provinceText.color = color;
+                tonnageText.color = color;
+            }));
+            button.OnLeave(new System.Action(() =>
+            {
+                provinceText.color = color;
+                tonnageText.color = color;
+            }));
+            provinceText.color = color;
+            tonnageText.color = color;
+        }
+
         [HarmonyPatch(nameof(CampaignNavalInvasionPopupUi.Init))]
         [HarmonyPrefix]
         internal static void Prefix_Init(CampaignNavalInvasionPopupUi __instance, ref Il2CppSystem.Collections.Generic.List<Province> provinces, Il2CppSystem.Action onConfirm)
@@ -202,73 +220,61 @@ namespace TweaksAndFixes.Harmony
                 return;
             }
 
-            Province TitleProvince = CampaignMap.Instance.Provinces.Provinces[0];
-
+            // Clear lists
             provinces.Clear();
             TitleIndexes.Clear();
 
-            // Get new invasions
-            if (NavalInvasionsThisTurn.Count > 0)
-            {
-                TitleIndexes.Add(0, "New Naval Invasions");
-                provinces.Add(TitleProvince);
-            }
-
-            foreach (Province province in NavalInvasionsThisTurn)
-            {
-                if (province.ControllerPlayer != NavalInvasionUiNation) continue;
-                provinces.Add(province);
-            }
-
-            if (provinces.Count == 1)
-            {
-                 provinces.Remove(TitleProvince);
-                 TitleIndexes.Remove(0);
-            }
+            // Get valid provinces
+            invadable = GetProvinceListForNavalInvasion(MainPlayer, NavalInvasionUiNation);
 
             // Get current invasions
-            Il2CppSystem.Collections.Generic.List<Province> invading = GetProvinceListOfCurrentNavalInvasions(MainPlayer, NavalInvasionUiNation);
+            invading = GetProvinceListOfCurrentNavalInvasions(MainPlayer, NavalInvasionUiNation);
+
+            // Get invalid provinces
+            uninvadable = GetListOfBlockedNavalInvasionProvinces(MainPlayer, NavalInvasionUiNation);
+
+            // Title placeholder
+            Province TitleProvince = CampaignMap.Instance.Provinces.Provinces[0];
+
+            // Get new invasions
+            if (__instance.choosenProvince != null && __instance.choosenProvince.ControllerPlayer == NavalInvasionUiNation && !invading.Contains(__instance.choosenProvince))
+            {
+                TitleIndexes.Add(0, LocalizeManager.Localize("$TAF_Ui_NavalInvasion_ProvinceListCatagories_New"));
+                provinces.Add(TitleProvince);
+                provinces.Add(__instance.choosenProvince);
+            }
 
             if (invading.Count > 0)
             {
-                TitleIndexes.Add(provinces.Count, "Current Naval Invasions");
+                TitleIndexes.Add(provinces.Count, LocalizeManager.Localize("$TAF_Ui_NavalInvasion_ProvinceListCatagories_Ongoing"));
                 provinces.Add(TitleProvince);
-            }
 
-            foreach (Province province in invading)
-            {
-                provinces.Add(province);
+                foreach (Province province in invading)
+                {
+                    provinces.Add(province);
+                }
             }
-
-            // Get valid provinces
-            Il2CppSystem.Collections.Generic.List<Province> invadable = GetProvinceListForNavalInvasion(MainPlayer, NavalInvasionUiNation);
 
             if (invadable.Count > 0)
             {
-                TitleIndexes.Add(provinces.Count, "Naval Invasion Options");
+                TitleIndexes.Add(provinces.Count, LocalizeManager.Localize("$TAF_Ui_NavalInvasion_ProvinceListCatagories_Options"));
                 provinces.Add(TitleProvince);
+
+                foreach (Province province in invadable)
+                {
+                    provinces.Add(province);
+                }
             }
-
-            foreach (Province province in invadable)
-            {
-                provinces.Add(province);
-            }
-
-            // Track valid province count
-            ValidInvasionTargetCount = provinces.Count;
-
-            // Get invalid provinces and add them to the list
-            Il2CppSystem.Collections.Generic.List<Province> uninvadable = GetListOfBlockedNavalInvasionProvinces(MainPlayer, NavalInvasionUiNation);
 
             if (uninvadable.Count > 0)
             {
-                TitleIndexes.Add(provinces.Count, "Insufficient Tonnage");
+                TitleIndexes.Add(provinces.Count, LocalizeManager.Localize("$TAF_Ui_NavalInvasion_ProvinceListCatagories_Insufficient_Tonnage"));
                 provinces.Add(TitleProvince);
-            }
 
-            foreach (Province province in uninvadable)
-            {
-                provinces.Add(province);
+                foreach (Province province in uninvadable)
+                {
+                    provinces.Add(province);
+                }
             }
 
             // Melon<TweaksAndFixes>.Logger.Msg(ModUtils.DumpHierarchy(__instance.gameObject));
@@ -280,28 +286,24 @@ namespace TweaksAndFixes.Harmony
         internal static void Postfix_Init(CampaignNavalInvasionPopupUi __instance, Il2CppSystem.Collections.Generic.List<Province> provinces, Il2CppSystem.Action onConfirm)
         {
             // Get the explanation text box and update the text based on the number of valid invasion targets
-            GameObject child = __instance.gameObject.Get("Window").Get("Text");
-            TMP_Text text = child.GetComponent<TMP_Text>();
+            GameObject DescObject = __instance.gameObject.Get("Window").Get("Text");
+            TMP_Text DescText = DescObject.GetComponent<TMP_Text>();
 
-            bool DisableOptions = Patch_CampaignPoliticsWindow.HasLaunchedNavalInvasionThisTurn;
-
-            if (DisableOptions)
+            if (__instance.choosenProvince != null)
             {
-                text.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_WaitUntilNextTurn"), NavalInvasionsThisTurn[0].Name);
+                DescText.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_ChangeNavalInvasionTarget"), __instance.choosenProvince.Name);
             }
-            else if (ValidInvasionTargetCount == 0)
+            else if (invadable.Count > 0)
             {
-                text.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_InsufficientTonnage"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"));
-                // text.text = "In order to launch a naval invasion, you require at least [" + Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0") + "] tonnes of naval assets in the sea region of the province you want to invade.";
+                DescText.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_InsufficientTonnage"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"));
             }
             else
             {
-                text.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_SufficientTonnage"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"));
-                // text.text = "You have naval assets over [" + Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0") + "] tonnes in a sea region containing enemy ports. Ensure you have enough tonnage to secure the province you invade!";
+                DescText.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_SufficientTonnage"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"));
             }
 
             // Set "No" to "Cancel" because it was bothering me
-            __instance.No.gameObject.GetChildren()[0].GetComponent<TMP_Text>().text = "Cancel";
+            if (__instance.choosenProvince == null)  __instance.No.gameObject.GetChildren()[0].GetComponent<TMP_Text>().text = LocalizeManager.Localize("$Ui_World_PopWindows_Cancel");
 
             // Melon<TweaksAndFixes>.Logger.Msg(ModUtils.DumpHierarchy(__instance.ProvinceTemplate));
 
@@ -317,23 +319,16 @@ namespace TweaksAndFixes.Harmony
                     return;
                 }
 
-                Il2CppSystem.Collections.Generic.List<string> newInvasionNames = new Il2CppSystem.Collections.Generic.List<string>();
-
-                foreach (Province province in NavalInvasionsThisTurn)
-                {
-                    newInvasionNames.Add(province.Name);
-                }
-
                 Il2CppSystem.Collections.Generic.List<string> invadingNames = new Il2CppSystem.Collections.Generic.List<string>();
 
-                foreach (Province province in GetProvinceListOfCurrentNavalInvasions(MainPlayer, NavalInvasionUiNation))
+                foreach (Province province in invading)
                 {
                     invadingNames.Add(province.Name);
                 }
 
                 Il2CppSystem.Collections.Generic.List<string> uninvadableNames = new Il2CppSystem.Collections.Generic.List<string>();
 
-                foreach (Province province in GetListOfBlockedNavalInvasionProvinces(MainPlayer, NavalInvasionUiNation))
+                foreach (Province province in uninvadable)
                 {
                     uninvadableNames.Add(province.Name);
                 }
@@ -347,111 +342,50 @@ namespace TweaksAndFixes.Harmony
                     string provinceText = provinceTMPText.text;
                     Button provinceButton = obj.GetComponent<Button>();
 
+                    // Title text
                     if (TitleIndexes.ContainsKey(i))
                     {
-                        provinceButton.onClick.RemoveAllListeners();
-                        Color white = new Color(1f, 1f, 1f);
-                        provinceButton.OnEnter(new System.Action(() =>
-                        {
-                            provinceTMPText.color = white;
-                            tonnageTMPText.color = white;
-                        }));
-                        provinceButton.OnLeave(new System.Action(() =>
-                        {
-                            provinceTMPText.color = white;
-                            tonnageTMPText.color = white;
-                        }));
+                        SetButtonUninteractable(provinceButton, provinceTMPText, tonnageTMPText, Color.white);
                         provinceTMPText.text = TitleIndexes[i];
-                        provinceTMPText.color = white;
-                        tonnageTMPText.color = white;
                         tonnageTMPText.text = "";
                         continue;
                     }
 
+                    // Indent all non-title entries
                     provinceTMPText.text = "  " + provinceText;
 
-                    if (newInvasionNames.Contains(provinceText))
+                    if (invadingNames.Contains(provinceText))
                     {
-                        provinceButton.onClick.RemoveAllListeners();
-                        Color green = new Color(0.3f, 0.9f, 0.3f);
-                        provinceButton.OnEnter(new System.Action(() =>
-                        {
-                            provinceTMPText.color = green;
-                            tonnageTMPText.color = green;
-                        }));
-                        provinceButton.OnLeave(new System.Action(() =>
-                        {
-                            provinceTMPText.color = green;
-                            tonnageTMPText.color = green;
-                        }));
-                        provinceTMPText.color = green;
-                        tonnageTMPText.color = green;
+                        Color light_grey = new Color(0.8f, 1f, 0.8f);
+                        SetButtonUninteractable(provinceButton, provinceTMPText, tonnageTMPText, light_grey);
                     }
-                    else if (invadingNames.Contains(provinceText))
+                    else if (__instance.choosenProvince != null && provinceText == __instance.choosenProvince.Name)
                     {
-                        // existingNavalInvasion.Interactable(false);
-                        provinceButton.onClick.RemoveAllListeners();
-                        Color blue = new Color(1f, 1f, 1f);
-                        provinceButton.OnEnter(new System.Action(() =>
-                        {
-                            provinceTMPText.color = blue;
-                            tonnageTMPText.color = blue;
-                        }));
-                        provinceButton.OnLeave(new System.Action(() =>
-                        {
-                            provinceTMPText.color = blue;
-                            tonnageTMPText.color = blue;
-                        }));
-                        provinceTMPText.color = blue;
-                        tonnageTMPText.color = blue;
+                        Color green = new Color(0.3f, 0.9f, 0.3f);
+                        SetButtonUninteractable(provinceButton, provinceTMPText, tonnageTMPText, green);
                     }
                     else if (uninvadableNames.Contains(provinceText))
                     {
-                        provinceButton.onClick.RemoveAllListeners();
                         Color grey = new Color(0.5f, 0.5f, 0.5f);
-                        provinceButton.OnEnter(new System.Action(() => 
-                        {
-                            provinceTMPText.color = grey;
-                            tonnageTMPText.color = grey;
-                        }));
-                        provinceButton.OnLeave(new System.Action(() => 
-                        {
-                            provinceTMPText.color = grey;
-                            tonnageTMPText.color = grey;
-                        }));
-                        provinceTMPText.color = grey;
-                        tonnageTMPText.color = grey;
+                        SetButtonUninteractable(provinceButton, provinceTMPText, tonnageTMPText, grey);
                     }
-                    else if (DisableOptions)
+                    else
                     {
-                        provinceButton.onClick.RemoveAllListeners();
-                        Color grey = new Color(0.5f, 0.5f, 0.5f);
-                        provinceButton.OnEnter(new System.Action(() =>
-                        {
-                            provinceTMPText.color = grey;
-                            tonnageTMPText.color = grey;
-                        }));
+                        Color light_grey = new Color(0.85f, 0.85f, 0.85f);
                         provinceButton.OnLeave(new System.Action(() =>
                         {
-                            provinceTMPText.color = grey;
-                            tonnageTMPText.color = grey;
+                            provinceTMPText.color = light_grey;
+                            tonnageTMPText.color = light_grey;
                         }));
-                        provinceTMPText.color = grey;
-                        tonnageTMPText.color = grey;
-                        continue;
-                    }
-                    else 
-                    {
+                        provinceTMPText.color = light_grey;
+                        tonnageTMPText.color = light_grey;
+
                         obj.GetComponent<Button>().onClick.AddListener(new System.Action(() =>
                         {
-                            text.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_ConfirmInvasion"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"), __instance.choosenProvince.Name);
-                            
-                            // Set "No" to "Cancel" because it was bothering me
-                            __instance.No.gameObject.GetChildren()[0].GetComponent<TMP_Text>().text = LocalizeManager.Localize("$Ui_World_PopWindows_Cancel");
+                            DescText.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_ConfirmInvasion"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"), __instance.choosenProvince.Name);
 
                             __instance.Yes.gameObject.GetComponent<Button>().onClick.AddListener(new System.Action(() =>
                             {
-                                NavalInvasionsThisTurn.Add(__instance.choosenProvince);
                                 Patch_CampaignPoliticsWindow.ForceNavalInvasionButtonsActive();
                             }));
                         }));
