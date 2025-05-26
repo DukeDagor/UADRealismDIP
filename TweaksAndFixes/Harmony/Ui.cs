@@ -17,6 +17,7 @@ namespace TweaksAndFixes
     internal class Patch_Ui
     {
         internal static bool _InUpdateConstructor = false;
+        public static float PartRotation = 0.0f;
 
         [HarmonyPatch(nameof(Ui.Start))]
         [HarmonyPostfix]
@@ -83,6 +84,45 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_UpdateConstructor()
         {
+            // if (Patch_Ship.LastCreatedShip.parts.Count > 0)
+            // {
+            //     // Part placablePart = Patch_Ship.LastCreatedShip.parts[0];
+            // 
+            //     float rotationValue = 45.0f;
+            //     if (Input.GetKeyDown(KeyCode.LeftAlt))
+            //     {
+            //         rotationValue = rotationValue == 45.0f ? 15.0f : 45.0f;
+            //     }
+            // 
+            //     if (Input.GetKeyDown(KeyCode.R))
+            //     {
+            //         PartRotation -= rotationValue;
+            //         // Vector3 CurrentRotation = placablePart.transform.eulerAngles;
+            //         // CurrentRotation.y = PartRotation;
+            //         // placablePart.transform.eulerAngles = CurrentRotation;
+            //         // placablePart.AnimateRotate(-15);
+            //         Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + Patch_Ship.LastCreatedShip.parts[0].transform.eulerAngles.ToString());
+            //     }
+            //     else if (Input.GetKeyDown(KeyCode.T))
+            //     {
+            //         PartRotation += rotationValue;
+            //         // Vector3 CurrentRotation = placablePart.transform.eulerAngles;
+            //         // CurrentRotation.y = PartRotation;
+            //         // placablePart.transform.eulerAngles = CurrentRotation;
+            //         // placablePart.AnimateRotate(15);
+            //         Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + Patch_Ship.LastCreatedShip.parts[0].transform.eulerAngles.ToString());
+            //     }
+            //     else if (Input.GetKeyDown(KeyCode.R) && Input.GetKeyDown(KeyCode.LeftControl))
+            //     {
+            //         Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + Patch_Ship.LastCreatedShip.parts[0].transform.eulerAngles.ToString());
+            //         // PartRotation -= 15.0f;
+            //     }
+            // 
+            //     // Vector3 CurrentRotation = placablePart.transform.eulerAngles;
+            //     // CurrentRotation.y = PartRotation;
+            //     // placablePart.transform.eulerAngles = CurrentRotation;
+            // }
+
             _InUpdateConstructor = false;
         }
 

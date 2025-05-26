@@ -13,6 +13,47 @@ namespace TweaksAndFixes
     [HarmonyPatch(typeof(Ship))]
     internal class Patch_Ship
     {
+        public static Ship LastCreatedShip;
+
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Ship.Create))]
+        internal static void Postfix_Create(Ship __result, Ship design, Player player, bool isTempForBattle = false, bool isPrewarming = false, bool isSharedDesign = false)
+        {
+            // Melon<TweaksAndFixes>.Logger.Msg("Create ship: " + design);
+            LastCreatedShip = __result;
+
+            if (LastCreatedShip == null) return;
+
+            Melon<TweaksAndFixes>.Logger.Msg(LastCreatedShip.Name(false, false));
+
+            // foreach (Mount mount in LastCreatedShip.mounts)
+            // {
+            //     Melon<TweaksAndFixes>.Logger.Msg(LastCreatedShip.Name(false, false) + ": " + mount.caliberMin + " - " + mount.caliberMax);
+            // }
+        }
+
+        // [HarmonyPostfix]
+        // [HarmonyPatch(nameof(Ship.RemovePart))]
+        // internal static void Postfix_RemovePart(Ship __instance, Part part)
+        // {
+        //     if ((part == Patch_Part.MirrorA || part == Patch_Part.MirrorB))
+        //     {
+        //         Melon<TweaksAndFixes>.Logger.Msg(part.Name() + ": Removed");
+        //         Part A = Patch_Part.MirrorB;
+        //         Part B =  Patch_Part.MirrorA;
+        //         Patch_Part.MirrorB = null;
+        //         Patch_Part.MirrorA = null;
+        //         if (part == A)
+        //         {
+        //             Patch_Ship.LastCreatedShip.RemovePart(B);
+        //         }
+        //         else
+        //         {
+        //             Patch_Ship.LastCreatedShip.RemovePart(A);
+        //         }
+        //     }
+        // }
+
         internal static int _GenerateShipState = -1;
         internal static bool _IsLoading = false;
         internal static Ship _ShipForLoading = null;
