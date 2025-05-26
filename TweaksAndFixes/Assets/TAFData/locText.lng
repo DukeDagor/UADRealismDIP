@@ -29,6 +29,6 @@ $TAF_Ui_NavalInvasion_ConfirmInvasion;You have naval assets of over [{0}] tonnes
 $TAF_Ui_NavalInvasion_ProvinceListCatagories_New;New:
 $TAF_Ui_NavalInvasion_ProvinceListCatagories_Ongoing;Ongoing:
 $TAF_Ui_NavalInvasion_ProvinceListCatagories_Options;Options:
-$TAF_Ui_NavalInvasion_ProvinceListCatagories_Insufficient_Tonnage;Insufficient Tonnage:
+$TAF_Ui_NavalInvasion_ProvinceListCatagories_Insufficient_Tonnage;Lacking Tonnage In Region:
 $TAF_Ui_Retirement_Header;Considering Retirement
 $TAF_Ui_Retirement_Body;After {0} long years of service to your country, perhaps its time to step down.\nWould you like to end the campaign here? If you decline, you will be asked again in {1} months.

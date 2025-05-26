@@ -33,8 +33,6 @@ namespace TweaksAndFixes.Harmony
         {
             Il2CppSystem.Collections.Generic.List<Province> provinces = new Il2CppSystem.Collections.Generic.List<Province>();
 
-            Il2CppSystem.Collections.Generic.List<Province> provincesUnderAttack = new Il2CppSystem.Collections.Generic.List<Province>();
-
             // Melon<TweaksAndFixes>.Logger.Msg("Provinces Under Attack:");
 
             // Get the list of provinces with naval invasions
@@ -161,11 +159,10 @@ namespace TweaksAndFixes.Harmony
                         if (provincesUnderAttack.Contains(province)) continue;
 
                         // Check if the province is owned by the enemy
-                        if (province.ControllerPlayer != Defender)
-                        {
-                            // Melon<TweaksAndFixes>.Logger.Msg("Skipped: " + area.Name + " -> " + province.Name);
-                            continue;
-                        }
+                        if (province.ControllerPlayer != Defender) continue;
+
+                        // Check we are already invading them
+                        if (G.ui.NavalInvasionElement.choosenProvince == province) continue;
 
                         // Sanity check to ensure we are still at war
                         if (province.ControllerPlayer.AtWarWith().Contains(Attacker))
@@ -235,7 +232,7 @@ namespace TweaksAndFixes.Harmony
 
             // Title placeholder
             Province TitleProvince = CampaignMap.Instance.Provinces.Provinces[0];
-
+            
             // Get new invasions
             if (__instance.choosenProvince != null && __instance.choosenProvince.ControllerPlayer == NavalInvasionUiNation && !invading.Contains(__instance.choosenProvince))
             {
