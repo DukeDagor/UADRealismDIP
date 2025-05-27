@@ -229,58 +229,90 @@ namespace TweaksAndFixes
         private static bool VerifyProvinces(Il2CppSystem.Collections.Generic.List<Province> provinces)
         {
             bool success = true;
-            HashSet<string> seenProvs = new HashSet<string>();
+            HashSet<string> seenProvinces = new HashSet<string>();
             HashSet<string> seenNeighbors = new HashSet<string>();
-            foreach (var p in provinces)
+
+            foreach (var province in provinces)
             {
-                if (seenProvs.Contains(p.Id) || seenProvs.Contains(p.Name))
+                // Check for duplicates
+                if (seenProvinces.Contains(province.Id) || seenProvinces.Contains(province.Name))
                 {
-                    Melon<TweaksAndFixes>.Logger.Error($"Province {p.Id} {p.Name} is duplicated");
+                    Melon<TweaksAndFixes>.Logger.Error($"Province {province.Id} {province.Name} is duplicated");
                     success = false;
                 }
-                seenProvs.Add(p.Id);
-                seenProvs.Add(p.Name);
-                var neighbors = p.NeighbourProvincesString.Split(',');
+                
+                // Track checked provinces
+                seenProvinces.Add(province.Id);
+                seenProvinces.Add(province.Name);
+
+                // Fetch neighbors, split by comma
+                string[] neighbors = province.NeighbourProvincesString.Split(',');
+
+                // Skip if the province has no neighbors
+                if (neighbors.Length == 1 && neighbors[0].Trim().Length == 0)
+                {
+                    continue;
+                }
+
+                // Reset neighbor tracking and check for duplicates
                 seenNeighbors.Clear();
                 for (int i = neighbors.Length; i-- > 0;)
                 {
-                    var n = neighbors[i].Trim();
-                    neighbors[i] = n;
-                    if (seenNeighbors.Contains(n))
+                    string neighbor = neighbors[i].Trim();
+                    neighbors[i] = neighbor;
+                    if (seenNeighbors.Contains(neighbor))
                     {
-                        Melon<TweaksAndFixes>.Logger.Error($"Province {p.Id} has duplicate neighbor {n}");
+                        Melon<TweaksAndFixes>.Logger.Error($"Province \"{province.Id}\" has duplicate neighbor \"{neighbor}\"");
                         success = false;
                     }
-                    seenNeighbors.Add(n);
+                    seenNeighbors.Add(neighbor);
                 }
 
-                if (neighbors.Contains(p.Id))
+                // Check if province has itself as a neighbor
+                if (neighbors.Contains(province.Id))
                 {
-                    Melon<TweaksAndFixes>.Logger.Error($"Province {p.Id} has self as neighbor");
+                    Melon<TweaksAndFixes>.Logger.Error($"Province \"{province.Id}\" has self as neighbor");
                     success = false;
                 }
 
-                foreach (var n in neighbors)
+                // Loop over all neighbors and check if they exist and are two-way paired
+                foreach (string neighbor in neighbors)
                 {
                     bool logErr = true;
-                    foreach (var o in provinces)
+
+                    // Skip if the province has no neighbors
+                    if (neighbor.Length == 0)
                     {
-                        if (o.Id != n)
+                        continue;
+                    }
+
+                    // Check list of provinces for a match
+                    foreach (var otherProvince in provinces)
+                    {
+                        if (otherProvince.Id != neighbor)
+                        {
                             continue;
+                        }
 
                         logErr = false;
-                        var neighborsO = o.NeighbourProvincesString.Split(',');
+                        string[] neighborsO = otherProvince.NeighbourProvincesString.Split(',');
+
                         for (int i = neighborsO.Length; i-- > 0;)
-                            neighborsO[i] = neighborsO[i].Trim();
-                        if (!neighborsO.Contains(p.Id))
                         {
-                            Melon<TweaksAndFixes>.Logger.Warning($"Province {p.Id} has neighbor {n} but that does not have {p.Id} as neighbor");
-                            //success = false;
+                            neighborsO[i] = neighborsO[i].Trim();
+                        }
+                        
+                        if (!neighborsO.Contains(province.Id))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Warning($"Province \"{province.Id}\" has neighbor \"{neighbor}\" but that does not have \"{province.Id}\" as neighbor");
+                            success = false;
                         }
                     }
+
+                    // If no match is found, print a warning
                     if (logErr)
                     {
-                        Melon<TweaksAndFixes>.Logger.Warning($"Province {p.Id} has neighbor {n} but that province could not be found");
+                        Melon<TweaksAndFixes>.Logger.Warning($"Province \"{province.Id}\" has neighbor \"{neighbor}\" but that province could not be found");
                         success = false;
                     }
                 }
@@ -296,9 +328,9 @@ namespace TweaksAndFixes
             success &= Load<ProvinceDTO, Province>("provinces", CampaignMap.Instance.Provinces.Provinces);
             success &= VerifyProvinces(CampaignMap.Instance.Provinces.Provinces);
             if (success)
-                Melon<TweaksAndFixes>.Logger.Msg($"Loaded map data successfully`");
+                Melon<TweaksAndFixes>.Logger.Msg($"Loaded map data successfully");
             else
-                Melon<TweaksAndFixes>.Logger.Error($"Failed to load overriding map data");
+                Melon<TweaksAndFixes>.Logger.Error($"Port and/or Province override data may be malformed!");
         }
 
         private static bool Load<T, U>(string assetName, Il2CppSystem.Collections.Generic.List<U> oldList) where U : MapElement2D where T : MapDataLoader<U>, new()
