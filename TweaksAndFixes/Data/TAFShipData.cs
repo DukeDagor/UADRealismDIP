@@ -24,11 +24,24 @@ namespace TweaksAndFixes
     {
         public static TAFShipData TAFData(this Ship ship)
         {
-            var sd = ship.gameObject.GetComponent<TAFShipData>();
-            if (sd == null)
-                sd = ship.gameObject.AddComponent<TAFShipData>();
+            if (ship == null)
+            {
+                throw new Exception("TAFShipData.cs: Tried to fetch TAF Data from null ship.");
+            }
 
-            return sd;
+            if (ship.gameObject == null)
+            {
+                throw new Exception("TAFShipData.cs: Unable to fetch TAF Data from ship [" + ship.Name() + "]. Does not have valid Game Object!");
+            }
+
+            TAFShipData shipData = ship.gameObject.GetComponent<TAFShipData>();
+
+            if (shipData == null)
+            {
+                shipData = ship.gameObject.AddComponent<TAFShipData>();
+            }
+
+            return shipData;
         }
     }
 
