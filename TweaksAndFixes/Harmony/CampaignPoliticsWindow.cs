@@ -41,9 +41,19 @@ namespace TweaksAndFixes.Harmony
                     continue;
                 }
 
+                // Get improve relations text
+                GameObject improveRelationsButton = element.value.ImproveRelations.GetChildren()[0];
+                TMP_Text improveRelationsText = improveRelationsButton.GetComponent<TMP_Text>();
+
+                // Check if the player already did an action (not including choosing a naval invasion)
+                if ((int)(improveRelationsText.color.g * 10) == 7 && G.ui.NavalInvasionElement.choosenProvince == null)
+                {
+                    continue;
+                }
+                
                 // Get naval invasion text
-                GameObject child = element.value.NavalInvasion.GetChildren()[0];
-                TMP_Text text = child.GetComponent<TMP_Text>();
+                GameObject navalInvasionButton = element.value.NavalInvasion.GetChildren()[0];
+                TMP_Text navalInvasionText = navalInvasionButton.GetComponent<TMP_Text>();
 
                 // if ((text.color.r == 1.0 && text.color.g == 0.0 && text.color.b == 0.0))
                 // {
@@ -53,7 +63,7 @@ namespace TweaksAndFixes.Harmony
                 // If we aren't at war, set the color to grey
                 if (!element.key.AtWarWith().Contains(MainPlayer))
                 {
-                    text.color = new Color(0.7f, 0.7f, 0.7f, 1);
+                    navalInvasionText.color = new Color(0.7f, 0.7f, 0.7f, 1);
                     // element.value.NavalInvasion.Interactable(false);
                     continue;
                 }
@@ -63,7 +73,7 @@ namespace TweaksAndFixes.Harmony
                 {
                     // Melon<TweaksAndFixes>.Logger.Msg("CampaignPoliticsWindow: " + element.key.Name(false));
                     element.value.NavalInvasion.Interactable(true);
-                    text.color = new Color(1, 1, 1, 1);
+                    navalInvasionText.color = new Color(1, 1, 1, 1);
                 }
             }
         }

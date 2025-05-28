@@ -316,18 +316,25 @@ namespace TweaksAndFixes.Harmony
                     return;
                 }
 
-                Il2CppSystem.Collections.Generic.List<string> invadingNames = new Il2CppSystem.Collections.Generic.List<string>();
+                Il2CppSystem.Collections.Generic.Dictionary<string, Province> invadableNames = new Il2CppSystem.Collections.Generic.Dictionary<string, Province>();
+
+                foreach (Province province in invadable)
+                {
+                    invadableNames.Add(province.Name, province);
+                }
+
+                Il2CppSystem.Collections.Generic.Dictionary<string, Province> invadingNames = new Il2CppSystem.Collections.Generic.Dictionary<string, Province>();
 
                 foreach (Province province in invading)
                 {
-                    invadingNames.Add(province.Name);
+                    invadingNames.Add(province.Name, province);
                 }
 
-                Il2CppSystem.Collections.Generic.List<string> uninvadableNames = new Il2CppSystem.Collections.Generic.List<string>();
+                Il2CppSystem.Collections.Generic.Dictionary<string, Province> uninvadableNames = new Il2CppSystem.Collections.Generic.Dictionary<string, Province>();
 
                 foreach (Province province in uninvadable)
                 {
-                    uninvadableNames.Add(province.Name);
+                    uninvadableNames.Add(province.Name, province);
                 }
 
                 // Add listener to all valid province options, disable all invalid targets
@@ -338,6 +345,12 @@ namespace TweaksAndFixes.Harmony
                     TMP_Text provinceTMPText = obj.GetChild("Province").GetComponent<TMP_Text>();
                     string provinceText = provinceTMPText.text;
                     Button provinceButton = obj.GetComponent<Button>();
+
+                    // TODO: Replace with current tonnage/required tonnage
+                    if (tonnageTMPText.text == "0")
+                    {
+                        tonnageTMPText.text = "-";
+                    }
 
                     // Title text
                     if (TitleIndexes.ContainsKey(i))
@@ -351,7 +364,7 @@ namespace TweaksAndFixes.Harmony
                     // Indent all non-title entries
                     provinceTMPText.text = "  " + provinceText;
 
-                    if (invadingNames.Contains(provinceText))
+                    if (invadingNames.ContainsKey(provinceText))
                     {
                         Color light_grey = new Color(0.8f, 1f, 0.8f);
                         SetButtonUninteractable(provinceButton, provinceTMPText, tonnageTMPText, light_grey);
@@ -361,7 +374,7 @@ namespace TweaksAndFixes.Harmony
                         Color green = new Color(0.3f, 0.9f, 0.3f);
                         SetButtonUninteractable(provinceButton, provinceTMPText, tonnageTMPText, green);
                     }
-                    else if (uninvadableNames.Contains(provinceText))
+                    else if (uninvadableNames.ContainsKey(provinceText))
                     {
                         Color grey = new Color(0.5f, 0.5f, 0.5f);
                         SetButtonUninteractable(provinceButton, provinceTMPText, tonnageTMPText, grey);
@@ -384,6 +397,12 @@ namespace TweaksAndFixes.Harmony
                             __instance.Yes.gameObject.GetComponent<Button>().onClick.AddListener(new System.Action(() =>
                             {
                                 Patch_CampaignPoliticsWindow.ForceNavalInvasionButtonsActive();
+                            }));
+
+                            __instance.No.gameObject.GetComponent<Button>().onClick.AddListener(new System.Action(() =>
+                            {
+                                Patch_CampaignPoliticsWindow.ForceNavalInvasionButtonsActive();
+                                __instance.choosenProvince = null;
                             }));
                         }));
                     }
