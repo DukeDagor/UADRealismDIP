@@ -18,6 +18,45 @@ namespace TweaksAndFixes.Harmony
     [HarmonyPatch(typeof(CampaignPoliticsWindow))]
     internal class Patch_CampaignPoliticsWindow
     {
+        public static bool HasPerformedActionThisTurn = false;
+
+        public static bool PlayerHasPerformedActionThisTurn()
+        {
+            Player MainPlayer = ExtraGameData.MainPlayer();
+
+            if (MainPlayer == null)
+            {
+                Melon<TweaksAndFixes>.Logger.Error("Could not find MainPlayer in [CampaignPoliticsWindow.UpdateInfo]. Default behavior will be used.");
+                return false;
+            }
+
+            // Loop over each countries politics sections
+            foreach (Il2CppSystem.Collections.Generic.KeyValuePair<Player, CampaignPolitics_ElementUI> element in G.ui.PoliticsWindow.createdElements)
+            {
+                if (element.value == null)
+                {
+                    continue;
+                }
+
+                if (element.key == MainPlayer)
+                {
+                    continue;
+                }
+
+                // Get improve relations text
+                GameObject improveRelationsButton = element.value.ImproveRelations.GetChildren()[0];
+                TMP_Text improveRelationsText = improveRelationsButton.GetComponent<TMP_Text>();
+
+                // Check if the player already did an action (not including choosing a naval invasion)
+                if ((int)(improveRelationsText.color.g * 10) == 7 && G.ui.NavalInvasionElement.choosenProvince == null && !element.key.AtWarWith().Contains(MainPlayer))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public static void ForceNavalInvasionButtonsActive()
         {
             // if (!USER_CONFIG.Naval_Invasions_Per_Turn.Unlimited_Naval_Invasions_Per_Turn && HasLaunchedNavalInvasion())
@@ -33,6 +72,8 @@ namespace TweaksAndFixes.Harmony
                 return;
             }
 
+            HasPerformedActionThisTurn = PlayerHasPerformedActionThisTurn();
+
             // Loop over each countries politics sections
             foreach (Il2CppSystem.Collections.Generic.KeyValuePair<Player, CampaignPolitics_ElementUI> element in G.ui.PoliticsWindow.createdElements)
             {
@@ -41,27 +82,12 @@ namespace TweaksAndFixes.Harmony
                     continue;
                 }
 
-                // Get improve relations text
-                GameObject improveRelationsButton = element.value.ImproveRelations.GetChildren()[0];
-                TMP_Text improveRelationsText = improveRelationsButton.GetComponent<TMP_Text>();
-
-                // Check if the player already did an action (not including choosing a naval invasion)
-                if ((int)(improveRelationsText.color.g * 10) == 7 && G.ui.NavalInvasionElement.choosenProvince == null)
-                {
-                    continue;
-                }
-                
                 // Get naval invasion text
                 GameObject navalInvasionButton = element.value.NavalInvasion.GetChildren()[0];
                 TMP_Text navalInvasionText = navalInvasionButton.GetComponent<TMP_Text>();
 
-                // if ((text.color.r == 1.0 && text.color.g == 0.0 && text.color.b == 0.0))
-                // {
-                //     continue;
-                // }
-
                 // If we aren't at war, set the color to grey
-                if (!element.key.AtWarWith().Contains(MainPlayer))
+                if (!element.key.AtWarWith().Contains(MainPlayer) || HasPerformedActionThisTurn)
                 {
                     navalInvasionText.color = new Color(0.7f, 0.7f, 0.7f, 1);
                     // element.value.NavalInvasion.Interactable(false);
@@ -78,9 +104,9 @@ namespace TweaksAndFixes.Harmony
             }
         }
 
-        [HarmonyPatch(nameof(CampaignPoliticsWindow.UpdateInfo))]
+        [HarmonyPatch(nameof(CampaignPoliticsWindow.Show))]
         [HarmonyPostfix]
-        internal static void Postfix_UpdateInfo()
+        internal static void Postfix_Show()
         {
             ForceNavalInvasionButtonsActive();
         }
