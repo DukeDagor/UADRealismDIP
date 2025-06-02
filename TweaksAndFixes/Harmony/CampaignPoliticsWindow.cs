@@ -12,58 +12,22 @@ using Il2CppUiExt;
 using static System.Net.Mime.MediaTypeNames;
 using static MelonLoader.MelonLogger;
 using static TweaksAndFixes.Config;
+using Il2CppSystem.Diagnostics.Tracing;
 
 namespace TweaksAndFixes.Harmony
 {
     [HarmonyPatch(typeof(CampaignPoliticsWindow))]
     internal class Patch_CampaignPoliticsWindow
     {
-        public static bool HasPerformedActionThisTurn = false;
+        public static bool HasPerformedAnyActionThisTurn = false;
 
         public static bool PlayerHasPerformedActionThisTurn()
         {
-            Player MainPlayer = ExtraGameData.MainPlayer();
-
-            if (MainPlayer == null)
-            {
-                Melon<TweaksAndFixes>.Logger.Error("Could not find MainPlayer in [CampaignPoliticsWindow.UpdateInfo]. Default behavior will be used.");
-                return false;
-            }
-
-            // Loop over each countries politics sections
-            foreach (Il2CppSystem.Collections.Generic.KeyValuePair<Player, CampaignPolitics_ElementUI> element in G.ui.PoliticsWindow.createdElements)
-            {
-                if (element.value == null)
-                {
-                    continue;
-                }
-
-                if (element.key == MainPlayer)
-                {
-                    continue;
-                }
-
-                // Get improve relations text
-                GameObject improveRelationsButton = element.value.ImproveRelations.GetChildren()[0];
-                TMP_Text improveRelationsText = improveRelationsButton.GetComponent<TMP_Text>();
-
-                // Check if the player already did an action (not including choosing a naval invasion)
-                if ((int)(improveRelationsText.color.g * 10) == 7 && G.ui.NavalInvasionElement.choosenProvince == null && !element.key.AtWarWith().Contains(MainPlayer))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return ActionsManager.lastInteractTurn == CampaignController.Instance.CurrentDate.turn;
         }
 
         public static void ForceNavalInvasionButtonsActive()
         {
-            // if (!USER_CONFIG.Naval_Invasions_Per_Turn.Unlimited_Naval_Invasions_Per_Turn && HasLaunchedNavalInvasion())
-            // {
-            //     return;
-            // }
-
             Player MainPlayer = ExtraGameData.MainPlayer();
 
             if (MainPlayer == null)
@@ -72,7 +36,14 @@ namespace TweaksAndFixes.Harmony
                 return;
             }
 
-            HasPerformedActionThisTurn = PlayerHasPerformedActionThisTurn();
+            HasPerformedAnyActionThisTurn = PlayerHasPerformedActionThisTurn();
+            bool HasNotPerformedNavalInvasionThisTurn = HasPerformedAnyActionThisTurn && ActionsManager.ChoosenAction != ActionsManager.ActionType.NavalInvasion;
+
+            if (!HasPerformedAnyActionThisTurn)
+            {
+                Patch_CampaignNavalInvasionPopupUi.LastConfirmedChoice = null;
+                G.ui.NavalInvasionElement.choosenProvince = null;
+            }
 
             // Loop over each countries politics sections
             foreach (Il2CppSystem.Collections.Generic.KeyValuePair<Player, CampaignPolitics_ElementUI> element in G.ui.PoliticsWindow.createdElements)
@@ -87,7 +58,7 @@ namespace TweaksAndFixes.Harmony
                 TMP_Text navalInvasionText = navalInvasionButton.GetComponent<TMP_Text>();
 
                 // If we aren't at war, set the color to grey
-                if (!element.key.AtWarWith().Contains(MainPlayer) || HasPerformedActionThisTurn)
+                if (!element.key.AtWarWith().Contains(MainPlayer) || HasNotPerformedNavalInvasionThisTurn)
                 {
                     navalInvasionText.color = new Color(0.7f, 0.7f, 0.7f, 1);
                     // element.value.NavalInvasion.Interactable(false);
@@ -108,6 +79,12 @@ namespace TweaksAndFixes.Harmony
         [HarmonyPostfix]
         internal static void Postfix_Show()
         {
+            // Check params
+            if (Config.Param("taf_naval_invasion_tweaks", 0) == 0)
+            {
+                return;
+            }
+
             ForceNavalInvasionButtonsActive();
         }
     }

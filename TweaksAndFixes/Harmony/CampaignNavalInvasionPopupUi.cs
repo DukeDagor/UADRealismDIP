@@ -78,13 +78,14 @@ namespace TweaksAndFixes.Harmony
             }
 
             // Melon<TweaksAndFixes>.Logger.Msg("");
+            float minimumAreaTonnage = Config.Param("taf_naval_invasion_minimum_area_tonnage", 25000);
 
             foreach (Area area in CampaignMap.Instance.Areas.Areas)
             {
                 float areaTonnage = CampaignController.Instance.AreaCurrentTonnage(area, Attacker);
 
                 // Check for minimum tonnage in the sea region
-                if (areaTonnage >= Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage)
+                if (areaTonnage >= minimumAreaTonnage)
                 {
                     // Melon<TweaksAndFixes>.Logger.Msg(area.Name + " : " + areaTonnage);
 
@@ -142,13 +143,14 @@ namespace TweaksAndFixes.Harmony
 
 
             // Melon<TweaksAndFixes>.Logger.Msg("");
+            float minimumAreaTonnage = Config.Param("taf_naval_invasion_minimum_area_tonnage", 25000);
 
             foreach (Area area in CampaignMap.Instance.Areas.Areas)
             {
                 float areaTonnage = CampaignController.Instance.AreaCurrentTonnage(area, Attacker);
 
                 // Check for FAILIER to meet minimum tonnage in the sea region
-                if (areaTonnage < Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage)
+                if (areaTonnage < minimumAreaTonnage)
                 {
                     // Melon<TweaksAndFixes>.Logger.Msg(area.Name + " : " + areaTonnage);
 
@@ -208,6 +210,12 @@ namespace TweaksAndFixes.Harmony
         [HarmonyPrefix]
         internal static void Prefix_Init(CampaignNavalInvasionPopupUi __instance, ref Il2CppSystem.Collections.Generic.List<Province> provinces, Il2CppSystem.Action onConfirm)
         {
+            // Check params
+            if (Config.Param("taf_naval_invasion_tweaks", 0) == 0)
+            {
+                return;
+            }
+
             // Sanity check
             if (NavalInvasionUiNation == null)
             {
@@ -289,9 +297,16 @@ namespace TweaksAndFixes.Harmony
         [HarmonyPostfix]
         internal static void Postfix_Init(CampaignNavalInvasionPopupUi __instance, Il2CppSystem.Collections.Generic.List<Province> provinces, Il2CppSystem.Action onConfirm)
         {
+            // Check params
+            if (Config.Param("taf_naval_invasion_tweaks", 0) == 0)
+            {
+                return;
+            }
+
             // Get the explanation text box and update the text based on the number of valid invasion targets
             GameObject DescObject = __instance.gameObject.Get("Window").Get("Text");
             TMP_Text DescText = DescObject.GetComponent<TMP_Text>();
+            float minimumAreaTonnage = Config.Param("taf_naval_invasion_minimum_area_tonnage", 25000);
 
             if (__instance.choosenProvince != null)
             {
@@ -299,11 +314,11 @@ namespace TweaksAndFixes.Harmony
             }
             else if (invadable.Count > 0)
             {
-                DescText.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_InsufficientTonnage"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"));
+                DescText.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_InsufficientTonnage"), minimumAreaTonnage.ToString("N0"));
             }
             else
             {
-                DescText.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_SufficientTonnage"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"));
+                DescText.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_SufficientTonnage"), minimumAreaTonnage.ToString("N0"));
             }
 
             // Set "No" to "Cancel" because it was bothering me
@@ -394,7 +409,7 @@ namespace TweaksAndFixes.Harmony
 
                         obj.GetComponent<Button>().onClick.AddListener(new System.Action(() =>
                         {
-                            DescText.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_ConfirmInvasion"), Config.USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage.ToString("N0"), __instance.choosenProvince.Name);
+                            DescText.text = String.Format(LocalizeManager.Localize("$TAF_Ui_NavalInvasion_ConfirmInvasion"), minimumAreaTonnage.ToString("N0"), __instance.choosenProvince.Name);
 
                             __instance.Yes.gameObject.GetComponent<Button>().onClick.AddListener(new System.Action(() =>
                             {
