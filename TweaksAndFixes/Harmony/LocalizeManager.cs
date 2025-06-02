@@ -4,6 +4,7 @@ using MelonLoader;
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
+using System.Diagnostics;
 
 namespace TweaksAndFixes
 {
@@ -11,6 +12,8 @@ namespace TweaksAndFixes
     internal class Patch_LocalizeManager
     {
         private static readonly HashSet<string> _SeenKeys = new HashSet<string>();
+
+        private static bool _Initialized = false;
 
         private static int LoadLocFromFile(LocalizeManager.LanguagesData __result, FilePath file, bool clobber)
         {
@@ -54,7 +57,16 @@ namespace TweaksAndFixes
         [HarmonyPatch(nameof(LocalizeManager.LoadLanguage))]
         internal static void Postfix_LoadLanguage(LocalizeManager __instance, string currentLanguage, ref LocalizeManager.LanguagesData __result)
         {
-            int overrideCount = LoadLocFromFile(__result, new FilePath(FilePath.DirType.ModsDir, currentLanguage + ".lng"), true);
+            if (!_Initialized)
+            {
+                _Initialized = true;
+            }
+            else
+            {
+                return;
+            }
+
+                int overrideCount = LoadLocFromFile(__result, new FilePath(FilePath.DirType.ModsDir, currentLanguage + ".lng"), true);
             if(overrideCount >= 0)
                 Melon<TweaksAndFixes>.Logger.Msg($"Overriding language {currentLanguage} with {overrideCount} lines");
 
