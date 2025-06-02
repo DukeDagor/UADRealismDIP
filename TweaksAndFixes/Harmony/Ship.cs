@@ -5,11 +5,99 @@ using Il2Cpp;
 using System.Collections.Generic;
 using System.Reflection;
 using MelonLoader.CoreClrUtils;
+using TweaksAndFixes.Data;
+using Il2CppSystem.Linq;
 
 #pragma warning disable CS8625
 
 namespace TweaksAndFixes
 {
+
+    // HitChanceCalc
+
+    [HarmonyPatch(typeof(Ship.HitChanceCalc))]
+    internal class Patch_Ship_HitChanceCalc
+    {
+        internal static MethodBase TargetMethod()
+        {
+            //return AccessTools.Method(typeof(Part), nameof(Part.CanPlace), new Type[] { typeof(string).MakeByRefType(), typeof(List<Part>).MakeByRefType(), typeof(List<Collider>).MakeByRefType() });
+
+            // Do this manually
+            var methods = AccessTools.GetDeclaredMethods(typeof(Ship.HitChanceCalc));
+            foreach (var m in methods)
+            {
+                if (m.Name != nameof(Ship.HitChanceCalc.Add))
+                    continue;
+
+                if (m.GetParameters().Length == 3)
+                    return m;
+            }
+
+            return null;
+        }
+
+        public static Dictionary<string, HashSet<string>> IgnoreList = new Dictionary<string, HashSet<string>>();
+
+        static Patch_Ship_HitChanceCalc()
+        {
+            IgnoreList["Gun"] = new HashSet<string> { "All" };
+            IgnoreList["Crew Training"] = new HashSet<string> { "All" };
+            IgnoreList["Time"] = new HashSet<string> { "All" };
+            IgnoreList["Weather"] = new HashSet<string> { "All" };
+            IgnoreList["Wind"] = new HashSet<string> { "All" };
+            IgnoreList["Sea Waves"] = new HashSet<string> { "All" };
+            IgnoreList["Sun Glare"] = new HashSet<string> { "All" };
+        }
+
+        internal static void Prefix(Ship.HitChanceCalc __instance, ref float mult, ref string reason, ref string value)
+        {
+            if (!AccuraciesExInfo.HasEntries())
+            {
+                return;
+            }
+
+            // Some multipliers are unamed, these have no real corrolation, so they are ignored.
+            if (reason.Length == 0)
+            {
+                return;
+            }
+
+            if (IgnoreList.ContainsKey(reason) && (IgnoreList[reason].Contains(value) || IgnoreList[reason].Contains("All")))
+            {
+                return;
+            }
+
+            float modifiedMultiplier = mult;
+            string modifiedName = reason;
+            string modifiedSubname = value;
+
+            bool changed = AccuraciesExInfo.UpdateAccuracyInfo(ref modifiedName, ref modifiedSubname, ref modifiedMultiplier);
+
+            mult = modifiedMultiplier;
+            reason = modifiedName;
+            value = modifiedSubname;
+
+            if (!changed)
+            {
+                if (!IgnoreList.ContainsKey(reason))
+                {
+                    IgnoreList[reason] = new HashSet<string>();
+                }
+
+                if (!IgnoreList[reason].Contains(value))
+                {
+                    IgnoreList[reason].Add(value);
+                    Melon<TweaksAndFixes>.Logger.Msg("Unknown accuracy modifier: " + reason + " : " + value + " : " + mult);
+                }
+            }
+            else
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg(reason + " : " + value + " : " + mult + " = " + __instance.multsCombined);
+            }
+        }
+    }
+
+
     [HarmonyPatch(typeof(Ship))]
     internal class Patch_Ship
     {

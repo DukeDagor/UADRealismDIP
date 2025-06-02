@@ -4,6 +4,7 @@ using MelonLoader;
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
+using TweaksAndFixes.Data;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8604
@@ -42,6 +43,7 @@ namespace TweaksAndFixes
             Melon<TweaksAndFixes>.Logger.Msg("************************************************** Loading TAF data:");
             GradeExtensions.LoadData();
             GenArmorData.LoadData();
+            AccuraciesExInfo.LoadData();
         }
 
         private static readonly List<string> _FixKeys = new List<string>();
