@@ -149,7 +149,8 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_TryGenerateSmallerNationsBattle()
         {
-            if (Config.USER_CONFIG.Minor_And_Medium_Nation_Land_Invasions.Disable_Minor_Nation_Invasions)
+            // Check params
+            if (Config.Param("taf_disable_minor_and_medium_nation_land_invasions", 1) == 1)
             {
                 Melon<TweaksAndFixes>.Logger.Msg("Skipped attempt to generate minor nation battle.");
                 return false;
@@ -161,7 +162,8 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_GenerateBattlesForMediumNationse()
         {
-            if (Config.USER_CONFIG.Minor_And_Medium_Nation_Land_Invasions.Disable_Medium_Nation_Invasions)
+            // Check params
+            if (Config.Param("taf_disable_minor_and_medium_nation_land_invasions", 1) == 1)
             {
                 Melon<TweaksAndFixes>.Logger.Msg("Skipped attempt to generate medium nation battle.");
                 return false;
