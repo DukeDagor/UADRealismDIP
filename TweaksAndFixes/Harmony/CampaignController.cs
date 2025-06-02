@@ -22,7 +22,7 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_CheckTension()
         {
-            if (Config.USER_CONFIG.Fleet_Tension.Disable)
+            if (Config.Param("taf_disable_fleet_tension", 1) == 1)
             {
                 Melon<TweaksAndFixes>.Logger.Msg("Skipping tension check...");
                 return false;
@@ -41,8 +41,10 @@ namespace TweaksAndFixes
                 return true;
             }
 
+            float campaignEndDate = Config.Param("taf_campaign_end_retirement_date", 1950);
+
             // If the year is less than the deisred retirement year, block the function
-            if (__instance.CurrentDate.AsDate().Year < Config.USER_CONFIG.Campagin_End_Date.Campaign_End_Date)
+            if (__instance.CurrentDate.AsDate().Year < campaignEndDate)
             {
                 return false;
             }
@@ -55,13 +57,16 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_CheckForCampaignEnd(CampaignController __instance)
         {
+            float campaignEndDate = Config.Param("taf_campaign_end_retirement_date", 1950);
+            float retirementPromptFrequency = Config.Param("taf_campaign_end_retirement_promt_every_x_months", 12);
+
             // If the year is equal or greter than the desired retirement date force game end
-            if (__instance.CurrentDate.AsDate().Year >= Config.USER_CONFIG.Campagin_End_Date.Campaign_End_Date)
+            if (__instance.CurrentDate.AsDate().Year >= campaignEndDate)
             {
                 // Check for month interval
                 int monthsSinceFirstRequest = __instance.CurrentDate.AsDate().Month + (__instance.CurrentDate.AsDate().Year - 1890) * 12;
 
-                if (Config.USER_CONFIG.Campagin_End_Date.Prompt_Player_About_Retirement_Every_X_Months != 0 && monthsSinceFirstRequest % Config.USER_CONFIG.Campagin_End_Date.Prompt_Player_About_Retirement_Every_X_Months != 0)
+                if (retirementPromptFrequency != 0 && monthsSinceFirstRequest % retirementPromptFrequency != 0)
                 {
                     // Melon<TweaksAndFixes>.Logger.Msg("Skipping retirement request.");
                     return;
@@ -78,7 +83,7 @@ namespace TweaksAndFixes
 
                 MessageBoxUI.MessageBoxQueue queue = new MessageBoxUI.MessageBoxQueue();
                 queue.Header = LocalizeManager.Localize("$TAF_Ui_Retirement_Header");
-                queue.Text = String.Format(LocalizeManager.Localize("$TAF_Ui_Retirement_Body"), __instance.CurrentDate.AsDate().Year - 1890, Config.USER_CONFIG.Campagin_End_Date.Prompt_Player_About_Retirement_Every_X_Months);
+                queue.Text = String.Format(LocalizeManager.Localize("$TAF_Ui_Retirement_Body"), __instance.CurrentDate.AsDate().Year - 1890, retirementPromptFrequency);
                 queue.Ok = LocalizeManager.Localize("$Ui_Popup_Generic_Yes");
                 queue.Cancel = LocalizeManager.Localize("$Ui_Popup_Generic_No");
                 queue.canBeClosed = false;
