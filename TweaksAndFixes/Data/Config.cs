@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
+using Il2Cpp;
 using MelonLoader;
 using static TweaksAndFixes.Config;
 
@@ -120,23 +121,10 @@ namespace TweaksAndFixes
                 }
             }
 
-            public class ConfigMinorAndMediumNationLandInvasions
-            {
-                public bool Disable_Minor_Nation_Invasions { get; set; }
-                public bool Disable_Medium_Nation_Invasions { get; set; }
-
-                public ConfigMinorAndMediumNationLandInvasions()
-                {
-                    Disable_Minor_Nation_Invasions = true;
-                    Disable_Medium_Nation_Invasions = true;
-                }
-            }
-
             public int Version { get; set; }
             public ConfigNavalInvasionTonnage Naval_Invasion_Minimum_Area_Tonnage { get; set; }
             public ConfigFleetTension Fleet_Tension { get; set; }
             public ConfigCampaginEndDate Campagin_End_Date { get; set; }
-            public ConfigMinorAndMediumNationLandInvasions Minor_And_Medium_Nation_Land_Invasions { get; set; }
 
             public UserConfig()
             {
@@ -144,7 +132,6 @@ namespace TweaksAndFixes
                 Naval_Invasion_Minimum_Area_Tonnage = new ConfigNavalInvasionTonnage();
                 Fleet_Tension = new ConfigFleetTension();
                 Campagin_End_Date = new ConfigCampaginEndDate();
-                Minor_And_Medium_Nation_Land_Invasions = new ConfigMinorAndMediumNationLandInvasions();
             }
         }
         
@@ -192,6 +179,7 @@ namespace TweaksAndFixes
         internal static readonly FilePath _FlagFile = new FilePath(FilePath.DirType.ModsDir, "flags.csv");
         internal static readonly FilePath _SpriteFile = new FilePath(FilePath.DirType.ModsDir, "sprites.csv");
         internal static readonly FilePath _GenArmorDataFile = new FilePath(FilePath.DirType.ModsDir, "genarmordata.csv");
+        internal static readonly FilePath _AccuraciesExFile = new FilePath(FilePath.DirType.ModsDir, "accuraciesEx.csv");
         internal static readonly FilePath _GenArmorDefaultsFile = new FilePath(FilePath.DirType.DataDir, "genArmorDefaults.csv", true);
         internal static readonly FilePath _PredefinedDesignsFile = new FilePath(FilePath.DirType.ModsDir, "predefinedDesigns.bin");
         internal static readonly FilePath _PredefinedDesignsDataFile = new FilePath(FilePath.DirType.ModsDir, "predefinedDesignsData.csv");
@@ -246,6 +234,8 @@ namespace TweaksAndFixes
         public static bool ForceNoPredefsInNewGames = false;
         [ConfigParse("Peace Checking Improvements", "peace_check")]
         public static bool PeaceCheckOverride = false;
+        [ConfigParse("Naval Invasion Tweaks", "naval_invasion_tweaks")]
+        public static bool NavalInvasionTweaks = true;
 
         public static void LoadConfig()
         {
@@ -307,40 +297,6 @@ namespace TweaksAndFixes
                 if (shouldLog)
                     Melon<TweaksAndFixes>.Logger.Msg($"{attrib._name}: {(f.FieldType.IsEnum ? f.GetValue(null) : ((bool)(f.GetValue(null)) ? "Enabled" : "Disabled"))}");
             }
-
-            Melon<TweaksAndFixes>.Logger.Msg("************************************************** Loading user config:");
-
-            USER_CONFIG = new UserConfig();
-
-            // An error might occur past this point, can't catch it for some reason tho
-            USER_CONFIG = Serializer.JSON.LoadJsonFile<UserConfig>("TweaksAndFixes.cfg");
-
-            if (USER_CONFIG == null || USER_CONFIG.Version == -1)
-            {
-                Melon<TweaksAndFixes>.Logger.Warning("Failed to load [TweaksAndFixes.cfg]. Using defaults.");
-
-                USER_CONFIG = new UserConfig();
-            }
-
-            if (USER_CONFIG.Version < CURRENT_USER_CONFIG_VERSION && USER_CONFIG.Version != -1)
-            {
-                Melon<TweaksAndFixes>.Logger.Warning("TweaksAndFixes.config is out of date. Please check the GitHub for an up-to-date version. Using defaults.");
-
-                USER_CONFIG = new UserConfig();
-            }
-
-            Melon<TweaksAndFixes>.Logger.Msg("TweaksAndFixes.cfg:");
-            Melon<TweaksAndFixes>.Logger.Msg("Version:                                : " + USER_CONFIG.Version);
-            Melon<TweaksAndFixes>.Logger.Msg("Naval_Invasion_Minimum_Area_Tonnage");
-            Melon<TweaksAndFixes>.Logger.Msg(" |.Minimum_Tonnage                      : " + USER_CONFIG.Naval_Invasion_Minimum_Area_Tonnage.Minimum_Tonnage);
-            Melon<TweaksAndFixes>.Logger.Msg("Fleet_Tension");
-            Melon<TweaksAndFixes>.Logger.Msg(" |.Disable                              : " + USER_CONFIG.Fleet_Tension.Disable);
-            Melon<TweaksAndFixes>.Logger.Msg("Campagin_End_Date");
-            Melon<TweaksAndFixes>.Logger.Msg(" |.Campaign_End_Date                    : " + USER_CONFIG.Campagin_End_Date.Campaign_End_Date);
-            Melon<TweaksAndFixes>.Logger.Msg(" |.Request_Retirement_Every_X_Months    : " + USER_CONFIG.Campagin_End_Date.Prompt_Player_About_Retirement_Every_X_Months);
-            Melon<TweaksAndFixes>.Logger.Msg("Minor_And_Medium_Nation_Land_Invasions");
-            Melon<TweaksAndFixes>.Logger.Msg(" |.Disable_Minor_Nation_Invasions       : " + USER_CONFIG.Minor_And_Medium_Nation_Land_Invasions.Disable_Minor_Nation_Invasions);
-            Melon<TweaksAndFixes>.Logger.Msg(" |.Disable_Medium_Nation_Invasions      : " + USER_CONFIG.Minor_And_Medium_Nation_Land_Invasions.Disable_Medium_Nation_Invasions);
         }
 
         public static float Param(string name, float defValue = 0f)
