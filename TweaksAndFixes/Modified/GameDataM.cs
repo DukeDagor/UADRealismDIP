@@ -10,6 +10,7 @@ using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
 using TweaksAndFixes;
+using TweaksAndFixes.Data;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8604
@@ -133,6 +134,8 @@ namespace TweaksAndFixes
                 {
                     Serializer.CSV.ProcessCSV<TechnologyData>(text, false, G.GameData.technologies);
                 }
+
+                AccuraciesExInfo.LoadData();
 
                 text = GameDataM.GetText("randParts");
                 if (text != null)
