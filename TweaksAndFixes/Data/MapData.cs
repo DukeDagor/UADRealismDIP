@@ -321,11 +321,37 @@ namespace TweaksAndFixes
             return success;
         }
 
+        private static bool PopulateProvinceHolderByYear()
+        {
+            bool success = true;
+
+            foreach (Province province in CampaignMap.Instance.Provinces.Provinces)
+            {
+                string defaultController = province.Controller;
+
+                if (defaultController.Length == 0)
+                {
+                    Melon<TweaksAndFixes>.Logger.Error($"Province `{province.Name}` has no default controller nation!");
+                    success = false;
+                }
+
+                province.Controller_1890 = province.Controller_1890.Length == 0 ? defaultController : province.Controller_1890;
+                province.Controller_1900 = province.Controller_1900.Length == 0 ? defaultController : province.Controller_1900;
+                province.Controller_1910 = province.Controller_1910.Length == 0 ? defaultController : province.Controller_1910;
+                province.Controller_1920 = province.Controller_1920.Length == 0 ? defaultController : province.Controller_1920;
+                province.Controller_1930 = province.Controller_1930.Length == 0 ? defaultController : province.Controller_1930;
+                province.Controller_1940 = province.Controller_1940.Length == 0 ? defaultController : province.Controller_1940;
+            }
+
+            return success;
+        }
+
         private static void LoadData()
         {
             bool success = true;
             success &= Load<PortElementDTO, PortElement>("ports", CampaignMap.Instance.Ports.Ports);
             success &= Load<ProvinceDTO, Province>("provinces", CampaignMap.Instance.Provinces.Provinces);
+            success &= PopulateProvinceHolderByYear();
             success &= VerifyProvinces(CampaignMap.Instance.Provinces.Provinces);
             if (success)
                 Melon<TweaksAndFixes>.Logger.Msg($"Loaded map data successfully");
