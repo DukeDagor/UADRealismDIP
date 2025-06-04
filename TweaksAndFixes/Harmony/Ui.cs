@@ -6,6 +6,8 @@ using UnityEngine;
 using Il2Cpp;
 using UnityEngine.UI;
 using static TweaksAndFixes.ModUtils;
+using Il2CppSystem;
+using System.Reflection.Metadata.Ecma335;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -80,48 +82,103 @@ namespace TweaksAndFixes
             Patch_Ui_c.Postfix_16(); // just in case we somehow died after running b15 and before b16
         }
 
+        public static bool nearlyEqual(float a, float b)
+        {
+            return (int)(Il2CppSystem.Math.Round(a * 1.0f) + 0.01) == (int)(Il2CppSystem.Math.Round(b * 1.0f) + 0.01);
+        }
+
         [HarmonyPatch(nameof(Ui.UpdateConstructor))]
         [HarmonyPostfix]
         internal static void Postfix_UpdateConstructor()
         {
-            // if (Patch_Ship.LastCreatedShip.parts.Count > 0)
-            // {
-            //     // Part placablePart = Patch_Ship.LastCreatedShip.parts[0];
-            // 
-            //     float rotationValue = 45.0f;
-            //     if (Input.GetKeyDown(KeyCode.LeftAlt))
-            //     {
-            //         rotationValue = rotationValue == 45.0f ? 15.0f : 45.0f;
-            //     }
-            // 
-            //     if (Input.GetKeyDown(KeyCode.R))
-            //     {
-            //         PartRotation -= rotationValue;
-            //         // Vector3 CurrentRotation = placablePart.transform.eulerAngles;
-            //         // CurrentRotation.y = PartRotation;
-            //         // placablePart.transform.eulerAngles = CurrentRotation;
-            //         // placablePart.AnimateRotate(-15);
-            //         Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + Patch_Ship.LastCreatedShip.parts[0].transform.eulerAngles.ToString());
-            //     }
-            //     else if (Input.GetKeyDown(KeyCode.T))
-            //     {
-            //         PartRotation += rotationValue;
-            //         // Vector3 CurrentRotation = placablePart.transform.eulerAngles;
-            //         // CurrentRotation.y = PartRotation;
-            //         // placablePart.transform.eulerAngles = CurrentRotation;
-            //         // placablePart.AnimateRotate(15);
-            //         Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + Patch_Ship.LastCreatedShip.parts[0].transform.eulerAngles.ToString());
-            //     }
-            //     else if (Input.GetKeyDown(KeyCode.R) && Input.GetKeyDown(KeyCode.LeftControl))
-            //     {
-            //         Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + Patch_Ship.LastCreatedShip.parts[0].transform.eulerAngles.ToString());
-            //         // PartRotation -= 15.0f;
-            //     }
-            // 
-            //     // Vector3 CurrentRotation = placablePart.transform.eulerAngles;
-            //     // CurrentRotation.y = PartRotation;
-            //     // placablePart.transform.eulerAngles = CurrentRotation;
-            // }
+            if (Patch_Ship.LastCreatedShip.parts.Count > 0)
+            {
+                // Populate unmatched?
+
+                foreach (Part part in Patch_Ship.LastCreatedShip.parts)
+                {
+                    if (Patch_Part.mirroredParts.ContainsKey(part))
+                    {
+                        Part pair = Patch_Part.mirroredParts[part];
+                        bool unpair = false;
+
+                        if (!nearlyEqual(Il2CppSystem.Math.Abs(part.transform.position.x), Il2CppSystem.Math.Abs(pair.transform.position.x))) unpair = true; // Starbord/port
+                        else if (!nearlyEqual(part.transform.position.y, pair.transform.position.y)) unpair = true; // Up/down
+                        else if (!nearlyEqual(part.transform.position.z, pair.transform.position.z)) unpair = true; // Fore/aft
+
+                        if (unpair)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg("Unpairing: ");
+                            Melon<TweaksAndFixes>.Logger.Msg("  " + part.Name());
+                            Melon<TweaksAndFixes>.Logger.Msg("  " + pair.Name());
+                            Patch_Part.mirroredParts.Remove(part);
+                            Patch_Part.mirroredParts.Remove(pair);
+                            Patch_Part.unmatchedParts.Add(part);
+                            Patch_Part.unmatchedParts.Add(pair);
+                        }
+                    
+                        continue;
+                    }
+
+                    for (int i = Patch_Part.unmatchedParts.Count - 1; i >= 0; i--)
+                    {
+                        Part pair = Patch_Part.unmatchedParts[i];
+                        bool found = false;
+
+                        if (nearlyEqual(part.transform.position.x, pair.transform.position.x)) found = true;
+                        else if (nearlyEqual(part.transform.position.y, pair.transform.position.y)) found = true;
+                        else if (nearlyEqual(part.transform.position.z, pair.transform.position.z)) found = true;
+
+                        if (found)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg("Pairing: ");
+                            Melon<TweaksAndFixes>.Logger.Msg("  " + part.Name());
+                            Melon<TweaksAndFixes>.Logger.Msg("  " + pair.Name());
+                            Patch_Part.mirroredParts.Add(pair, part);
+                            Patch_Part.mirroredParts.Add(part, pair);
+                            Patch_Part.unmatchedParts.Remove(part);
+                            Patch_Part.unmatchedParts.Remove(pair);
+                            break;
+                        }
+                    }
+                }
+
+                // // Part placablePart = Patch_Ship.LastCreatedShip.parts[0];
+                // 
+                // float rotationValue = 45.0f;
+                // if (Input.GetKeyDown(KeyCode.LeftAlt))
+                // {
+                //     rotationValue = rotationValue == 45.0f ? 15.0f : 45.0f;
+                // }
+                // 
+                // if (Input.GetKeyDown(KeyCode.R))
+                // {
+                //     PartRotation -= rotationValue;
+                //     // Vector3 CurrentRotation = placablePart.transform.eulerAngles;
+                //     // CurrentRotation.y = PartRotation;
+                //     // placablePart.transform.eulerAngles = CurrentRotation;
+                //     // placablePart.AnimateRotate(-15);
+                //     Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + Patch_Ship.LastCreatedShip.parts[0].transform.eulerAngles.ToString());
+                // }
+                // else if (Input.GetKeyDown(KeyCode.T))
+                // {
+                //     PartRotation += rotationValue;
+                //     // Vector3 CurrentRotation = placablePart.transform.eulerAngles;
+                //     // CurrentRotation.y = PartRotation;
+                //     // placablePart.transform.eulerAngles = CurrentRotation;
+                //     // placablePart.AnimateRotate(15);
+                //     Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + Patch_Ship.LastCreatedShip.parts[0].transform.eulerAngles.ToString());
+                // }
+                // else if (Input.GetKeyDown(KeyCode.R) && Input.GetKeyDown(KeyCode.LeftControl))
+                // {
+                //     Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + Patch_Ship.LastCreatedShip.parts[0].transform.eulerAngles.ToString());
+                //     // PartRotation -= 15.0f;
+                // }
+                // 
+                // // Vector3 CurrentRotation = placablePart.transform.eulerAngles;
+                // // CurrentRotation.y = PartRotation;
+                // // placablePart.transform.eulerAngles = CurrentRotation;
+            }
 
             _InUpdateConstructor = false;
         }

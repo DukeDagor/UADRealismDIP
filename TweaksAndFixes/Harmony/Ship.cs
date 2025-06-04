@@ -32,27 +32,27 @@ namespace TweaksAndFixes
             // }
         }
 
-        // [HarmonyPostfix]
-        // [HarmonyPatch(nameof(Ship.RemovePart))]
-        // internal static void Postfix_RemovePart(Ship __instance, Part part)
-        // {
-        //     if ((part == Patch_Part.MirrorA || part == Patch_Part.MirrorB))
-        //     {
-        //         Melon<TweaksAndFixes>.Logger.Msg(part.Name() + ": Removed");
-        //         Part A = Patch_Part.MirrorB;
-        //         Part B =  Patch_Part.MirrorA;
-        //         Patch_Part.MirrorB = null;
-        //         Patch_Part.MirrorA = null;
-        //         if (part == A)
-        //         {
-        //             Patch_Ship.LastCreatedShip.RemovePart(B);
-        //         }
-        //         else
-        //         {
-        //             Patch_Ship.LastCreatedShip.RemovePart(A);
-        //         }
-        //     }
-        // }
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Ship.RemovePart))]
+        internal static void Postfix_RemovePart(Ship __instance, Part part)
+        {
+            if (Patch_Part.mirroredParts.ContainsKey(part))
+            {
+                Melon<TweaksAndFixes>.Logger.Msg(part.Name() + ": Removed");
+                Part A = part;
+                Part B = Patch_Part.mirroredParts[part];
+                Patch_Part.mirroredParts.Remove(A);
+                Patch_Part.mirroredParts.Remove(B);
+                if (part == A)
+                {
+                    Patch_Ship.LastCreatedShip.RemovePart(B);
+                }
+                else
+                {
+                    Patch_Ship.LastCreatedShip.RemovePart(A);
+                }
+            }
+        }
 
         internal static int _GenerateShipState = -1;
         internal static bool _IsLoading = false;
