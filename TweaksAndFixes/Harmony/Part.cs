@@ -31,7 +31,6 @@ namespace TweaksAndFixes
 
             if (!Patch_Ui._InUpdateConstructor)
             {
-                Melon<TweaksAndFixes>.Logger.Msg("Not being placed by a human!");
                 return true;
             }
 
@@ -59,6 +58,9 @@ namespace TweaksAndFixes
 
         public static Part MirrorA = null;
         public static Part MirrorB = null;
+
+        public static Il2CppSystem.Collections.Generic.Dictionary<Part, Part> mirroredParts = new Il2CppSystem.Collections.Generic.Dictionary<Part, Part>();
+        public static Il2CppSystem.Collections.Generic.List<Part> unmatchedParts = new Il2CppSystem.Collections.Generic.List<Part>();
 
         [HarmonyPatch(nameof(Part.Place))]
         [HarmonyPostfix]
@@ -102,6 +104,7 @@ namespace TweaksAndFixes
                 if (mirroredPart == null)
                 {
                     Melon<TweaksAndFixes>.Logger.Msg("Part not mirrored.");
+                    unmatchedParts.Add(placedPart);
                 }
                 else
                 {
@@ -115,8 +118,8 @@ namespace TweaksAndFixes
                     }
 
                     Melon<TweaksAndFixes>.Logger.Msg("Part mirrored successfully");
-                    MirrorA = placedPart;
-                    MirrorB = mirroredPart;
+                    mirroredParts[placedPart] = mirroredPart;
+                    mirroredParts[mirroredPart] = placedPart;
                 }
 
                 Melon<TweaksAndFixes>.Logger.Msg("");
