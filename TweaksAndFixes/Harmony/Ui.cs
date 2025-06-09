@@ -8,6 +8,7 @@ using UnityEngine.UI;
 using static TweaksAndFixes.ModUtils;
 using Il2CppSystem;
 using System.Reflection.Metadata.Ecma335;
+using static MelonLoader.MelonLogger;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -19,7 +20,6 @@ namespace TweaksAndFixes
     internal class Patch_Ui
     {
         internal static bool _InUpdateConstructor = false;
-        public static float PartRotation = 0.0f;
 
         [HarmonyPatch(nameof(Ui.Start))]
         [HarmonyPostfix]
@@ -87,24 +87,176 @@ namespace TweaksAndFixes
             return (int)(Il2CppSystem.Math.Round(a * 1.0f) + 0.01) == (int)(Il2CppSystem.Math.Round(b * 1.0f) + 0.01);
         }
 
+        public static Part SelectedPart = null;
+        public static bool NeedsConstructionListsClear = false;
+        public static float PartRotation = 0.0f;
+        public static float RotationValue = 15.0f;
+        public static float DefaultRotation = 0.0f;
+        public static bool FixedRotation = false;
+        public static bool FixedRotationValue = false;
+        public static bool SideGun = false;
+        public static bool Casemate = false;
+        public static bool Mounted = false;
+        public static bool MainTower = false;
+        public static bool SecTower = false;
+        public static bool Funnel = false;
+        public static bool UnderwaterTorpedo = false;
+
+        public static bool UseNewConstructionLogic()
+        {
+            return _InUpdateConstructor;
+        }
+
+        public static void UpdateSelectedPart(Part part)
+        {
+            // Track the part selected from the toolbox
+            if (SelectedPart == null || SelectedPart != part)
+            {
+                SelectedPart = part;
+                Melon<TweaksAndFixes>.Logger.Msg("Selected part: " + SelectedPart.Name() + " : " + SelectedPart.data.type + " : " + SelectedPart.data.name);
+            
+                Casemate = SelectedPart.data.name.StartsWith("casemate");
+                SideGun = SelectedPart.data.name.EndsWith("side");
+                UnderwaterTorpedo = SelectedPart.data.name.EndsWith("x0");
+                MainTower = SelectedPart.data.isTowerMain;
+                SecTower = !SelectedPart.data.isTowerMain && SelectedPart.data.isTowerAny;
+                Funnel = SelectedPart.data.isFunnel;
+
+                if (Funnel)
+                {
+                    PartRotation = 0;
+                    FixedRotation = true;
+                    FixedRotationValue = true;
+                    RotationValue = 0;
+                }
+                else if(MainTower)
+                {
+                    PartRotation = 0;
+                    FixedRotation = false;
+                    RotationValue = 180;
+                    FixedRotationValue = true;
+                }
+                else if (SecTower)
+                {
+                    PartRotation = 180;
+                    FixedRotation = false;
+                    RotationValue = 180;
+                    FixedRotationValue = true;
+                }
+                else if (Casemate)
+                {
+                    FixedRotation = false;
+                    PartRotation = 0;
+                    FixedRotationValue = false;
+                    RotationValue = 45;
+                }
+                else if (UnderwaterTorpedo)
+                {
+                    FixedRotation = true;
+                    PartRotation = 0;
+                    FixedRotationValue = true;
+                    RotationValue = 0;
+                }
+                else
+                {
+                    FixedRotation = false;
+                    FixedRotationValue = false;
+                    RotationValue = 45;
+                }
+            }
+        }
+
         [HarmonyPatch(nameof(Ui.UpdateConstructor))]
         [HarmonyPostfix]
         internal static void Postfix_UpdateConstructor()
         {
-            if (Patch_Ship.LastCreatedShip.parts.Count > 0)
+            if (NeedsConstructionListsClear)
             {
-                // Populate unmatched?
+                Patch_Part.applyMirrorFromTo.Clear();
+                Patch_Part.mirroredParts.Clear();
+                Patch_Part.unmatchedParts.Clear();
+                NeedsConstructionListsClear = false;
+            }
 
+            if (UseNewConstructionLogic() && Patch_Ship.LastCreatedShip.parts.Count > 0)
+            {
+                Patch_Part.TrySkipDestroy = null;
+                Part toRemove = null;
+
+                // foreach (Part part in G.ui.placedPartsWarn)
+                // {
+                //     if (part == null || !part.data.isGun) continue;
+                //     Part.FireSectorInfo info = new Part.FireSectorInfo();
+                //     part.CalcFireSectorNonAlloc(info);
+                //     if (info.shootableAngleTotal < 90) continue;
+                //     toRemove = part;
+                // }
+                // 
+                // if (toRemove != null)
+                // {
+                //     G.ui.placedPartsWarn.Remove(toRemove);
+                //     toRemove = null;
+                // }
+                // 
+                // if (G.ui.placedPartsWarn.Count == 0)
+                // {
+                //     
+                // }
+
+                // Update mirrored pairs since mounts have a mind of their own
+                foreach (Il2CppSystem.Collections.Generic.KeyValuePair<Part, Part> pair in Patch_Part.applyMirrorFromTo)
+                {
+                    if (!Patch_Ship.LastCreatedShip.parts.Contains(pair.Key) || !Patch_Ship.LastCreatedShip.parts.Contains(pair.Value))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg("Error: Failed to find parts for mirroring:");
+                        Melon<TweaksAndFixes>.Logger.Msg("  " + pair.Value.Name());
+                        Melon<TweaksAndFixes>.Logger.Msg("  " + pair.Key.Name());
+                        toRemove = pair.key;
+                        // Patch_Part.applyMirrorFromTo.Remove(pair.Key);
+                        continue;
+                    }
+
+                    Vector3 partRot = pair.Key.transform.eulerAngles;
+                    pair.Value.transform.eulerAngles = new Vector3(partRot.x, -partRot.y, partRot.z);
+                }
+
+                if (toRemove != null)
+                {
+                    Patch_Part.applyMirrorFromTo.Remove(toRemove);
+                }
+
+                // Loop over all current parts
                 foreach (Part part in Patch_Ship.LastCreatedShip.parts)
                 {
+                    if (part == null) continue;
+
+                    if (part == SelectedPart) continue;
+
+                    if ((int)part.transform.position.x == 0) continue;
+
+                    // Melon<TweaksAndFixes>.Logger.Msg("Selected part: " + part.Name() + " : " + part.visualMode + " : " + part.transform + " : " + part.hasModel);
+
+                    // Melon<TweaksAndFixes>.Logger.Msg("Selected part: " + part.gameObject.GetChildren()[0].GetChild("Visual").GetComponent<Renderer>().material.color.ToString());
+                    // Melon<TweaksAndFixes>.Logger.Msg("Selected part: " + part.gameObject.GetComponent<Renderer>());
+
+                    // Check if part is still mirrored
                     if (Patch_Part.mirroredParts.ContainsKey(part))
                     {
                         Part pair = Patch_Part.mirroredParts[part];
                         bool unpair = false;
 
-                        if (!nearlyEqual(Il2CppSystem.Math.Abs(part.transform.position.x), Il2CppSystem.Math.Abs(pair.transform.position.x))) unpair = true; // Starbord/port
-                        else if (!nearlyEqual(part.transform.position.y, pair.transform.position.y)) unpair = true; // Up/down
-                        else if (!nearlyEqual(part.transform.position.z, pair.transform.position.z)) unpair = true; // Fore/aft
+                        if (!nearlyEqual(Il2CppSystem.Math.Abs(part.transform.position.x), Il2CppSystem.Math.Abs(pair.transform.position.x))) // Starbord/port
+                        {
+                            unpair = true;
+                        }
+                        else if (!nearlyEqual(part.transform.position.y, pair.transform.position.y)) // Up/down
+                        {
+                            unpair = true;
+                        }
+                        else if (!nearlyEqual(part.transform.position.z, pair.transform.position.z)) // Fore/aft
+                        {
+                            unpair = true;
+                        }
 
                         if (unpair)
                         {
@@ -120,14 +272,31 @@ namespace TweaksAndFixes
                         continue;
                     }
 
+                    // Add unmirrored parts to unmatched parts
+                    if (!Patch_Part.unmatchedParts.Contains(part))
+                    {
+                        Patch_Part.unmatchedParts.Add(part);
+                    }
+
+                    // Melon<TweaksAndFixes>.Logger.Msg("Check for new mirrors: ");
+
+                    // Check for new mirrors
                     for (int i = Patch_Part.unmatchedParts.Count - 1; i >= 0; i--)
                     {
                         Part pair = Patch_Part.unmatchedParts[i];
-                        bool found = false;
+                        bool found = true;
 
-                        if (nearlyEqual(part.transform.position.x, pair.transform.position.x)) found = true;
-                        else if (nearlyEqual(part.transform.position.y, pair.transform.position.y)) found = true;
-                        else if (nearlyEqual(part.transform.position.z, pair.transform.position.z)) found = true;
+                        if (pair == part) continue;
+                        if (!Patch_Ship.LastCreatedShip.parts.Contains(pair))
+                        {
+                            Patch_Part.unmatchedParts.Remove(pair);
+                            continue;
+                        }
+                        if ((int)pair.transform.position.x == 0) continue;
+
+                        if (!nearlyEqual(Il2CppSystem.Math.Abs(part.transform.position.x), Il2CppSystem.Math.Abs(pair.transform.position.x))) found = false;
+                        else if (!nearlyEqual(part.transform.position.y, pair.transform.position.y)) found = false;
+                        else if (!nearlyEqual(part.transform.position.z, pair.transform.position.z)) found = false;
 
                         if (found)
                         {
@@ -143,41 +312,59 @@ namespace TweaksAndFixes
                     }
                 }
 
-                // // Part placablePart = Patch_Ship.LastCreatedShip.parts[0];
-                // 
-                // float rotationValue = 45.0f;
-                // if (Input.GetKeyDown(KeyCode.LeftAlt))
-                // {
-                //     rotationValue = rotationValue == 45.0f ? 15.0f : 45.0f;
-                // }
-                // 
-                // if (Input.GetKeyDown(KeyCode.R))
-                // {
-                //     PartRotation -= rotationValue;
-                //     // Vector3 CurrentRotation = placablePart.transform.eulerAngles;
-                //     // CurrentRotation.y = PartRotation;
-                //     // placablePart.transform.eulerAngles = CurrentRotation;
-                //     // placablePart.AnimateRotate(-15);
-                //     Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + Patch_Ship.LastCreatedShip.parts[0].transform.eulerAngles.ToString());
-                // }
-                // else if (Input.GetKeyDown(KeyCode.T))
-                // {
-                //     PartRotation += rotationValue;
-                //     // Vector3 CurrentRotation = placablePart.transform.eulerAngles;
-                //     // CurrentRotation.y = PartRotation;
-                //     // placablePart.transform.eulerAngles = CurrentRotation;
-                //     // placablePart.AnimateRotate(15);
-                //     Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + Patch_Ship.LastCreatedShip.parts[0].transform.eulerAngles.ToString());
-                // }
-                // else if (Input.GetKeyDown(KeyCode.R) && Input.GetKeyDown(KeyCode.LeftControl))
-                // {
-                //     Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + Patch_Ship.LastCreatedShip.parts[0].transform.eulerAngles.ToString());
-                //     // PartRotation -= 15.0f;
-                // }
-                // 
-                // // Vector3 CurrentRotation = placablePart.transform.eulerAngles;
-                // // CurrentRotation.y = PartRotation;
-                // // placablePart.transform.eulerAngles = CurrentRotation;
+                if (Input.GetKeyDown(KeyCode.LeftAlt) && !FixedRotationValue)
+                {
+                    RotationValue += 15.0f;
+                    if (RotationValue - 0.1 >= 45.0f)
+                    {
+                        RotationValue = 15.0f;
+                    }
+                    Melon<TweaksAndFixes>.Logger.Msg("Rotation inc: " + RotationValue);
+                }
+                
+                if (SelectedPart != null && Input.GetKeyDown(KeyCode.R) && !FixedRotation)
+                {
+                    PartRotation -= RotationValue;
+                    SelectedPart.AnimateRotate(-RotationValue);
+                    Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + SelectedPart.transform.eulerAngles.y);
+                }
+                else if (SelectedPart != null && Input.GetKeyDown(KeyCode.T) && !FixedRotation)
+                {
+                    PartRotation += RotationValue;
+                    SelectedPart.AnimateRotate(RotationValue);
+                    Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + SelectedPart.transform.eulerAngles.y);
+                }
+                else if (SelectedPart != null && Input.GetKeyDown(KeyCode.F) && !FixedRotation)
+                {
+                    PartRotation = (SelectedPart.transform.position.z > 0 || Mounted) ? 0 : 180;
+                    Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + Patch_Ship.LastCreatedShip.parts[0].transform.eulerAngles.y);
+                }
+
+                // Melon<TweaksAndFixes>.Logger.Msg("Check selected part:");
+
+                if (SelectedPart != null)
+                {
+                    if (SelectedPart.mount != null && !MainTower && !SecTower && !Funnel)
+                    {
+                        DefaultRotation = SelectedPart.mount.transform.rotation.eulerAngles.y;
+                        Mounted = true;
+                    }
+                    else
+                    {
+                        DefaultRotation = 0;
+                        Mounted = false;
+                    }
+
+                    Vector3 CurrentRotation = SelectedPart.transform.eulerAngles;
+                    CurrentRotation.y = PartRotation + DefaultRotation;
+                    SelectedPart.transform.eulerAngles = CurrentRotation;
+
+                    if (Input.GetKey(KeyCode.LeftShift) && !SideGun && SelectedPart.mount == null)
+                    {
+                        G.ui.fireSectorObj.transform.SetX(0);
+                        SelectedPart.Place(new Vector3(0, SelectedPart.transform.position.y, SelectedPart.transform.position.z), false);
+                    }
+                }
             }
 
             _InUpdateConstructor = false;

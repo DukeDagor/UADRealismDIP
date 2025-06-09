@@ -29,7 +29,7 @@ namespace TweaksAndFixes
             //if (__instance != null) Melon<TweaksAndFixes>.Logger.Msg("AutoRotatePart: " + __instance.Name() + " : " + __instance.localRotationBackup?.ToString());
             // Melon<TweaksAndFixes>.Logger.Msg("AutoRotatePart: " + __instance.Name());
 
-            if (!Patch_Ui._InUpdateConstructor)
+            if (!Patch_Ui.UseNewConstructionLogic())
             {
                 return true;
             }
@@ -43,43 +43,59 @@ namespace TweaksAndFixes
             // }
         }
 
-        // [HarmonyPatch(nameof(Part.AnimateRotate))]
-        // [HarmonyPrefix]
-        // internal static bool Prefix_AnimateRotatet(Part __instance, float angle)
-        // {
-        //     if ((int)Math.Abs(angle) != (int)15)
-        //     {
-        //         Melon<TweaksAndFixes>.Logger.Msg("Does not equal rotation override: " + angle);
-        //         return false;
-        //     }
-        // 
-        //     return true;
-        // }
+        [HarmonyPatch(nameof(Part.AnimateRotate))]
+        [HarmonyPrefix]
+        internal static bool Prefix_AnimateRotatet(Part __instance, float angle)
+        {
+            if (!Patch_Ui.UseNewConstructionLogic())
+            {
+                return true;
+            }
 
-        public static Part MirrorA = null;
-        public static Part MirrorB = null;
+            if ((int)(Math.Abs(angle) + 0.1) != (int)(Patch_Ui.RotationValue + 0.1))
+            {
+                Melon<TweaksAndFixes>.Logger.Msg("Does not equal rotation override: " + angle + " != " + Patch_Ui.RotationValue);
+                return false;
+            }
+
+            return true;
+        }
 
         public static Il2CppSystem.Collections.Generic.Dictionary<Part, Part> mirroredParts = new Il2CppSystem.Collections.Generic.Dictionary<Part, Part>();
         public static Il2CppSystem.Collections.Generic.List<Part> unmatchedParts = new Il2CppSystem.Collections.Generic.List<Part>();
+        public static Il2CppSystem.Collections.Generic.Dictionary<Part, Part> applyMirrorFromTo = new Il2CppSystem.Collections.Generic.Dictionary<Part, Part>();
+        public static Part TrySkipDestroy = null;
+
+        [HarmonyPatch(nameof(Part.ShowAsTransparent))]
+        [HarmonyPostfix]
+        internal static void Postfix_ShowAsTransparent(Part __instance)
+        {
+            // if (!Patch_Ui.UseNewConstructionLogic()) return;
+            Patch_Ui.UpdateSelectedPart(__instance);
+        }
 
         [HarmonyPatch(nameof(Part.Place))]
         [HarmonyPostfix]
         internal static void Postfix_Place(Part __instance, Vector3 pos, bool autoRotate = true)
         {
-            if (!Patch_Ui._InUpdateConstructor)
+            if (!Patch_Ui.UseNewConstructionLogic())
             {
-                Melon<TweaksAndFixes>.Logger.Msg("Not being placed by a human!");
                 return;
             }
 
-            if (__instance.visualMode == Part.VisualMode.Normal)
+            if (__instance.visualMode != Part.VisualMode.Active && __instance.visualMode != Part.VisualMode.ActiveBad)
             {
+                Melon<TweaksAndFixes>.Logger.Msg("New part: ");
+                Melon<TweaksAndFixes>.Logger.Msg("  " + __instance.Name());
+                Melon<TweaksAndFixes>.Logger.Msg("  " + __instance.transform.position.ToString());
+                Melon<TweaksAndFixes>.Logger.Msg("  " + __instance.transform.rotation.eulerAngles.ToString());
+
                 if (pos.x == 0.0f)
                 {
                     return;
                 }
 
-                Melon<TweaksAndFixes>.Logger.Msg("Matching Parts:");
+                // Melon<TweaksAndFixes>.Logger.Msg("Matching Parts:");
 
                 Part placedPart = __instance;
                 Part mirroredPart = null;
@@ -88,12 +104,13 @@ namespace TweaksAndFixes
                 {
                     if (part == null) continue;
                     if (part.transform == null) continue;
+                    if (part == __instance) continue;
 
                     Vector3 partPos = part.transform.position;
                     if (partPos.y != pos.y) continue;
                     if (partPos.z != pos.z) continue;
 
-                    Melon<TweaksAndFixes>.Logger.Msg("  " + part.Name() + ": " + partPos.ToString() + " : " + part.visualMode);
+                    // Melon<TweaksAndFixes>.Logger.Msg("  " + part.Name() + ": " + partPos.ToString() + " : " + part.visualMode);
 
                     if (part != __instance)
                     {
@@ -101,28 +118,27 @@ namespace TweaksAndFixes
                     }
                 }
 
-                if (mirroredPart == null)
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg("Part not mirrored.");
-                    unmatchedParts.Add(placedPart);
-                }
-                else
+                if (mirroredPart != null)
                 {
                     Vector3 partRot = mirroredPart.transform.eulerAngles;
                     placedPart.transform.eulerAngles = new Vector3(partRot.x, -partRot.y, partRot.z);
 
-                    if (!placedPart.CanPlace() || !mirroredPart.CanPlace())
-                    {
-                        Melon<TweaksAndFixes>.Logger.Msg("Failed to mirror part: Invalid mirror.");
-                        return;
-                    }
+                    applyMirrorFromTo[mirroredPart] = placedPart;
 
-                    Melon<TweaksAndFixes>.Logger.Msg("Part mirrored successfully");
-                    mirroredParts[placedPart] = mirroredPart;
-                    mirroredParts[mirroredPart] = placedPart;
+                    TrySkipDestroy = placedPart;
+
+                    // if (!placedPart.CanPlace() || !mirroredPart.CanPlace())
+                    // {
+                    //     Melon<TweaksAndFixes>.Logger.Msg("Failed to mirror part: Invalid mirror.");
+                    //     return;
+                    // }
+
+                    // Melon<TweaksAndFixes>.Logger.Msg("Part mirrored successfully");
+                    // mirroredParts[placedPart] = mirroredPart;
+                    // mirroredParts[mirroredPart] = placedPart;
                 }
 
-                Melon<TweaksAndFixes>.Logger.Msg("");
+                // Melon<TweaksAndFixes>.Logger.Msg("");
             }
             // else if (__instance.visualMode == Part.VisualMode.Active)
             // {
@@ -134,23 +150,6 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static void Prefix_SetVisualMode(Part __instance, ref Part.VisualMode m)
         {
-            // if (__instance.visualMode != m && !(m == Part.VisualMode.Highlight && __instance.visualMode == Part.VisualMode.Normal) && !(m == Part.VisualMode.Normal && __instance.visualMode == Part.VisualMode.Highlight)) Melon<TweaksAndFixes>.Logger.Msg(__instance.Name() + ": " + __instance.visualMode + " : Changed to : " + m);
-
-            // if ((__instance == MirrorA || __instance == MirrorB) && !(m == Part.VisualMode.Normal || m == Part.VisualMode.Highlight || m == Part.VisualMode.BadOverlap || m == Part.VisualMode.Bad || m == Part.VisualMode.Warn))
-            // {
-            //     Melon<TweaksAndFixes>.Logger.Msg(__instance.Name() + ": Moved : " + m);
-            //     if (__instance == MirrorA)
-            //     {
-            //         Patch_Ship.LastCreatedShip.RemovePart(MirrorB);
-            //     }
-            //     else
-            //     {
-            //         Patch_Ship.LastCreatedShip.RemovePart(MirrorA);
-            //     }
-            //     MirrorB = null;
-            //     MirrorA = null;
-            // }
-
             if (m == Part.VisualMode.ActiveBad && _IgnoreNextActiveBad) //Patch_Ui._InUpdateConstructor && ((Patch_Ui_c._SetBackToBarbette && __instance.data == Patch_Ui_c._BarbetteData) || __instance.data.isBarbette))
             {
                 _IgnoreNextActiveBad = false;

@@ -7,6 +7,7 @@ using System.Reflection;
 using MelonLoader.CoreClrUtils;
 using TweaksAndFixes.Data;
 using Il2CppSystem.Linq;
+using static Il2Cpp.Ship;
 
 #pragma warning disable CS8625
 
@@ -112,7 +113,7 @@ namespace TweaksAndFixes
 
             if (LastCreatedShip == null) return;
 
-            Melon<TweaksAndFixes>.Logger.Msg(LastCreatedShip.Name(false, false));
+            // Melon<TweaksAndFixes>.Logger.Msg(LastCreatedShip.Name(false, false));
 
             // foreach (Mount mount in LastCreatedShip.mounts)
             // {
@@ -120,17 +121,48 @@ namespace TweaksAndFixes
             // }
         }
 
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(Ship.RemovePart))]
+        internal static bool Prefix_RemovePart(Ship __instance, Part part)
+        {
+            if (part != Patch_Ui.SelectedPart && part.mount != null && part == Patch_Part.TrySkipDestroy || !Patch_Ship.LastCreatedShip.parts.Contains(part))
+            {
+                Patch_Part.TrySkipDestroy = null;
+                return false;
+            }
+
+            return true;
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Ship.RemovePart))]
         internal static void Postfix_RemovePart(Ship __instance, Part part)
         {
-            if (Patch_Part.mirroredParts.ContainsKey(part))
+            // Melon<TweaksAndFixes>.Logger.Msg(part.Name() + ": Removed");
+
+            if (!Patch_Ui.UseNewConstructionLogic()) return;
+
+            if (!_IsInChangeHullWithHuman && Patch_Part.unmatchedParts.Contains(part)) Patch_Part.unmatchedParts.Remove(part);
+
+            if (!_IsInChangeHullWithHuman && G.settings.autoMirror && Patch_Part.mirroredParts.ContainsKey(part))
             {
-                Melon<TweaksAndFixes>.Logger.Msg(part.Name() + ": Removed");
                 Part A = part;
                 Part B = Patch_Part.mirroredParts[part];
                 Patch_Part.mirroredParts.Remove(A);
                 Patch_Part.mirroredParts.Remove(B);
+
+                if (Patch_Part.applyMirrorFromTo.ContainsKey(A))
+                {
+                    Patch_Part.applyMirrorFromTo.Remove(A);
+                }
+                else
+                {
+                    Patch_Part.applyMirrorFromTo.Remove(B);
+                }
+
+                // if (Input.GetMouseButtonUp(1)) return;
+
                 if (part == A)
                 {
                     Patch_Ship.LastCreatedShip.RemovePart(B);
@@ -264,6 +296,7 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_ChangeHull()
         {
+            Patch_Ui.NeedsConstructionListsClear = true;
             _IsInChangeHullWithHuman = false;
         }
         [HarmonyPatch(nameof(Ship.SetDraught))]
