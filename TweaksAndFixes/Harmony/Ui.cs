@@ -326,19 +326,79 @@ namespace TweaksAndFixes
                 {
                     PartRotation -= RotationValue;
                     SelectedPart.AnimateRotate(-RotationValue);
-                    Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + SelectedPart.transform.eulerAngles.y);
+                    // Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + SelectedPart.transform.eulerAngles.y);
                 }
                 else if (SelectedPart != null && Input.GetKeyDown(KeyCode.T) && !FixedRotation)
                 {
                     PartRotation += RotationValue;
                     SelectedPart.AnimateRotate(RotationValue);
-                    Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + SelectedPart.transform.eulerAngles.y);
+                    // Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + SelectedPart.transform.eulerAngles.y);
                 }
                 else if (SelectedPart != null && Input.GetKeyDown(KeyCode.F) && !FixedRotation)
                 {
                     PartRotation = (SelectedPart.transform.position.z > 0 || Mounted) ? 0 : 180;
-                    Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + Patch_Ship.LastCreatedShip.parts[0].transform.eulerAngles.y);
+                    // Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + SelectedPart.transform.eulerAngles.y);
                 }
+                else if (SelectedPart == null && Input.GetKeyDown(KeyCode.G))
+                {
+                    // foreach (Mount mount in Patch_Ship.LastCreatedShip.mounts)
+                    // {
+                    //     string mConcat = "";
+                    // 
+                    //     foreach (string str in mount.m) mConcat += str + ", ";
+                    // 
+                    //     if (mConcat.Length > 0) mConcat = mConcat.Substring(0, mConcat.Length - 2);
+                    //     else mConcat = "NO MODS";
+                    // 
+                    //     Melon<TweaksAndFixes>.Logger.Msg(mount.ToString().PadRight(50) + ": " + mount.MountToString().PadRight(25) + " : " + mConcat.PadRight(50) + " : LAYER - " + mount.gameObject.layer + " : PACK # - " + mount.packNumber);
+                    // }
+
+                    // Melon<TweaksAndFixes>.Logger.Msg(Patch_Ship.LastCreatedShip.parts[0].gameObject.layer);
+
+                    // int layerObject = 0;
+                    // Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+                    // Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<RaycastHit> hits;
+                    // hits = Physics.RaycastAll(ray, 10000);
+                    // Melon<TweaksAndFixes>.Logger.Msg(Input.mousePosition.ToString() + " : " + G.cam.transform.TransformDirection(Vector3.forward).ToString());
+                    // Part partUnderMouse = null;
+                    // foreach (RaycastHit hit in hits)
+                    // {
+                    //     if (hit.collider == null || hit.collider.name != "PartSelect")
+                    //     {
+                    //         continue;
+                    //     }
+                    // 
+                    //     GameObject hitObj = hit.collider.gameObject.GetParent().GetParent();
+                    // 
+                    //     if (hitObj != null)
+                    //     {
+                    //         // Melon<TweaksAndFixes>.Logger.Msg(hitObj.name);
+                    // 
+                    //         foreach (Part part in Patch_Ship.LastCreatedShip.parts)
+                    //         {
+                    //             if (part.gameObject == hitObj)
+                    //             {
+                    //                 Melon<TweaksAndFixes>.Logger.Msg("Hit: " + part.Name());
+                    //                 Melon<TweaksAndFixes>.Logger.Msg("   : " + hit.collider.gameObject.name);
+                    //                 partUnderMouse = part;
+                    //             }
+                    //             // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(part.gameObject));
+                    //         }
+                    //     }
+                    // 
+                    //     if (partUnderMouse != null) break;
+                    // }
+
+                    // int layerObject = 8;
+                    // Vector2 ray = new Vector2(Camera.main.ScreenToWorldPoint(Input.mousePosition).x, Camera.main.ScreenToWorldPoint(Input.mousePosition).y);
+                    // Melon<TweaksAndFixes>.Logger.Msg(ray);
+                    // RaycastHit2D hit = Physics2D.Raycast(ray, new Vector2(0,0), 10000, 0);
+                    // if (hit.collider != null)
+                    // {
+                    //     Melon<TweaksAndFixes>.Logger.Msg("HIT: " + hit.collider.name);
+                    // }
+                }
+
 
                 // Melon<TweaksAndFixes>.Logger.Msg("Check selected part:");
 
@@ -368,6 +428,45 @@ namespace TweaksAndFixes
             }
 
             _InUpdateConstructor = false;
+        }
+
+        [HarmonyPatch(nameof(Ui.FindPartUnderMouseCursor))]
+        [HarmonyPrefix]
+        internal static bool Prefix_FindPartUnderMouseCursor(Ui __instance, ref Part __result)
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<RaycastHit> hits;
+            hits = Physics.RaycastAll(ray, 10000);
+            // Melon<TweaksAndFixes>.Logger.Msg(Input.mousePosition.ToString() + " : " + G.cam.transform.TransformDirection(Vector3.forward).ToString());
+            __result = null;
+            foreach (RaycastHit hit in hits)
+            {
+                if (hit.collider == null || hit.collider.name != "PartSelect")
+                {
+                    continue;
+                }
+
+                GameObject hitObj = hit.collider.gameObject.GetParent().GetParent();
+
+                if (hitObj != null)
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg(hitObj.name);
+
+                    foreach (Part part in Patch_Ship.LastCreatedShip.parts)
+                    {
+                        if (part.gameObject == hitObj)
+                        {
+                            // Melon<TweaksAndFixes>.Logger.Msg("Hit: " + part.Name());
+                            __result = part;
+                        }
+                        // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(part.gameObject));
+                    }
+                }
+
+                if (__result != null) break;
+            }
+
+            return false;
         }
 
         [HarmonyPatch(nameof(Ui.ConstructorUI))]
