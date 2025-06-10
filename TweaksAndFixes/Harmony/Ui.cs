@@ -339,65 +339,63 @@ namespace TweaksAndFixes
                     PartRotation = (SelectedPart.transform.position.z > 0 || Mounted) ? 0 : 180;
                     // Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + SelectedPart.transform.eulerAngles.y);
                 }
-                else if (SelectedPart == null && Input.GetKeyDown(KeyCode.G))
-                {
-                    // foreach (Mount mount in Patch_Ship.LastCreatedShip.mounts)
-                    // {
-                    //     string mConcat = "";
-                    // 
-                    //     foreach (string str in mount.m) mConcat += str + ", ";
-                    // 
-                    //     if (mConcat.Length > 0) mConcat = mConcat.Substring(0, mConcat.Length - 2);
-                    //     else mConcat = "NO MODS";
-                    // 
-                    //     Melon<TweaksAndFixes>.Logger.Msg(mount.ToString().PadRight(50) + ": " + mount.MountToString().PadRight(25) + " : " + mConcat.PadRight(50) + " : LAYER - " + mount.gameObject.layer + " : PACK # - " + mount.packNumber);
-                    // }
-
-                    // Melon<TweaksAndFixes>.Logger.Msg(Patch_Ship.LastCreatedShip.parts[0].gameObject.layer);
-
-                    // int layerObject = 0;
-                    // Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-                    // Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<RaycastHit> hits;
-                    // hits = Physics.RaycastAll(ray, 10000);
-                    // Melon<TweaksAndFixes>.Logger.Msg(Input.mousePosition.ToString() + " : " + G.cam.transform.TransformDirection(Vector3.forward).ToString());
-                    // Part partUnderMouse = null;
-                    // foreach (RaycastHit hit in hits)
-                    // {
-                    //     if (hit.collider == null || hit.collider.name != "PartSelect")
-                    //     {
-                    //         continue;
-                    //     }
-                    // 
-                    //     GameObject hitObj = hit.collider.gameObject.GetParent().GetParent();
-                    // 
-                    //     if (hitObj != null)
-                    //     {
-                    //         // Melon<TweaksAndFixes>.Logger.Msg(hitObj.name);
-                    // 
-                    //         foreach (Part part in Patch_Ship.LastCreatedShip.parts)
-                    //         {
-                    //             if (part.gameObject == hitObj)
-                    //             {
-                    //                 Melon<TweaksAndFixes>.Logger.Msg("Hit: " + part.Name());
-                    //                 Melon<TweaksAndFixes>.Logger.Msg("   : " + hit.collider.gameObject.name);
-                    //                 partUnderMouse = part;
-                    //             }
-                    //             // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(part.gameObject));
-                    //         }
-                    //     }
-                    // 
-                    //     if (partUnderMouse != null) break;
-                    // }
-
-                    // int layerObject = 8;
-                    // Vector2 ray = new Vector2(Camera.main.ScreenToWorldPoint(Input.mousePosition).x, Camera.main.ScreenToWorldPoint(Input.mousePosition).y);
-                    // Melon<TweaksAndFixes>.Logger.Msg(ray);
-                    // RaycastHit2D hit = Physics2D.Raycast(ray, new Vector2(0,0), 10000, 0);
-                    // if (hit.collider != null)
-                    // {
-                    //     Melon<TweaksAndFixes>.Logger.Msg("HIT: " + hit.collider.name);
-                    // }
-                }
+                // else if (SelectedPart == null && Input.GetKeyDown(KeyCode.G))
+                // {
+                //     foreach (Mount mount in Patch_Ship.LastCreatedShip.mounts)
+                //     {
+                //         // string mConcat = "";
+                //     
+                //         // foreach (string str in mount.m) mConcat += str + ", ";
+                //         // 
+                //         // if (mConcat.Length > 0) mConcat = mConcat.Substring(0, mConcat.Length - 2);
+                //         // else mConcat = "NO MODS";
+                //     
+                //         Melon<TweaksAndFixes>.Logger.Msg(mount.ToString().PadRight(50) + ": " + mount.MountToString().PadRight(25) + " : (" + Patch_Ship.LastCreatedShip.mounts[0].angleLeft + " : " + Patch_Ship.LastCreatedShip.mounts[0].angleRight + ") : (" + Patch_Ship.LastCreatedShip.mounts[0].angleLeftx + " : " + Patch_Ship.LastCreatedShip.mounts[0].angleRightx + ") : LAYER - " + mount.gameObject.layer + " : PACK # - " + mount.packNumber);
+                //     }
+                // 
+                //     // int layerObject = 0;
+                //     // Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+                //     // Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<RaycastHit> hits;
+                //     // hits = Physics.RaycastAll(ray, 10000);
+                //     // Melon<TweaksAndFixes>.Logger.Msg(Input.mousePosition.ToString() + " : " + G.cam.transform.TransformDirection(Vector3.forward).ToString());
+                //     // Part partUnderMouse = null;
+                //     // foreach (RaycastHit hit in hits)
+                //     // {
+                //     //     if (hit.collider == null || hit.collider.name != "PartSelect")
+                //     //     {
+                //     //         continue;
+                //     //     }
+                //     // 
+                //     //     GameObject hitObj = hit.collider.gameObject.GetParent().GetParent();
+                //     // 
+                //     //     if (hitObj != null)
+                //     //     {
+                //     //         // Melon<TweaksAndFixes>.Logger.Msg(hitObj.name);
+                //     // 
+                //     //         foreach (Part part in Patch_Ship.LastCreatedShip.parts)
+                //     //         {
+                //     //             if (part.gameObject == hitObj)
+                //     //             {
+                //     //                 Melon<TweaksAndFixes>.Logger.Msg("Hit: " + part.Name());
+                //     //                 Melon<TweaksAndFixes>.Logger.Msg("   : " + hit.collider.gameObject.name);
+                //     //                 partUnderMouse = part;
+                //     //             }
+                //     //             // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(part.gameObject));
+                //     //         }
+                //     //     }
+                //     // 
+                //     //     if (partUnderMouse != null) break;
+                //     // }
+                // 
+                //     // int layerObject = 8;
+                //     // Vector2 ray = new Vector2(Camera.main.ScreenToWorldPoint(Input.mousePosition).x, Camera.main.ScreenToWorldPoint(Input.mousePosition).y);
+                //     // Melon<TweaksAndFixes>.Logger.Msg(ray);
+                //     // RaycastHit2D hit = Physics2D.Raycast(ray, new Vector2(0,0), 10000, 0);
+                //     // if (hit.collider != null)
+                //     // {
+                //     //     Melon<TweaksAndFixes>.Logger.Msg("HIT: " + hit.collider.name);
+                //     // }
+                // }
 
 
                 // Melon<TweaksAndFixes>.Logger.Msg("Check selected part:");
@@ -428,6 +426,172 @@ namespace TweaksAndFixes
             }
 
             _InUpdateConstructor = false;
+        }
+
+        public static Texture2D Resize(Texture2D texture2D, int targetX, int targetY)
+        {
+            if (texture2D.width == targetX && texture2D.height == targetY) { return texture2D; }
+            RenderTexture rt = new RenderTexture(targetX, targetY, 16);
+            RenderTexture.active = rt;
+            Graphics.Blit(texture2D, rt);
+            Texture2D result = new Texture2D(targetX, targetY);
+            result.ReadPixels(new Rect(0, 0, targetX, targetY), 0, 0);
+            result.Apply();
+            return result;
+        }
+
+        public static Dictionary<string, Texture2D> PartPreviewCache = new Dictionary<string, Texture2D>();
+
+        private static string LastPartPreviewGuid = "";
+
+        // private static Il2CppSystem.Guid GetShipPreviewGuid(PartData part, Ship ship)
+        // {
+        //     Il2CppSystem.Guid guid;
+        // 
+        //     return guid;
+        // }
+
+
+        // [HarmonyPatch(nameof(Ui.GetShipPreviewTexGeneric))]
+        // [HarmonyPrefix]
+        // internal static bool Prefix_GetShipPreviewTexGeneric(Ui __instance, Ship ship, Dictionary<Il2CppSystem.Guid, Texture2D> cache, GameObject camera, Camera cameraActual, bool placeDiagonal, bool isForce, ref Texture2D __result)
+        // {
+        //     Melon<TweaksAndFixes>.Logger.Msg("Generate ship preview: " + ship.Name(false, false, false, false, false) + " : " + ship.NameAsClass(false, false, false, false));
+        // 
+        //     return true;
+        // }
+
+        // [HarmonyPatch(nameof(Ui.GetShipPreviewTexGeneric))]
+        // [HarmonyPostfix]
+        // internal static void Postfix_GetShipPreviewTexGeneric(Ui __instance, Ship ship, Dictionary<Il2CppSystem.Guid, Texture2D> cache, GameObject camera, Camera cameraActual, bool placeDiagonal, bool isForce, ref Texture2D __result)
+        // {
+        //     Melon<TweaksAndFixes>.Logger.Msg("Generate ship preview: " + ship.Name(false, false, false, false, false) + " | " + ship.id + " : " + __instance.shipsPreview.Count + " : " + __instance.shipsPreview.count + " : " + __instance.shipsPreview.freeCount);
+        // 
+        //     // foreach (Il2CppSystem.Collections.Generic.KeyValuePair<Il2CppSystem.Guid, Texture2D> previews in __instance.shipsPreview)
+        //     // {
+        //     // 
+        //     //     if (previews.value == __result)
+        //     //     {
+        //     //         Melon<TweaksAndFixes>.Logger.Msg(" *" + previews.key + " : " + previews.value);
+        //     //         __instance.shipsPreview[previews.key] = Resize(__result, 256, 256);
+        //     //         __result = __instance.shipsPreview[previews.key];
+        //     //     }
+        //     //     else
+        //     //     {
+        //     //         Melon<TweaksAndFixes>.Logger.Msg("  " + previews.key + " : " + previews.value);
+        //     //     }
+        //     // }
+        //     // 
+        //     // __instance.shipsPreview[ship.id] = __result;
+        // 
+        //     // cache[ship.id] = __result;
+        // }
+
+        private static string GetPartPreviewGuid(PartData part, Ship ship)
+        {
+            string guid = "";
+
+            // guid += " : " + part.type;
+            // guid += " : " + part.Id;
+            // guid += " : " + ship.Name(false, false, false, false, true);
+            // guid += " : " + ship.GetNameFull();
+
+            // torpedo_x(tubenumber)_(size) -> (mark)
+
+            // (name)_(country)_(class/s)
+
+            if (part.type == "gun")
+            {
+                guid += part.name.Replace("_side", "");
+                guid += " : " + ship.name.Split(" ")[0]; // Ship type
+                guid += " : " + ship.name.Split(" ")[2]; // Ship country
+
+                // guid += part.type == "gun" ? (" : " + ship.TechGunGrade(part)) : "";
+
+                PartModelData key = null;
+                string name = part.name.Replace("_side", "");
+                string type = ship.name.Split(" ")[0];
+                string country = ship.name.Split(" ")[2].Trim(']').TrimStart('[');
+                // Melon<TweaksAndFixes>.Logger.Msg(type + " : " + country);
+                ShipType typeData = G.GameData.shipTypes[type.ToLower()];
+                PlayerData countryData = ship.player.data; // G.GameData.players[country];
+
+                // string compareStr = part.name + "_" + country;
+
+                foreach (Il2CppSystem.Collections.Generic.KeyValuePair<string, PartModelData> partModelEntry in G.GameData.partModels)
+                {
+                    // if (partModelEntry.key == partModelEntry.value.name) continue; // Skip generics
+                    if (partModelEntry.value.subName != name) continue;
+                    if (partModelEntry.value.shipTypesx.Count > 0 && !partModelEntry.value.shipTypesx.Contains(typeData)) continue;
+                    if (partModelEntry.value.countriesx.Count > 0 && !partModelEntry.value.countriesx.Contains(countryData)) continue;
+                    if (partModelEntry.value.models[ship.TechGunGrade(part)].Length == 0) continue;
+
+                    key = partModelEntry.value;
+
+                    // Melon<TweaksAndFixes>.Logger.Msg("  Found: " + key.name + " : " + key.models[ship.TechGunGrade(part)]);
+                }
+
+                if (key == null)
+                {
+                    Melon<TweaksAndFixes>.Logger.Error("Could not find PartModelData for [" + name + "]. Using backup ID.");
+                }
+                else
+                {
+                    guid = name + key.models[ship.TechGunGrade(part)];
+                }
+            }
+            else if (part.type == "torpedo")
+            {
+                guid += part.name;
+                // guid += " : " + ship.name.Split(" ")[0]; // Ship type
+                // guid += " : " + ship.name.Split(" ")[2]; // Ship country
+
+                int torpedoIndex = int.Parse(ship.components[G.GameData.compTypes["torpedo_size"]].name.Split("_")[^1]) + 15;
+
+                guid = part.name + "_" + torpedoIndex;
+
+                guid = G.GameData.partModels[guid].models[ship.TechTorpedoGrade(part)];
+
+                // foreach (Il2CppSystem.Collections.Generic.KeyValuePair<string, CompType> component in G.GameData.compTypes)
+                // {
+                //     Melon<TweaksAndFixes>.Logger.Msg(component.key + " : " + component.value.nameUi);
+                // }
+            }
+            else
+            {
+                guid += part.model;
+            }
+
+            return guid;
+        }
+
+        [HarmonyPatch(nameof(Ui.GetPartPreviewTex))]
+        [HarmonyPrefix]
+        internal static bool Prefix_GetPartPreviewTex(Ui __instance, PartData part, Ship ship, ref Texture2D __result)
+        {
+            LastPartPreviewGuid = GetPartPreviewGuid(part, ship);
+
+            if (PartPreviewCache.ContainsKey(LastPartPreviewGuid))
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg("Use cashed part preview: " + guid);
+                __result = PartPreviewCache[LastPartPreviewGuid];
+                return false;
+            }
+
+            return true;
+        }
+
+        [HarmonyPatch(nameof(Ui.GetPartPreviewTex))]
+        [HarmonyPostfix]
+        internal static void Postfix_GetPartPreviewTex(Ui __instance, PartData part, Ship ship, ref Texture2D __result)
+        {
+            if (!PartPreviewCache.ContainsKey(LastPartPreviewGuid))
+            {
+                Texture2D downscale = Resize(__result, __result.width / 2, __result.height / 2);
+                // downscale = Resize(downscale, downscale.width / 2, downscale.height / 2);
+                // Melon<TweaksAndFixes>.Logger.Msg("Cashed new part preview: " + guid + " | " + downscale.height + " : " + downscale.width + " | Cashe Size: " + PartPreviewCache.Count);
+                PartPreviewCache[LastPartPreviewGuid] = downscale;
+            }
         }
 
         [HarmonyPatch(nameof(Ui.FindPartUnderMouseCursor))]
