@@ -14,7 +14,7 @@ using static Il2Cpp.Ship;
 namespace TweaksAndFixes
 {
 
-    // HitChanceCalc
+    // ########## HIT CHANCE OVERRIDES ########## //
 
     [HarmonyPatch(typeof(Ship.HitChanceCalc))]
     internal class Patch_Ship_HitChanceCalc
@@ -102,6 +102,8 @@ namespace TweaksAndFixes
     [HarmonyPatch(typeof(Ship))]
     internal class Patch_Ship
     {
+        // ########## NEW CONSTRUCTOR LOGIC ########## //
+
         public static Ship LastCreatedShip;
 
         [HarmonyPostfix]
@@ -173,6 +175,13 @@ namespace TweaksAndFixes
                 }
             }
         }
+
+
+
+
+
+
+        // ########## MODIFIED SHIP GENERATION ########## //
 
         internal static int _GenerateShipState = -1;
         internal static bool _IsLoading = false;

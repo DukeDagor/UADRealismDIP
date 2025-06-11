@@ -19,8 +19,8 @@ namespace TweaksAndFixes
     [HarmonyPatch(typeof(Ui))]
     internal class Patch_Ui
     {
-        internal static bool _InUpdateConstructor = false;
-        internal static bool _InConstructor = false;
+
+        // ########## UPDATE CUSTOM VERSION STRING ########## //
 
         [HarmonyPatch(nameof(Ui.Start))]
         [HarmonyPostfix]
@@ -57,12 +57,26 @@ namespace TweaksAndFixes
             vt.text = text;
         }
 
+
+
+
+
+
+        // ########## INITALIZE SPRITE DATABASE IF NEED-BE ########## //
+
         [HarmonyPatch(nameof(Ui.ChooseComponentType))]
         [HarmonyPrefix]
         internal static void Prefix_ChooseComponentType()
         {
             SpriteDatabase.Instance.OverrideResources();
         }
+
+
+
+
+
+
+        // ########## CHECK FOR WHITE PEACE ########## //
 
         [HarmonyPatch(nameof(Ui.CheckForPeace))]
         [HarmonyPrefix]
@@ -75,30 +89,35 @@ namespace TweaksAndFixes
             return false;
         }
 
-        [HarmonyPatch(nameof(Ui.UpdateConstructor))]
-        [HarmonyPrefix]
-        internal static void Prefix_UpdateConstructor()
-        {
-            _InConstructor = true;
-            _InUpdateConstructor = true;
-            Patch_Ui_c.Postfix_16(); // just in case we somehow died after running b15 and before b16
-        }
 
-        public static bool nearlyEqual(float a, float b)
-        {
-            return (int)(Il2CppSystem.Math.Round(a * 1.0f) + 0.01) == (int)(Il2CppSystem.Math.Round(b * 1.0f) + 0.01);
-        }
 
-        public static Part SelectedPart = null;
+
+
+
+        // ########## CUSTOM DOCKYARD LOGIC ########## //
+
+        // States
+        internal static bool _InUpdateConstructor = false;
+        internal static bool _InConstructor = false;
         public static bool NeedsConstructionListsClear = false;
+
+        // Selected part
+        public static Part SelectedPart = null;
+
+        // Rotation tracking
         public static float PartRotation = 0.0f;
         public static float RotationValue = 15.0f;
         public static float DefaultRotation = 0.0f;
+
+        // Rotation restrictions
         public static bool FixedRotation = false;
         public static bool FixedRotationValue = false;
+        public static bool UseDefaultMountRotation = true;
+        public static bool Mounted = false;
+        
+        // Selected part type
         public static bool SideGun = false;
         public static bool Casemate = false;
-        public static bool Mounted = false;
         public static bool MainTower = false;
         public static bool SecTower = false;
         public static bool Funnel = false;
@@ -117,6 +136,7 @@ namespace TweaksAndFixes
                 SelectedPart = part;
                 Melon<TweaksAndFixes>.Logger.Msg("Selected part: " + SelectedPart.Name() + " : " + SelectedPart.data.type + " : " + SelectedPart.data.name);
             
+                // Why be consistant when you can have no sensable typeing system?
                 Casemate = SelectedPart.data.name.StartsWith("casemate");
                 SideGun = SelectedPart.data.name.EndsWith("side");
                 UnderwaterTorpedo = SelectedPart.data.name.EndsWith("x0");
@@ -124,19 +144,24 @@ namespace TweaksAndFixes
                 SecTower = !SelectedPart.data.isTowerMain && SelectedPart.data.isTowerAny;
                 Funnel = SelectedPart.data.isFunnel;
 
+                // Funnels have a fixed rotation
                 if (Funnel)
                 {
                     PartRotation = 0;
                     FixedRotation = true;
                     FixedRotationValue = true;
                     RotationValue = 0;
+                    UseDefaultMountRotation = false;
                 }
+
+                // Main Towers and Secondary Towers can be roatated 180*
                 else if(MainTower)
                 {
                     PartRotation = 0;
                     FixedRotation = false;
                     RotationValue = 180;
                     FixedRotationValue = true;
+                    UseDefaultMountRotation = false;
                 }
                 else if (SecTower)
                 {
@@ -144,28 +169,49 @@ namespace TweaksAndFixes
                     FixedRotation = false;
                     RotationValue = 180;
                     FixedRotationValue = true;
+                    UseDefaultMountRotation = false;
                 }
+
+                // Casemates have default rotations that don't really need to be changed
+                // The current rotation is reset to 0 so they use the default mount rotation instead
                 else if (Casemate)
                 {
                     FixedRotation = false;
                     PartRotation = 0;
                     FixedRotationValue = false;
                     RotationValue = 45;
+                    UseDefaultMountRotation = true;
                 }
+
+                // Underwater torpedoes are fixed
                 else if (UnderwaterTorpedo)
                 {
                     FixedRotation = true;
                     PartRotation = 0;
                     FixedRotationValue = true;
                     RotationValue = 0;
+                    UseDefaultMountRotation = true;
                 }
+                
+                // Everything else has free rotation
                 else
                 {
                     FixedRotation = false;
                     FixedRotationValue = false;
                     RotationValue = 45;
+                    UseDefaultMountRotation = true;
                 }
             }
+        }
+
+
+        [HarmonyPatch(nameof(Ui.UpdateConstructor))]
+        [HarmonyPrefix]
+        internal static void Prefix_UpdateConstructor()
+        {
+            _InConstructor = true;
+            _InUpdateConstructor = true;
+            Patch_Ui_c.Postfix_16(); // just in case we somehow died after running b15 and before b16
         }
 
         [HarmonyPatch(nameof(Ui.UpdateConstructor))]
@@ -247,15 +293,15 @@ namespace TweaksAndFixes
                         Part pair = Patch_Part.mirroredParts[part];
                         bool unpair = false;
 
-                        if (!nearlyEqual(Il2CppSystem.Math.Abs(part.transform.position.x), Il2CppSystem.Math.Abs(pair.transform.position.x))) // Starbord/port
+                        if (!NearlyEqual(Il2CppSystem.Math.Abs(part.transform.position.x), Il2CppSystem.Math.Abs(pair.transform.position.x))) // Starbord/port
                         {
                             unpair = true;
                         }
-                        else if (!nearlyEqual(part.transform.position.y, pair.transform.position.y)) // Up/down
+                        else if (!NearlyEqual(part.transform.position.y, pair.transform.position.y)) // Up/down
                         {
                             unpair = true;
                         }
-                        else if (!nearlyEqual(part.transform.position.z, pair.transform.position.z)) // Fore/aft
+                        else if (!NearlyEqual(part.transform.position.z, pair.transform.position.z)) // Fore/aft
                         {
                             unpair = true;
                         }
@@ -296,9 +342,9 @@ namespace TweaksAndFixes
                         }
                         if ((int)pair.transform.position.x == 0) continue;
 
-                        if (!nearlyEqual(Il2CppSystem.Math.Abs(part.transform.position.x), Il2CppSystem.Math.Abs(pair.transform.position.x))) found = false;
-                        else if (!nearlyEqual(part.transform.position.y, pair.transform.position.y)) found = false;
-                        else if (!nearlyEqual(part.transform.position.z, pair.transform.position.z)) found = false;
+                        if (!NearlyEqual(Il2CppSystem.Math.Abs(part.transform.position.x), Il2CppSystem.Math.Abs(pair.transform.position.x))) found = false;
+                        else if (!NearlyEqual(part.transform.position.y, pair.transform.position.y)) found = false;
+                        else if (!NearlyEqual(part.transform.position.z, pair.transform.position.z)) found = false;
 
                         if (found)
                         {
@@ -404,7 +450,7 @@ namespace TweaksAndFixes
 
                 if (SelectedPart != null)
                 {
-                    if (SelectedPart.mount != null && !MainTower && !SecTower && !Funnel)
+                    if (SelectedPart.mount != null && UseDefaultMountRotation)
                     {
                         DefaultRotation = SelectedPart.mount.transform.rotation.eulerAngles.y;
                         Mounted = true;
@@ -419,7 +465,7 @@ namespace TweaksAndFixes
                     CurrentRotation.y = PartRotation + DefaultRotation;
                     SelectedPart.transform.eulerAngles = CurrentRotation;
 
-                    if (Input.GetKey(KeyCode.LeftShift) && !SideGun && SelectedPart.mount == null)
+                    if (Input.GetKey(KeyCode.LeftControl) && !SideGun && SelectedPart.mount == null)
                     {
                         G.ui.fireSectorObj.transform.SetX(0);
                         SelectedPart.Place(new Vector3(0, SelectedPart.transform.position.y, SelectedPart.transform.position.z), false);
@@ -429,6 +475,17 @@ namespace TweaksAndFixes
 
             _InUpdateConstructor = false;
         }
+
+
+
+
+
+
+        // ########## PART PREVIEW CACHING ########## //
+
+        public static Dictionary<string, Texture2D> PartPreviewCache = new Dictionary<string, Texture2D>();
+        private static string LastPartPreviewGuid = "";
+
 
         public static Texture2D Resize(Texture2D texture2D, int targetX, int targetY)
         {
@@ -441,53 +498,6 @@ namespace TweaksAndFixes
             result.Apply();
             return result;
         }
-
-        public static Dictionary<string, Texture2D> PartPreviewCache = new Dictionary<string, Texture2D>();
-
-        private static string LastPartPreviewGuid = "";
-
-        // private static Il2CppSystem.Guid GetShipPreviewGuid(PartData part, Ship ship)
-        // {
-        //     Il2CppSystem.Guid guid;
-        // 
-        //     return guid;
-        // }
-
-
-        // [HarmonyPatch(nameof(Ui.GetShipPreviewTexGeneric))]
-        // [HarmonyPrefix]
-        // internal static bool Prefix_GetShipPreviewTexGeneric(Ui __instance, Ship ship, Dictionary<Il2CppSystem.Guid, Texture2D> cache, GameObject camera, Camera cameraActual, bool placeDiagonal, bool isForce, ref Texture2D __result)
-        // {
-        //     Melon<TweaksAndFixes>.Logger.Msg("Generate ship preview: " + ship.Name(false, false, false, false, false) + " : " + ship.NameAsClass(false, false, false, false));
-        // 
-        //     return true;
-        // }
-
-        // [HarmonyPatch(nameof(Ui.GetShipPreviewTexGeneric))]
-        // [HarmonyPostfix]
-        // internal static void Postfix_GetShipPreviewTexGeneric(Ui __instance, Ship ship, Dictionary<Il2CppSystem.Guid, Texture2D> cache, GameObject camera, Camera cameraActual, bool placeDiagonal, bool isForce, ref Texture2D __result)
-        // {
-        //     Melon<TweaksAndFixes>.Logger.Msg("Generate ship preview: " + ship.Name(false, false, false, false, false) + " | " + ship.id + " : " + __instance.shipsPreview.Count + " : " + __instance.shipsPreview.count + " : " + __instance.shipsPreview.freeCount);
-        // 
-        //     // foreach (Il2CppSystem.Collections.Generic.KeyValuePair<Il2CppSystem.Guid, Texture2D> previews in __instance.shipsPreview)
-        //     // {
-        //     // 
-        //     //     if (previews.value == __result)
-        //     //     {
-        //     //         Melon<TweaksAndFixes>.Logger.Msg(" *" + previews.key + " : " + previews.value);
-        //     //         __instance.shipsPreview[previews.key] = Resize(__result, 256, 256);
-        //     //         __result = __instance.shipsPreview[previews.key];
-        //     //     }
-        //     //     else
-        //     //     {
-        //     //         Melon<TweaksAndFixes>.Logger.Msg("  " + previews.key + " : " + previews.value);
-        //     //     }
-        //     // }
-        //     // 
-        //     // __instance.shipsPreview[ship.id] = __result;
-        // 
-        //     // cache[ship.id] = __result;
-        // }
 
         private static string GetPartPreviewGuid(PartData part, Ship ship)
         {
@@ -601,6 +611,20 @@ namespace TweaksAndFixes
             }
         }
 
+        [HarmonyPatch(nameof(Ui.ExitConstructor))]
+        [HarmonyPostfix]
+        internal static void Postfix_ExitConstructor(Ui __instance, bool changeState = true, bool quickLoading = true)
+        {
+            _InConstructor = false;
+        }
+
+
+
+
+
+
+        // ########## FIND PART UNDER MOUSE FIX ########## //
+
         [HarmonyPatch(nameof(Ui.FindPartUnderMouseCursor))]
         [HarmonyPrefix]
         internal static bool Prefix_FindPartUnderMouseCursor(Ui __instance, ref Part __result)
@@ -640,44 +664,15 @@ namespace TweaksAndFixes
             return false;
         }
 
-        [HarmonyPatch(nameof(Ui.ConstructorUI))]
-        [HarmonyPostfix]
-        internal static void Postfix_ConstructorUI(Ui __instance)
-        {
-            ClearAllButtons(__instance);
-            EnsureAllButtons(__instance);
-        }
 
-        [HarmonyPatch(nameof(Ui.ExitConstructor))]
-        [HarmonyPostfix]
-        internal static void Postfix_ExitConstructor(Ui __instance, bool changeState = true, bool quickLoading = true)
-        {
-            _InConstructor = false;
-        }
 
-        [HarmonyPatch(nameof(Ui.RefreshConstructorInfo))]
-        [HarmonyPrefix]
-        internal static void Prefix_RefreshConstructorInfo(Ui __instance)
-        {
-            ClearAllButtons(__instance);
-            SpriteDatabase.Instance.OverrideResources();
-        }
 
-        [HarmonyPatch(nameof(Ui.RefreshConstructorInfo))]
-        [HarmonyPostfix]
-        internal static void Postfix_RefreshConstructorInfo(Ui __instance)
-        {
-            EnsureAllButtons(__instance);
-        }
 
-        [HarmonyPatch(nameof(Ui.NewGameUI))]
-        [HarmonyPostfix]
-        internal static void Postfix_NewGameUI(Ui __instance)
-        {
-            if (!GameManager.IsNewGame)
-                return;
-            Patch_CampaignNewGame.FixDesignUsage(__instance.NewGameWindow);
-        }
+
+        // ########## UPGRADE MARK BUTTONS ########## //
+
+        static List<Ship.TurretCaliber> _Turrets = new List<Ship.TurretCaliber>();
+        static List<Ship.TurretCaliber> _Casemates = new List<Ship.TurretCaliber>();
 
         private static void ClearAllButtons(Ui ui)
         {
@@ -740,9 +735,6 @@ namespace TweaksAndFixes
                 GameObject.DestroyImmediate(subTrf.gameObject);
             }
         }
-
-        static List<Ship.TurretCaliber> _Turrets = new List<Ship.TurretCaliber>();
-        static List<Ship.TurretCaliber> _Casemates = new List<Ship.TurretCaliber>();
 
         private static void EnsureAllButtons(Ui ui)
         {
@@ -906,11 +898,52 @@ namespace TweaksAndFixes
 
             buttonNew.SetActive(true);
         }
+
+        [HarmonyPatch(nameof(Ui.ConstructorUI))]
+        [HarmonyPostfix]
+        internal static void Postfix_ConstructorUI(Ui __instance)
+        {
+            ClearAllButtons(__instance);
+            EnsureAllButtons(__instance);
+        }
+
+        [HarmonyPatch(nameof(Ui.RefreshConstructorInfo))]
+        [HarmonyPrefix]
+        internal static void Prefix_RefreshConstructorInfo(Ui __instance)
+        {
+            ClearAllButtons(__instance);
+            SpriteDatabase.Instance.OverrideResources();
+        }
+
+        [HarmonyPatch(nameof(Ui.RefreshConstructorInfo))]
+        [HarmonyPostfix]
+        internal static void Postfix_RefreshConstructorInfo(Ui __instance)
+        {
+            EnsureAllButtons(__instance);
+        }
+
+
+
+
+
+
+        // ########## FIX DESIGN USEAGE ########## //
+
+        [HarmonyPatch(nameof(Ui.NewGameUI))]
+        [HarmonyPostfix]
+        internal static void Postfix_NewGameUI(Ui __instance)
+        {
+            if (!GameManager.IsNewGame)
+                return;
+            Patch_CampaignNewGame.FixDesignUsage(__instance.NewGameWindow);
+        }
     }
 
     [HarmonyPatch(typeof(Ui.__c))]
     internal class Patch_Ui_c
     {
+        // ########## MODIFIED BARBETTE LOGIC ########## //
+
         internal static bool _SetBackToBarbette = false;
         internal static PartData _BarbetteData = null;
         internal static bool _IsFirstCallofB15 = true;
