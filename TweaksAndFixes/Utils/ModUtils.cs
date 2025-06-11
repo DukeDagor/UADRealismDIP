@@ -86,6 +86,11 @@ namespace TweaksAndFixes
             return value;
         }
 
+        public static bool NearlyEqual(float a, float b)
+        {
+            return (int)(Il2CppSystem.Math.Round(a * 1.0f) + 0.01) == (int)(Il2CppSystem.Math.Round(b * 1.0f) + 0.01);
+        }
+
         private struct ObjectStack
         {
             public GameObject obj;
