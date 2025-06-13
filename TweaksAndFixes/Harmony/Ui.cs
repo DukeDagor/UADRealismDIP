@@ -128,7 +128,7 @@ namespace TweaksAndFixes
 
         public static bool UseNewConstructionLogic()
         {
-            if (Config.Param("taf_disable_battle_simulation_speed_restrictions", 1) != 1)
+            if (Config.Param("taf_dockyard_new_logic", 1) != 1)
             {
                 return false;
             }
