@@ -6,6 +6,93 @@ using System.Collections.Generic;
 
 namespace TweaksAndFixes
 {
+    [HarmonyPatch(typeof(TimeControl))]
+    internal class Patch_TimeControl
+    {
+        public static int LastAutomaticTimeScaleSlowdown = 0;
+        public static int LastUserTimeScale = 1;
+        public static bool IgnoreNextAutomaticTimeScaleSlowdown = false;
+
+        [HarmonyPatch(nameof(TimeControl.TimeScale))]
+        [HarmonyPrefix]
+        internal static void Prefix_TimeScale(ref float scale)
+        {
+            if (Config.Param("taf_disable_battle_simulation_speed_restrictions", 1) != 1)
+            {
+                return;
+            }
+
+            // Melon<TweaksAndFixes>.Logger.Msg("SET TIMESCALE: " + scale);
+
+            int truncScale = (int)(scale + 0.1f);
+
+            if (Patch_BattleManager.InUpdateSpeedLimit)
+            {
+                if (LastUserTimeScale > truncScale && truncScale != LastAutomaticTimeScaleSlowdown)
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg("New override value: " + truncScale);
+                    LastAutomaticTimeScaleSlowdown = truncScale;
+
+                    if (IgnoreNextAutomaticTimeScaleSlowdown)
+                    {
+                        // Melon<TweaksAndFixes>.Logger.Msg("Ignore override.");
+                        IgnoreNextAutomaticTimeScaleSlowdown = false;
+                        scale = LastUserTimeScale;
+                    }
+                }
+                else
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg("Setting scale to: " + LastUserTimeScale);
+                    scale = LastUserTimeScale;
+                }
+            }
+            else if (LastUserTimeScale != truncScale)
+            {
+                LastUserTimeScale = truncScale;
+                IgnoreNextAutomaticTimeScaleSlowdown = true;
+            }
+        }
+    }
+
+
+    [HarmonyPatch(typeof(BattleManager))]
+    internal class Patch_BattleManager
+    {
+        public static int LastTimeScale = 0;
+        public static bool InUpdateSpeedLimit = false;
+
+        public static void SetTimeSpeedLimit()
+        {
+            if (Config.Param("taf_disable_battle_simulation_speed_restrictions", 1) != 1)
+            {
+                return;
+            }
+
+            float speed = 30.0f;
+            
+            // TODO: Limit speed to 15x when speed is below 5x?
+
+            BattleManager.Instance.CombatTimeSpeedLimit = new Il2CppSystem.Nullable<float>(speed);
+        }
+
+        [HarmonyPatch(nameof(BattleManager.CombatUpdateTimeSpeedLimit))]
+        [HarmonyPrefix]
+        internal static void Prefix_CombatUpdateTimeSpeedLimit()
+        {
+            InUpdateSpeedLimit = true;
+        }
+        
+        [HarmonyPatch(nameof(BattleManager.CombatUpdateTimeSpeedLimit))]
+        [HarmonyPostfix]
+        internal static void Postfix_CombatUpdateTimeSpeedLimit()
+        {
+            InUpdateSpeedLimit = false;
+
+            SetTimeSpeedLimit();
+        }
+    }
+
+
     [HarmonyPatch(typeof(BattleManager._UpdateLoadingMissionBuild_d__113))]
     internal class Patch_BattleManager_d115
     {
