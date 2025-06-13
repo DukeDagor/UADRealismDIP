@@ -84,6 +84,11 @@ namespace TweaksAndFixes
                 _noFile = false;
                 text = File.ReadAllText(Config._PredefinedDesignsDataFile.path);
             }
+            else if (Config._PredefinedDesignsFile.Exists)
+            {
+                _noFile = false;
+                text = $"@name,filename,skipChance,yearRange\n{Config._PredefinedDesignsFile.name.Replace(".bin", "")},{Config._PredefinedDesignsFile.name},0,-1";
+            }
             else
             {
                 _noFile = true;
