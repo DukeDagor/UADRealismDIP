@@ -106,29 +106,27 @@ namespace TweaksAndFixes
 
         public static Ship LastCreatedShip;
 
-        [HarmonyPostfix]
-        [HarmonyPatch(nameof(Ship.Create))]
-        internal static void Postfix_Create(Ship __result, Ship design, Player player, bool isTempForBattle = false, bool isPrewarming = false, bool isSharedDesign = false)
-        {
-            // Melon<TweaksAndFixes>.Logger.Msg("Create ship: " + design);
-            LastCreatedShip = __result;
-
-            if (LastCreatedShip == null) return;
-
-            // Melon<TweaksAndFixes>.Logger.Msg(LastCreatedShip.Name(false, false));
-
-            // foreach (Mount mount in LastCreatedShip.mounts)
-            // {
-            //     Melon<TweaksAndFixes>.Logger.Msg(LastCreatedShip.Name(false, false) + ": " + mount.caliberMin + " - " + mount.caliberMax);
-            // }
-        }
-
+        // [HarmonyPostfix]
+        // [HarmonyPatch(nameof(Ship.Create))]
+        // internal static void Postfix_Create(Ship __result, Ship design, Player player, bool isTempForBattle = false, bool isPrewarming = false, bool isSharedDesign = false)
+        // {
+        //     // LastCreatedShip = __result;
+        //     // 
+        //     // if (LastCreatedShip == null) return;
+        // 
+        //     // Melon<TweaksAndFixes>.Logger.Msg(LastCreatedShip.Name(false, false));
+        // 
+        //     // foreach (Mount mount in LastCreatedShip.mounts)
+        //     // {
+        //     //     Melon<TweaksAndFixes>.Logger.Msg(LastCreatedShip.Name(false, false) + ": " + mount.caliberMin + " - " + mount.caliberMax);
+        //     // }
+        // }
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Ship.RemovePart))]
         internal static bool Prefix_RemovePart(Ship __instance, Part part)
         {
-            if (part != Patch_Ui.SelectedPart && part.mount != null && part == Patch_Part.TrySkipDestroy || !Patch_Ship.LastCreatedShip.parts.Contains(part))
+            if (part != Patch_Ui.SelectedPart && part.mount != null && part == Patch_Part.TrySkipDestroy || !__instance.parts.Contains(part))
             {
                 Patch_Part.TrySkipDestroy = null;
                 return false;
@@ -167,11 +165,11 @@ namespace TweaksAndFixes
 
                 if (part == A)
                 {
-                    Patch_Ship.LastCreatedShip.RemovePart(B);
+                    __instance.RemovePart(B);
                 }
                 else
                 {
-                    Patch_Ship.LastCreatedShip.RemovePart(A);
+                    __instance.RemovePart(A);
                 }
             }
         }
@@ -303,10 +301,30 @@ namespace TweaksAndFixes
         }
         [HarmonyPatch(nameof(Ship.ChangeHull))]
         [HarmonyPostfix]
-        internal static void Postfix_ChangeHull()
+        internal static void Postfix_ChangeHull(Ship __instance)
         {
             Patch_Ui.NeedsConstructionListsClear = true;
+            LastCreatedShip = __instance;
             _IsInChangeHullWithHuman = false;
+
+            if (G.ui.isConstructorRefitMode)
+            {
+                Player player = ExtraGameData.MainPlayer();
+
+                if (player == null)
+                {
+                    Melon<TweaksAndFixes>.Logger.Error("Failed to get main player in Refit Mode. Build mode will be broken.");
+                    return;
+                }
+
+                if (player.designs.Count() < 2)
+                {
+                    Melon<TweaksAndFixes>.Logger.Error("Design count less than 2. Failed to find refit ship reference. Build mode will be broken.");
+                    return;
+                }
+
+                LastCreatedShip = new Il2CppSystem.Collections.Generic.List<Ship>(player.designs)[^2];
+            }
         }
         [HarmonyPatch(nameof(Ship.SetDraught))]
         [HarmonyPostfix]

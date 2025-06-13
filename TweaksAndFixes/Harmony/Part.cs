@@ -11,6 +11,7 @@ using Il2CppInterop.Runtime;
 using Il2CppInterop.Runtime.Startup;
 using static Il2Cpp.Ship;
 using static MelonLoader.MelonLogger;
+using Il2CppSystem.Linq;
 
 #pragma warning disable CS8603
 
@@ -56,10 +57,12 @@ namespace TweaksAndFixes
                 return true;
             }
 
+            if (__instance.Name().Contains("Dual Barbette for")) return false;
+
             // Ignore animated rotation values that don't match the new rotation incraments
             if (!ModUtils.NearlyEqual(Math.Abs(angle), Patch_Ui.RotationValue))
             {
-                Melon<TweaksAndFixes>.Logger.Warning("Does not equal rotation override: " + angle + " != " + Patch_Ui.RotationValue);
+                // Melon<TweaksAndFixes>.Logger.Warning("Does not equal rotation override: " + angle + " != " + Patch_Ui.RotationValue);
                 return false;
             }
 
@@ -103,7 +106,29 @@ namespace TweaksAndFixes
                 Part placedPart = __instance;
                 Part mirroredPart = null;
 
-                foreach (Part part in Patch_Ship.LastCreatedShip.parts)
+                // Il2CppSystem.Collections.Generic.List<Ship> temp = new Il2CppSystem.Collections.Generic.List<Ship>(ExtraGameData.MainPlayer().designs);
+
+                // Melon<TweaksAndFixes>.Logger.Msg("A\n" + ModUtils.DumpHierarchy(__instance.data.constructorShip.gameObject));
+                // Melon<TweaksAndFixes>.Logger.Msg("A\n" + ModUtils.DumpHierarchy(temp[^2].gameObject));
+                // Melon<TweaksAndFixes>.Logger.Msg("B\n" + temp.IndexOf(__instance.data.constructorShip) + " : " + temp.Count);
+
+                // Melon<TweaksAndFixes>.Logger.Msg("Search in ship: " + __instance.data.constructorShip.NameAsClass(false) + " : Contains: " + ExtraGameData.MainPlayer().designs.First().NameAsClass(false));
+                // 
+                // Melon<TweaksAndFixes>.Logger.Msg("DESIGN LIST:");
+                // for(int i = 0; i < temp.Count; i++)
+                // {
+                //     Ship ship = temp[i];
+                // 
+                //     if (ship == null)
+                //     {
+                //         Melon<TweaksAndFixes>.Logger.Msg("  NULL");
+                //         continue;
+                //     }
+                // 
+                //     Melon<TweaksAndFixes>.Logger.Msg("  SHIP: " + ModUtils.DumpHierarchy(ship.gameObject));
+                // }
+
+                foreach (Part part in __instance.data.constructorShip.parts)
                 {
                     if (part == null) continue;
                     if (part.transform == null) continue;

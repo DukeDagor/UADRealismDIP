@@ -9,6 +9,8 @@ using static TweaksAndFixes.ModUtils;
 using Il2CppSystem;
 using System.Reflection.Metadata.Ecma335;
 using static MelonLoader.MelonLogger;
+using Il2CppInterop.Runtime;
+using System.Drawing;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -101,8 +103,9 @@ namespace TweaksAndFixes
         internal static bool _InConstructor = false;
         public static bool NeedsConstructionListsClear = false;
 
-        // Selected part
+        // Selected part & related data
         public static Part SelectedPart = null;
+        // public static Il2CppSystem.Collections.Generic.Dictionary<Part, float> SelectedPartMountRotationData = new Il2CppSystem.Collections.Generic.Dictionary<Part, float>();
 
         // Rotation tracking
         public static float PartRotation = 0.0f;
@@ -125,6 +128,11 @@ namespace TweaksAndFixes
 
         public static bool UseNewConstructionLogic()
         {
+            if (Config.Param("taf_disable_battle_simulation_speed_restrictions", 1) != 1)
+            {
+                return false;
+            }
+
             return _InUpdateConstructor;
         }
 
@@ -133,8 +141,9 @@ namespace TweaksAndFixes
             // Track the part selected from the toolbox
             if (SelectedPart == null || SelectedPart != part)
             {
+                // SelectedPartMountRotationData.Clear();
                 SelectedPart = part;
-                Melon<TweaksAndFixes>.Logger.Msg("Selected part: " + SelectedPart.Name() + " : " + SelectedPart.data.type + " : " + SelectedPart.data.name);
+                // Melon<TweaksAndFixes>.Logger.Msg("Selected part: " + SelectedPart.Name() + " : " + SelectedPart.data.type + " : " + SelectedPart.data.name);
             
                 // Why be consistant when you can have no sensable typeing system?
                 Casemate = SelectedPart.data.name.StartsWith("casemate");
@@ -220,13 +229,19 @@ namespace TweaksAndFixes
         {
             if (NeedsConstructionListsClear)
             {
+                //  Melon<TweaksAndFixes>.Logger.Msg("Clearing paired component lists...");
                 Patch_Part.applyMirrorFromTo.Clear();
                 Patch_Part.mirroredParts.Clear();
                 Patch_Part.unmatchedParts.Clear();
                 NeedsConstructionListsClear = false;
             }
 
-            if (UseNewConstructionLogic() && Patch_Ship.LastCreatedShip.parts.Count > 0)
+            // var a = CampaignController.Instance.CampaignData.VesselsByPlayer[ExtraGameData.MainPlayer().data];
+            // a[^1].
+
+            // ExtraGameData.MainPlayer().designs[^1]
+
+            if (UseNewConstructionLogic() && Patch_Ship.LastCreatedShip != null && Patch_Ship.LastCreatedShip.parts.Count > 0)
             {
                 Patch_Part.TrySkipDestroy = null;
                 Part toRemove = null;
@@ -256,9 +271,9 @@ namespace TweaksAndFixes
                 {
                     if (!Patch_Ship.LastCreatedShip.parts.Contains(pair.Key) || !Patch_Ship.LastCreatedShip.parts.Contains(pair.Value))
                     {
-                        Melon<TweaksAndFixes>.Logger.Msg("Error: Failed to find parts for mirroring:");
-                        Melon<TweaksAndFixes>.Logger.Msg("  " + pair.Value.Name());
-                        Melon<TweaksAndFixes>.Logger.Msg("  " + pair.Key.Name());
+                        // Melon<TweaksAndFixes>.Logger.Msg("Error: Failed to find parts for mirroring:");
+                        // Melon<TweaksAndFixes>.Logger.Msg("  " + pair.Value.Name());
+                        // Melon<TweaksAndFixes>.Logger.Msg("  " + pair.Key.Name());
                         toRemove = pair.key;
                         // Patch_Part.applyMirrorFromTo.Remove(pair.Key);
                         continue;
@@ -308,9 +323,9 @@ namespace TweaksAndFixes
 
                         if (unpair)
                         {
-                            Melon<TweaksAndFixes>.Logger.Msg("Unpairing: ");
-                            Melon<TweaksAndFixes>.Logger.Msg("  " + part.Name());
-                            Melon<TweaksAndFixes>.Logger.Msg("  " + pair.Name());
+                            // Melon<TweaksAndFixes>.Logger.Msg("Unpairing: ");
+                            // Melon<TweaksAndFixes>.Logger.Msg("  " + part.Name());
+                            // Melon<TweaksAndFixes>.Logger.Msg("  " + pair.Name());
                             Patch_Part.mirroredParts.Remove(part);
                             Patch_Part.mirroredParts.Remove(pair);
                             Patch_Part.unmatchedParts.Add(part);
@@ -348,9 +363,9 @@ namespace TweaksAndFixes
 
                         if (found)
                         {
-                            Melon<TweaksAndFixes>.Logger.Msg("Pairing: ");
-                            Melon<TweaksAndFixes>.Logger.Msg("  " + part.Name());
-                            Melon<TweaksAndFixes>.Logger.Msg("  " + pair.Name());
+                            // Melon<TweaksAndFixes>.Logger.Msg("Pairing: ");
+                            // Melon<TweaksAndFixes>.Logger.Msg("  " + part.Name());
+                            // Melon<TweaksAndFixes>.Logger.Msg("  " + pair.Name());
                             Patch_Part.mirroredParts.Add(pair, part);
                             Patch_Part.mirroredParts.Add(part, pair);
                             Patch_Part.unmatchedParts.Remove(part);
@@ -360,91 +375,33 @@ namespace TweaksAndFixes
                     }
                 }
 
-                if (Input.GetKeyDown(KeyCode.LeftAlt) && !FixedRotationValue)
+                if (!FixedRotationValue && SelectedPart != null && Input.GetKeyDown(KeyCode.G))
                 {
                     RotationValue += 15.0f;
                     if (RotationValue - 0.1 >= 45.0f)
                     {
                         RotationValue = 15.0f;
                     }
-                    Melon<TweaksAndFixes>.Logger.Msg("Rotation inc: " + RotationValue);
+                    // Melon<TweaksAndFixes>.Logger.Msg("Rotation inc: " + RotationValue);
                 }
                 
-                if (SelectedPart != null && Input.GetKeyDown(KeyCode.R) && !FixedRotation)
+                if (!FixedRotation && SelectedPart != null && Input.GetKeyDown(G.settings.Bindings.RotatePartLeft.Code))
                 {
                     PartRotation -= RotationValue;
                     SelectedPart.AnimateRotate(-RotationValue);
                     // Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + SelectedPart.transform.eulerAngles.y);
                 }
-                else if (SelectedPart != null && Input.GetKeyDown(KeyCode.T) && !FixedRotation)
+                else if (!FixedRotation && SelectedPart != null && Input.GetKeyDown(G.settings.Bindings.RotatePartRight.Code))
                 {
                     PartRotation += RotationValue;
                     SelectedPart.AnimateRotate(RotationValue);
                     // Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + SelectedPart.transform.eulerAngles.y);
                 }
-                else if (SelectedPart != null && Input.GetKeyDown(KeyCode.F) && !FixedRotation)
+                else if (!FixedRotation && SelectedPart != null && Input.GetKeyDown(KeyCode.F))
                 {
                     PartRotation = (SelectedPart.transform.position.z > 0 || Mounted) ? 0 : 180;
                     // Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + SelectedPart.transform.eulerAngles.y);
                 }
-                else if (SelectedPart == null && Input.GetKeyDown(KeyCode.G))
-                {
-                    // foreach (Mount mount in Patch_Ship.LastCreatedShip.mounts)
-                    // {
-                    //     // string mConcat = "";
-                    // 
-                    //     // foreach (string str in mount.m) mConcat += str + ", ";
-                    //     // 
-                    //     // if (mConcat.Length > 0) mConcat = mConcat.Substring(0, mConcat.Length - 2);
-                    //     // else mConcat = "NO MODS";
-                    // 
-                    //     Melon<TweaksAndFixes>.Logger.Msg(mount.ToString().PadRight(50) + ": " + mount.MountToString().PadRight(25) + " : (" + Patch_Ship.LastCreatedShip.mounts[0].angleLeft + " : " + Patch_Ship.LastCreatedShip.mounts[0].angleRight + ") : (" + Patch_Ship.LastCreatedShip.mounts[0].angleLeftx + " : " + Patch_Ship.LastCreatedShip.mounts[0].angleRightx + ") : LAYER - " + mount.gameObject.layer + " : PACK # - " + mount.packNumber);
-                    // }
-
-                    // int layerObject = 0;
-                    // Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-                    // Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<RaycastHit> hits;
-                    // hits = Physics.RaycastAll(ray, 10000);
-                    // Melon<TweaksAndFixes>.Logger.Msg(Input.mousePosition.ToString() + " : " + G.cam.transform.TransformDirection(Vector3.forward).ToString());
-                    // Part partUnderMouse = null;
-                    // foreach (RaycastHit hit in hits)
-                    // {
-                    //     if (hit.collider == null || hit.collider.name != "PartSelect")
-                    //     {
-                    //         continue;
-                    //     }
-                    // 
-                    //     GameObject hitObj = hit.collider.gameObject.GetParent().GetParent();
-                    // 
-                    //     if (hitObj != null)
-                    //     {
-                    //         // Melon<TweaksAndFixes>.Logger.Msg(hitObj.name);
-                    // 
-                    //         foreach (Part part in Patch_Ship.LastCreatedShip.parts)
-                    //         {
-                    //             if (part.gameObject == hitObj)
-                    //             {
-                    //                 Melon<TweaksAndFixes>.Logger.Msg("Hit: " + part.Name());
-                    //                 Melon<TweaksAndFixes>.Logger.Msg("   : " + hit.collider.gameObject.name);
-                    //                 partUnderMouse = part;
-                    //             }
-                    //             // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(part.gameObject));
-                    //         }
-                    //     }
-                    // 
-                    //     if (partUnderMouse != null) break;
-                    // }
-                
-                    // int layerObject = 8;
-                    // Vector2 ray = new Vector2(Camera.main.ScreenToWorldPoint(Input.mousePosition).x, Camera.main.ScreenToWorldPoint(Input.mousePosition).y);
-                    // Melon<TweaksAndFixes>.Logger.Msg(ray);
-                    // RaycastHit2D hit = Physics2D.Raycast(ray, new Vector2(0,0), 10000, 0);
-                    // if (hit.collider != null)
-                    // {
-                    //     Melon<TweaksAndFixes>.Logger.Msg("HIT: " + hit.collider.name);
-                    // }
-                }
-
 
                 // Melon<TweaksAndFixes>.Logger.Msg("Check selected part:");
 
@@ -467,8 +424,46 @@ namespace TweaksAndFixes
 
                     if (Input.GetKey(KeyCode.LeftControl) && !SideGun && SelectedPart.mount == null)
                     {
-                        G.ui.fireSectorObj.transform.SetX(0);
+                        if (G.ui.fireSectorObj != null) G.ui.fireSectorObj.transform.SetX(0);
                         SelectedPart.Place(new Vector3(0, SelectedPart.transform.position.y, SelectedPart.transform.position.z), false);
+                        
+                        // int group = -1;
+
+                        if (Patch_Ship.LastCreatedShip.mountsUsed != null)
+                        {
+                            // foreach (Il2CppSystem.Collections.Generic.KeyValuePair<Mount, Part> pair in Patch_Ship.LastCreatedShip.mountsUsed)
+                            // {
+                            //     if (pair.key.parentPart != SelectedPart) continue;
+                            // 
+                            //     Melon<TweaksAndFixes>.Logger.Msg("Part: " + pair.value.Name() + " on mount: #" + pair.key.packNumber);
+                            // 
+                            //     group = pair.key.packNumber;
+                            // 
+                            //     break;
+                            // 
+                            //     // Melon<TweaksAndFixes>.Logger.Msg("Used part mount: " + pair.value.Name());
+                            //     // pair.value.transform.position = pair.key.transform.position;
+                            //     // pair.value.transform.rotation = pair.key.transform.rotation;
+                            // }
+                        
+                            foreach (Mount mount in Patch_Ship.LastCreatedShip.mounts)
+                            {
+                                if (mount.parentPart == SelectedPart && mount.employedPart != null)
+                                {
+                                    // if (!SelectedPartMountRotationData.ContainsKey(mount.employedPart))
+                                    // {
+                                    //     SelectedPartMountRotationData[mount.employedPart] = mount.employedPart.transform.rotation.eulerAngles.y;
+                                    // }
+
+                                    // Melon<TweaksAndFixes>.Logger.Msg("Selected part mount: " + mount.transform.position.ToString());
+                                    mount.employedPart.transform.SetX(0);
+
+                                    // Vector3 MountCurrentRotation = mount.employedPart.transform.eulerAngles;
+                                    // MountCurrentRotation.y = mount.transform.rotation.y + SelectedPartMountRotationData[mount.employedPart];
+                                    // mount.employedPart.transform.eulerAngles = MountCurrentRotation;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -476,8 +471,29 @@ namespace TweaksAndFixes
             _InUpdateConstructor = false;
         }
 
+        [HarmonyPatch(nameof(Ui.ExitConstructor))]
+        [HarmonyPostfix]
+        internal static void Postfix_ExitConstructor(Ui __instance, bool changeState = true, bool quickLoading = true)
+        {
+            _InConstructor = false;
+        }
 
 
+
+        // ########## SHIP PREVIEWS ########## //
+
+        [HarmonyPatch(nameof(Ui.GetShipPreviewTexGeneric))]
+        [HarmonyPrefix]
+        internal static bool Prefix_GetShipPreviewTexGeneric(Ui __instance, Ship ship, Dictionary<Il2CppSystem.Guid, Texture2D> cache, GameObject camera, Camera cameraActual, bool placeDiagonal, ref Texture2D __result)
+        {
+            if (Config.Param("taf_ship_previews_disable", 1) == 1)
+            {
+                __result = new Texture2D(0, 0);
+                return false;
+            }
+
+            return true;
+        }
 
 
 
@@ -485,7 +501,6 @@ namespace TweaksAndFixes
 
         public static Dictionary<string, Texture2D> PartPreviewCache = new Dictionary<string, Texture2D>();
         private static string LastPartPreviewGuid = "";
-
 
         public static Texture2D Resize(Texture2D texture2D, int targetX, int targetY)
         {
@@ -581,14 +596,34 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_GetPartPreviewTex(Ui __instance, PartData part, Ship ship, ref Texture2D __result)
         {
-            if (!_InConstructor) return true;
+            if (Config.Param("taf_part_previews_enable_caching", 1) != 1)
+            {
+                return true;
+            }
 
             LastPartPreviewGuid = GetPartPreviewGuid(part, ship);
 
             if (PartPreviewCache.ContainsKey(LastPartPreviewGuid))
             {
-                // Melon<TweaksAndFixes>.Logger.Msg("Use cashed part preview: " + LastPartPreviewGuid);
-                __result = PartPreviewCache[LastPartPreviewGuid];// Resize(PartPreviewCache[LastPartPreviewGuid], 256, 256);
+                try
+                {
+                    // Unfortunately the only real way to check if the preveiew was destroyed is to call a function.
+                    PartPreviewCache[LastPartPreviewGuid].GetPixel(0, 0);
+                }
+                catch
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg("Part preview was deleted: " + LastPartPreviewGuid);
+
+                    // If it errors out, then we assume it was deleted and regenerate the preview.
+                    PartPreviewCache.Remove(LastPartPreviewGuid);
+                    return true;
+                }
+
+                //Melon<TweaksAndFixes>.Logger.Msg("Use cashed part preview: " + LastPartPreviewGuid);
+                // Melon<TweaksAndFixes>.Logger.Msg(PartPreviewCache[LastPartPreviewGuid].Pointer);
+                // Melon<TweaksAndFixes>.Logger.Msg(PartPreviewCache[LastPartPreviewGuid].name);
+                __result = PartPreviewCache[LastPartPreviewGuid]; // Resize(PartPreviewCache[LastPartPreviewGuid], 256, 256);
+
                 return false;
             }
 
@@ -599,25 +634,22 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_GetPartPreviewTex(Ui __instance, PartData part, Ship ship, ref Texture2D __result)
         {
-            if (!_InConstructor) return;
+            if (Config.Param("taf_part_previews_enable_caching", 1) != 1)
+            {
+                return;
+            }
 
             if (!PartPreviewCache.ContainsKey(LastPartPreviewGuid))
             {
-                Texture2D downscale = Resize(__result, __result.width / 2, __result.height / 2);
-                // downscale = Resize(downscale, downscale.width / 2, downscale.height / 2);
+                if (Config.Param("taf_part_previews_half_resolution", 1) == 1)
+                {
+                    __result = Resize(__result, __result.width / 2, __result.height / 2);
+                }
+
                 // Melon<TweaksAndFixes>.Logger.Msg("Cashed new part preview: " + LastPartPreviewGuid + " | " + downscale.height + " : " + downscale.width + " | Cashe Size: " + PartPreviewCache.Count);
-                PartPreviewCache[LastPartPreviewGuid] = downscale;
-                __result = PartPreviewCache[LastPartPreviewGuid];// Resize(PartPreviewCache[LastPartPreviewGuid], 256, 256);
+                PartPreviewCache[LastPartPreviewGuid] = __result;
             }
         }
-
-        [HarmonyPatch(nameof(Ui.ExitConstructor))]
-        [HarmonyPostfix]
-        internal static void Postfix_ExitConstructor(Ui __instance, bool changeState = true, bool quickLoading = true)
-        {
-            _InConstructor = false;
-        }
-
 
 
 
@@ -625,44 +657,52 @@ namespace TweaksAndFixes
 
         // ########## FIND PART UNDER MOUSE FIX ########## //
 
-        [HarmonyPatch(nameof(Ui.FindPartUnderMouseCursor))]
-        [HarmonyPrefix]
-        internal static bool Prefix_FindPartUnderMouseCursor(Ui __instance, ref Part __result)
-        {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<RaycastHit> hits;
-            hits = Physics.RaycastAll(ray, 10000);
-            // Melon<TweaksAndFixes>.Logger.Msg(Input.mousePosition.ToString() + " : " + G.cam.transform.TransformDirection(Vector3.forward).ToString());
-            __result = null;
-            foreach (RaycastHit hit in hits)
-            {
-                if (hit.collider == null || hit.collider.name != "PartSelect")
-                {
-                    continue;
-                }
-
-                GameObject hitObj = hit.collider.gameObject.GetParent().GetParent();
-
-                if (hitObj != null)
-                {
-                    // Melon<TweaksAndFixes>.Logger.Msg(hitObj.name);
-
-                    foreach (Part part in Patch_Ship.LastCreatedShip.parts)
-                    {
-                        if (part.gameObject == hitObj)
-                        {
-                            // Melon<TweaksAndFixes>.Logger.Msg("Hit: " + part.Name());
-                            __result = part;
-                        }
-                        // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(part.gameObject));
-                    }
-                }
-
-                if (__result != null) break;
-            }
-
-            return false;
-        }
+        // [HarmonyPatch(nameof(Ui.FindPartUnderMouseCursor))]
+        // [HarmonyPrefix]
+        // internal static bool Prefix_FindPartUnderMouseCursor(Ui __instance, ref Part __result)
+        // {
+        //     Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        //     Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<RaycastHit> hits;
+        //     hits = Physics.RaycastAll(ray, 10000);
+        //     // Melon<TweaksAndFixes>.Logger.Msg(Input.mousePosition.ToString() + " : " + G.cam.transform.TransformDirection(Vector3.forward).ToString());
+        //     __result = null;
+        //     foreach (RaycastHit hit in hits)
+        //     {
+        //         if (hit.collider == null)
+        //         {
+        //             continue;
+        //         }
+        // 
+        //         Melon<TweaksAndFixes>.Logger.Msg(hit.collider.gameObject.GetParent().name + " : " + hit.collider.name);
+        // 
+        //         if (hit.collider == null || hit.collider.name != "DeckSize")
+        //         {
+        //             continue;
+        //         }
+        // 
+        //         GameObject hitObj = hit.collider.gameObject.GetParent().GetParent();
+        // 
+        //         if (hitObj != null)
+        //         {
+        //             // Melon<TweaksAndFixes>.Logger.Msg(hitObj.name + ": " + hit.collider.name);
+        // 
+        //             foreach (Part part in Patch_Ship.LastCreatedShip.parts)
+        //             {
+        //                 // Melon<TweaksAndFixes>.Logger.Msg("  Check: " + part.gameObject.name);
+        //                 if (part.gameObject == hitObj)
+        //                 {
+        //                     Melon<TweaksAndFixes>.Logger.Msg("  Hit: " + part.Name());
+        //                     __result = part;
+        //                 }
+        //             }
+        //             // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(Patch_Ship.LastCreatedShip.gameObject));
+        //         }
+        // 
+        //         if (__result != null) break;
+        //     }
+        // 
+        //     return false;
+        // }
 
 
 
