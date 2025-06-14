@@ -124,6 +124,7 @@ namespace TweaksAndFixes
         public static bool MainTower = false;
         public static bool SecTower = false;
         public static bool Funnel = false;
+        public static bool Barbette = false;
         public static bool UnderwaterTorpedo = false;
 
         public static bool UseNewConstructionLogic()
@@ -152,6 +153,7 @@ namespace TweaksAndFixes
                 MainTower = SelectedPart.data.isTowerMain;
                 SecTower = !SelectedPart.data.isTowerMain && SelectedPart.data.isTowerAny;
                 Funnel = SelectedPart.data.isFunnel;
+                Barbette = SelectedPart.data.isBarbette;
 
                 // Funnels have a fixed rotation
                 if (Funnel)
@@ -164,7 +166,7 @@ namespace TweaksAndFixes
                 }
 
                 // Main Towers and Secondary Towers can be roatated 180*
-                else if(MainTower)
+                else if (MainTower)
                 {
                     PartRotation = 0;
                     FixedRotation = false;
@@ -201,7 +203,16 @@ namespace TweaksAndFixes
                     RotationValue = 0;
                     UseDefaultMountRotation = true;
                 }
-                
+
+                // Barbettes are weird, disable default rotation to help a bit.
+                else if (Barbette)
+                {
+                    FixedRotation = false;
+                    FixedRotationValue = false;
+                    RotationValue = 45;
+                    UseDefaultMountRotation = false;
+                }
+
                 // Everything else has free rotation
                 else
                 {
