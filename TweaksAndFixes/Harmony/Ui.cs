@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using MelonLoader;
+﻿using MelonLoader;
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
 using UnityEngine.UI;
 using static TweaksAndFixes.ModUtils;
 using Il2CppSystem;
-using System.Reflection.Metadata.Ecma335;
 using static MelonLoader.MelonLogger;
-using Il2CppInterop.Runtime;
-using System.Drawing;
+using static Il2Cpp.CampaignController;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -106,18 +102,26 @@ namespace TweaksAndFixes
         // Selected part & related data
         public static Part SelectedPart = null;
         // public static Il2CppSystem.Collections.Generic.Dictionary<Part, float> SelectedPartMountRotationData = new Il2CppSystem.Collections.Generic.Dictionary<Part, float>();
+        public static Mount PartMount = null;
 
         // Rotation tracking
         public static float PartRotation = 0.0f;
+        public static float MountedPartRotation = 0.0f;
         public static float RotationValue = 15.0f;
         public static float DefaultRotation = 0.0f;
+
+        public static float LastPartZ = 0.0f;
+        public static float LastAutoRotateZ = 0.0f;
+        public static bool IsInAutoRotateMargin = false;
 
         // Rotation restrictions
         public static bool FixedRotation = false;
         public static bool FixedRotationValue = false;
         public static bool UseDefaultMountRotation = true;
-        public static bool Mounted = false;
-        
+        public static bool UseSpecialDefaultMountRotation = true; // When default rotation != 0 or 180
+        public static bool IgnoreSoftAutoRotate = false;
+        public static bool Mounted = false; // Used for casemates and underwater torpedoes
+
         // Selected part type
         public static bool SideGun = false;
         public static bool Casemate = false;
@@ -126,6 +130,10 @@ namespace TweaksAndFixes
         public static bool Funnel = false;
         public static bool Barbette = false;
         public static bool UnderwaterTorpedo = false;
+
+        // New UI Popups
+        public static bool DeleteShipNextTurn = false;
+        public static Button.ButtonClickedEvent DeleteShipEvent = null;
 
         public static bool UseNewConstructionLogic()
         {
@@ -136,6 +144,75 @@ namespace TweaksAndFixes
 
             return _InUpdateConstructor;
         }
+
+        public static void SetDestroyNextTurn()
+        {
+            DeleteShipNextTurn = true;
+        }
+
+        // private static void AddConfirmationPopups(Ui ui)
+        // {
+        //     GameObject TopBarChildren = ui.conUpperButtons.GetChild("Layout");
+        // 
+        //     Button DeleteShip = TopBarChildren.GetChild("DeleteShip").GetComponent<Button>();
+        // 
+        //     if (DeleteShipEvent == null) DeleteShipEvent = DeleteShip.onClick;
+        // 
+        //     DeleteShip.onClick = new Button.ButtonClickedEvent();
+        //     DeleteShip.onClick.AddListener(new System.Action(() =>
+        //     {
+        //         ui.ShowConfirmation("Are you sure you want to destroy this design?",
+        //         new System.Action(() =>
+        //         {
+        //             Melon<TweaksAndFixes>.Logger.Msg("yes1");
+        //             // originalEvent.Invoke();
+        //             // DeleteShipNextTurn = true;
+        //             // a = true;
+        //             // DeleteShipEvent.Invoke();
+        //             ui.ConDeleteShip(Patch_Ship.LastCreatedShip);
+        //             Melon<TweaksAndFixes>.Logger.Msg("yes2");
+        //         }),
+        //         new System.Action(() =>
+        //         {
+        //             Melon<TweaksAndFixes>.Logger.Msg("No");
+        //         }));
+        // 
+        //         // MessageBoxUI.MessageBoxQueue queue = new MessageBoxUI.MessageBoxQueue();
+        //         // queue.Header = "Destroy Design";//LocalizeManager.Localize("$TAF_Ui_Retirement_Header");
+        //         // queue.Text = "Are you sure you want to destroy this design?";// Il2CppSystem.String.Format(LocalizeManager.Localize("$TAF_Ui_Retirement_Body"), __instance.CurrentDate.AsDate().Year - 1890, retirementPromptFrequency);
+        //         // queue.Ok = LocalizeManager.Localize("$Ui_Popup_Generic_Yes");
+        //         // queue.Cancel = LocalizeManager.Localize("$Ui_Popup_Generic_No");
+        //         // queue.canBeClosed = false;
+        //         // queue.OnConfirm = new System.Action(() =>
+        //         // {
+        //         //     originalEvent.Invoke();
+        //         // });
+        //         // MessageBoxUI.Messages.Enqueue(queue);
+        //     }));
+        // 
+        // 
+        //     // if (DeleteShipNextTurn)
+        //     // {
+        //     //     originalEvent.Invoke();
+        //     //     DeleteShipNextTurn = false;
+        //     // }
+        // 
+        //     // DeleteShip.onClick.RemoveAllListeners();
+        // 
+        //     // Melon<TweaksAndFixes>.Logger.Msg("Top Bar:");
+        //     // foreach (GameObject child in TopBarChildren)
+        //     // {
+        //     //     if (child == null) continue;
+        //     //     if (child.name.Contains("Space")) continue;
+        //     //     Melon<TweaksAndFixes>.Logger.Msg("  " + child.name);
+        //     // 
+        //     //     Button button = child.GetComponent<Button>();
+        //     //     if (button != null)
+        //     //     {
+        //     //         button.onClick = new Button.ButtonClickedEvent();
+        //     //     }
+        //     // }
+        // }
 
         public static void UpdateSelectedPart(Part part)
         {
@@ -159,9 +236,10 @@ namespace TweaksAndFixes
                 if (Funnel)
                 {
                     PartRotation = 0;
+                    RotationValue = 0;
                     FixedRotation = true;
                     FixedRotationValue = true;
-                    RotationValue = 0;
+                    IgnoreSoftAutoRotate = true;
                     UseDefaultMountRotation = false;
                 }
 
@@ -169,17 +247,19 @@ namespace TweaksAndFixes
                 else if (MainTower)
                 {
                     PartRotation = 0;
-                    FixedRotation = false;
                     RotationValue = 180;
+                    FixedRotation = false;
                     FixedRotationValue = true;
+                    IgnoreSoftAutoRotate = true;
                     UseDefaultMountRotation = false;
                 }
                 else if (SecTower)
                 {
                     PartRotation = 180;
-                    FixedRotation = false;
                     RotationValue = 180;
+                    FixedRotation = false;
                     FixedRotationValue = true;
+                    IgnoreSoftAutoRotate = true;
                     UseDefaultMountRotation = false;
                 }
 
@@ -187,39 +267,49 @@ namespace TweaksAndFixes
                 // The current rotation is reset to 0 so they use the default mount rotation instead
                 else if (Casemate)
                 {
-                    FixedRotation = false;
                     PartRotation = 0;
-                    FixedRotationValue = false;
                     RotationValue = 45;
+                    FixedRotation = false;
+                    FixedRotationValue = false;
+                    IgnoreSoftAutoRotate = true;
                     UseDefaultMountRotation = true;
+                    UseSpecialDefaultMountRotation = false;
                 }
 
                 // Underwater torpedoes are fixed
                 else if (UnderwaterTorpedo)
                 {
-                    FixedRotation = true;
                     PartRotation = 0;
-                    FixedRotationValue = true;
                     RotationValue = 0;
+                    FixedRotation = true;
+                    FixedRotationValue = true;
+                    IgnoreSoftAutoRotate = true;
                     UseDefaultMountRotation = true;
+                    UseSpecialDefaultMountRotation = false;
                 }
 
-                // Barbettes are weird, disable default rotation to help a bit.
+                // Same as normal parts, just ignore special rotations
                 else if (Barbette)
                 {
+                    PartRotation = 0;
+                    RotationValue = 45;
                     FixedRotation = false;
                     FixedRotationValue = false;
-                    RotationValue = 45;
+                    IgnoreSoftAutoRotate = false;
                     UseDefaultMountRotation = false;
+                    UseSpecialDefaultMountRotation = false;
                 }
 
                 // Everything else has free rotation
                 else
                 {
+                    PartRotation = 0;
+                    RotationValue = 45;
                     FixedRotation = false;
                     FixedRotationValue = false;
-                    RotationValue = 45;
-                    UseDefaultMountRotation = true;
+                    IgnoreSoftAutoRotate = false;
+                    UseDefaultMountRotation = false;
+                    UseSpecialDefaultMountRotation = true;
                 }
             }
         }
@@ -227,11 +317,12 @@ namespace TweaksAndFixes
 
         [HarmonyPatch(nameof(Ui.UpdateConstructor))]
         [HarmonyPrefix]
-        internal static void Prefix_UpdateConstructor()
+        internal static void Prefix_UpdateConstructor(Ui __instance)
         {
             _InConstructor = true;
             _InUpdateConstructor = true;
             Patch_Ui_c.Postfix_16(); // just in case we somehow died after running b15 and before b16
+            // AddConfirmationPopups(__instance);
         }
 
         [HarmonyPatch(nameof(Ui.UpdateConstructor))]
@@ -386,42 +477,100 @@ namespace TweaksAndFixes
                     }
                 }
 
-                if (!FixedRotationValue && SelectedPart != null && Input.GetKeyDown(KeyCode.G))
-                {
-                    RotationValue += 15.0f;
-                    if (RotationValue - 0.1 >= 45.0f)
-                    {
-                        RotationValue = 15.0f;
-                    }
-                    // Melon<TweaksAndFixes>.Logger.Msg("Rotation inc: " + RotationValue);
-                }
-                
-                if (!FixedRotation && SelectedPart != null && Input.GetKeyDown(G.settings.Bindings.RotatePartLeft.Code))
-                {
-                    PartRotation -= RotationValue;
-                    SelectedPart.AnimateRotate(-RotationValue);
-                    // Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + SelectedPart.transform.eulerAngles.y);
-                }
-                else if (!FixedRotation && SelectedPart != null && Input.GetKeyDown(G.settings.Bindings.RotatePartRight.Code))
-                {
-                    PartRotation += RotationValue;
-                    SelectedPart.AnimateRotate(RotationValue);
-                    // Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + SelectedPart.transform.eulerAngles.y);
-                }
-                else if (!FixedRotation && SelectedPart != null && Input.GetKeyDown(KeyCode.F))
-                {
-                    PartRotation = (SelectedPart.transform.position.z > 0 || Mounted) ? 0 : 180;
-                    // Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + SelectedPart.transform.eulerAngles.y);
-                }
-
                 // Melon<TweaksAndFixes>.Logger.Msg("Check selected part:");
 
                 if (SelectedPart != null)
                 {
-                    if (SelectedPart.mount != null && UseDefaultMountRotation)
+
+                    if (!FixedRotationValue && Input.GetKeyDown(KeyCode.G))
+                    {
+                        RotationValue += 15.0f;
+                        if (RotationValue - 0.1 >= 45.0f)
+                        {
+                            RotationValue = 15.0f;
+                        }
+                        // Melon<TweaksAndFixes>.Logger.Msg("Rotation inc: " + RotationValue);
+                    }
+                
+                    if (!FixedRotation && Input.GetKeyDown(G.settings.Bindings.RotatePartLeft.Code))
+                    {
+                        if (Mounted) MountedPartRotation -= RotationValue;
+                        else PartRotation -= RotationValue;
+                        SelectedPart.AnimateRotate(-RotationValue);
+                        // Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + SelectedPart.transform.eulerAngles.y);
+                    }
+                    else if (!FixedRotation && Input.GetKeyDown(G.settings.Bindings.RotatePartRight.Code))
+                    {
+                        if (Mounted) MountedPartRotation += RotationValue;
+                        else PartRotation += RotationValue;
+                        SelectedPart.AnimateRotate(RotationValue);
+                        // Melon<TweaksAndFixes>.Logger.Msg("Rotate: " + SelectedPart.transform.eulerAngles.y);
+                    }
+                    else if (!FixedRotation && Input.GetKeyDown(KeyCode.F))
+                    {
+                        if (Mounted) MountedPartRotation = 0;
+                        else PartRotation = SelectedPart.transform.position.z > 0 ? 0 : 180;
+                        // Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + SelectedPart.transform.eulerAngles.y);
+                    }
+
+                    if (!IgnoreSoftAutoRotate && SelectedPart.transform.position.z < 9000 && SelectedPart.transform.position.z > -9000)
+                    {
+                        // Outside Margin
+                        if (IsInAutoRotateMargin && Il2CppSystem.Math.Abs(LastAutoRotateZ - SelectedPart.transform.position.z) > 5)
+                        {
+                            // Melon<TweaksAndFixes>.Logger.Msg("Outside margin: " + Il2CppSystem.Math.Abs(LastAutoRotateZ - SelectedPart.transform.position.z));
+                            IsInAutoRotateMargin = false;
+                        }
+                        // else if (IsInAutoRotateMargin)
+                        // {
+                        //     if (LastPartZ != SelectedPart.transform.position.z) Melon<TweaksAndFixes>.Logger.Msg("Inside margin: " + Il2CppSystem.Math.Abs(LastAutoRotateZ - SelectedPart.transform.position.z));
+                        // }
+
+                        // Soft Auto-Rotate
+                        if (!IsInAutoRotateMargin && (Il2CppSystem.Math.Abs(SelectedPart.transform.position.z) <= 5 || Il2CppSystem.Math.Sign(SelectedPart.transform.position.z) != Il2CppSystem.Math.Sign(LastPartZ)) && ((SelectedPart.transform.position.z > 0 || Mounted) ? 0 : 180) != PartRotation)
+                        {
+                            IsInAutoRotateMargin = true;
+                            LastAutoRotateZ = SelectedPart.transform.position.z;
+                            PartRotation = (SelectedPart.transform.position.z > 0 || Mounted) ? 0 : 180;
+                            // Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + SelectedPart.transform.eulerAngles.y);
+                        }
+
+                        // if (LastPartZ != SelectedPart.transform.position.z) Melon<TweaksAndFixes>.Logger.Msg("Update Pos: " + SelectedPart.transform.position.z);
+                        LastPartZ = SelectedPart.transform.position.z;
+                    }
+
+
+                    if (UseDefaultMountRotation && SelectedPart.mount != null)
                     {
                         DefaultRotation = SelectedPart.mount.transform.rotation.eulerAngles.y;
                         Mounted = true;
+
+                        if (SelectedPart.mount != PartMount)
+                        {
+                            PartMount = SelectedPart.mount;
+                            MountedPartRotation = 0;
+                        }
+                    }
+                    else if (UseSpecialDefaultMountRotation && SelectedPart.mount != null)
+                    {
+                        int MountDefaultRotation = (int)(Il2CppSystem.Math.Abs(SelectedPart.mount.transform.rotation.eulerAngles.y) + 0.1);
+
+                        if ((MountDefaultRotation != 0 && MountDefaultRotation != 180) || SelectedPart.mount.parentPart.data.isTowerAny || SelectedPart.mount.parentPart.data.isFunnel)
+                        {
+                            DefaultRotation = SelectedPart.mount.transform.rotation.eulerAngles.y;
+                            Mounted = true;
+
+                            if (SelectedPart.mount != PartMount)
+                            {
+                                PartMount = SelectedPart.mount;
+                                MountedPartRotation = 0;
+                            }
+                        }
+                        else
+                        {
+                            DefaultRotation = 0;
+                            Mounted = false;
+                        }
                     }
                     else
                     {
@@ -430,7 +579,7 @@ namespace TweaksAndFixes
                     }
 
                     Vector3 CurrentRotation = SelectedPart.transform.eulerAngles;
-                    CurrentRotation.y = PartRotation + DefaultRotation;
+                    CurrentRotation.y = (Mounted ? MountedPartRotation : PartRotation) + DefaultRotation;
                     SelectedPart.transform.eulerAngles = CurrentRotation;
 
                     if (Input.GetKey(KeyCode.LeftControl) && !SideGun && SelectedPart.mount == null)
@@ -497,7 +646,7 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_GetShipPreviewTexGeneric(Ui __instance, Ship ship, Dictionary<Il2CppSystem.Guid, Texture2D> cache, GameObject camera, Camera cameraActual, bool placeDiagonal, ref Texture2D __result)
         {
-            if (Config.Param("taf_ship_previews_disable", 1) == 1)
+            if (Config.Param("taf_ship_previews_disable", 0) == 1)
             {
                 __result = new Texture2D(0, 0);
                 return false;
