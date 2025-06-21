@@ -7,6 +7,8 @@ using Il2Cpp;
 using System.Runtime.CompilerServices;
 using System.Reflection;
 using System.Globalization;
+using UnityEngine.UI;
+using Il2CppTMPro;
 
 #pragma warning disable CS8601
 #pragma warning disable CS8602
@@ -148,10 +150,37 @@ namespace TweaksAndFixes
 
                 hierarchy += $" {go.transform.position}x{go.transform.localScale}";
 
-                int rCount = go.GetComponents<Renderer>().Length;
-                int mCount = go.GetComponents<MeshFilter>().Length;
-                if (rCount > 0 || mCount > 0)
-                    hierarchy += ". R.";
+                T AddComponentText<T> (string text) {
+                    var comp = go.GetComponent<T>();
+
+                    if (comp == null) { return default(T); }
+                    
+                    hierarchy += "\n";
+
+                    for (int i = 0; i < depth; ++i)
+                    {
+                        hierarchy += "  ";
+                    }
+
+                    hierarchy += " |-> " + text;
+                    return comp;
+                };
+
+                // AddComponentText<Transform>();
+                AddComponentText<Button>("Button");
+                AddComponentText<KeyButton>("KeyButton");
+                AddComponentText<TMP_Text>("TMP_Text");
+                Text txt = AddComponentText<Text>("Text");
+                if (txt != null) hierarchy += ": " + txt.text;
+                AddComponentText<Image>("Image");
+                AddComponentText<Texture2D>("Texture2D");
+                AddComponentText<LayoutGroup>("LayoutGroup");
+                AddComponentText<LayoutElement>("LayoutElement");
+
+                // int rCount = go.GetComponents<Renderer>().Length;
+                // int mCount = go.GetComponents<MeshFilter>().Length;
+                // if (rCount > 0 || mCount > 0)
+                //     hierarchy += ". R.";
                 //hierarchy += $". R={rCount}, M={mCount}";
 
                 ++depth;
@@ -190,6 +219,22 @@ namespace TweaksAndFixes
             return null;
         }
 
+
+        public static void DestroyChild(GameObject child, bool tryDestroy = true)
+        {
+            if (child == null) return;
+
+            if (tryDestroy)
+            {
+                child.transform.SetParent(null);
+                child.TryDestroy();
+            }
+            else
+            {
+                child.SetActive(false);
+            }
+        }
+        
         // Returns a smoothed distribution, i.e.
         // Random.Range(-range, range) + Random.Range(-range, range)...
         // divided by steps
