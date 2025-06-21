@@ -61,6 +61,9 @@
       <HintPath>G:\Games\Steam\steamapps\common\Ultimate Admiral Dreadnoughts\MelonLoader\Il2CppAssemblies\UnityEngine.ImageConversionModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>G:\Games\Steam\steamapps\common\Ultimate Admiral Dreadnoughts\MelonLoader\Il2CppAssemblies\UnityEngine.IMGUIModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
       <HintPath>G:\Games\Steam\steamapps\common\Ultimate Admiral Dreadnoughts\MelonLoader\Il2CppAssemblies\UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>False</Private>
