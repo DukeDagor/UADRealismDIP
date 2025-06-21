@@ -70,6 +70,7 @@ namespace TweaksAndFixes
         private int _lastValidData = 0;
         private bool _needUseNewFindCode = false;
         public bool NeedUseNewFindCode => _needUseNewFindCode;
+        private static bool PredefinedDesignFileProblem = false;
         public static bool NeedLoadRestrictive(bool prewarm)
             => CampaignController.Instance.designsUsage == CampaignController.DesignsUsage.FullPredefined ||
                             (prewarm && CampaignController.Instance.designsUsage != CampaignController.DesignsUsage.FullGenerated);
@@ -107,7 +108,9 @@ namespace TweaksAndFixes
 
         public bool LoadPredefSets(bool prewarm)
         {
-            int totalCount = 0;
+            if (PredefinedDesignFileProblem) return false;
+
+                int totalCount = 0;
             _lastValidData = 0;
             _lastLoadCared = false; // if we fail, remember this load as less restrictive
             int iC = _predefFileData.Count;
@@ -237,6 +240,75 @@ namespace TweaksAndFixes
             {
                 Melon<TweaksAndFixes>.Logger.Error("Failed to load shipsPerYear from " + path);
                 return false;
+            }
+
+            // Check for predef problems
+            {
+                string ShipsPerYearProblems = "";
+
+                foreach (var spy in store.shipsPerYear)
+                {
+                    bool yearProblem = false;
+                    foreach (var p in G.GameData.playersMajor.Values)
+                    {
+                        bool missing = true;
+                        foreach (var spp2 in spy.Value.shipsPerPlayer)
+                        {
+                            if (spp2.Key == p.name)
+                            {
+                                missing = false;
+                                break;
+                            }
+                        }
+                        if (missing)
+                        {
+                            if (!yearProblem)
+                            {
+                                yearProblem = true;
+                                ShipsPerYearProblems += "\n - " + spy.Key;
+                            }
+                            ShipsPerYearProblems += $"\n   = {p.name}: No Designs";
+                            continue;
+                        }
+                    }
+
+
+                    foreach (var spp2 in spy.Value.shipsPerPlayer)
+                    {
+                        string msg = $"\n   = {spp2.key}:";
+                        bool countryProblem = false;
+                        foreach (var spp3 in spp2.value.shipsPerType)
+                        {
+                            if (spp3.value.Count < 5 || spp3.value.Count > 40)
+                            {
+                                msg += $"\n     + {spp3.key}: " + spp3.value.Count;
+                                countryProblem = true;
+                                if (!yearProblem)
+                                {
+                                    yearProblem = true;
+                                    ShipsPerYearProblems += "\n - " + spy.Key;
+                                }
+                            }
+                        }
+                        if (countryProblem) ShipsPerYearProblems += msg;
+                    }
+                }
+
+                if (ShipsPerYearProblems.Length > 0)
+                {
+                    Melon<TweaksAndFixes>.Logger.Warning($"Found problems with pregen design file:{ShipsPerYearProblems}");
+
+                    G.ui.ShowConfirmation("Malformed predefs. Check log: `...\\Steam\\steamapps\\common\\Ultimate Admiral Dreadnoughts\\MelonLoader\\Latest.log`.",
+                        new System.Action(() =>
+                        {
+                            GameManager.Quit();
+                        })
+                    );
+
+                    PredefinedDesignFileProblem = true;
+
+                    return false;
+                }
             }
 
             foreach (var spy in store.shipsPerYear)
