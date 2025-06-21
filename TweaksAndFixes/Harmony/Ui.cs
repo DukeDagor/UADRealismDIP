@@ -7,6 +7,8 @@ using static TweaksAndFixes.ModUtils;
 using Il2CppSystem;
 using static MelonLoader.MelonLogger;
 using static Il2Cpp.CampaignController;
+using Il2CppTMPro;
+using Il2CppUiExt;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -103,11 +105,12 @@ namespace TweaksAndFixes
         public static Part SelectedPart = null;
         // public static Il2CppSystem.Collections.Generic.Dictionary<Part, float> SelectedPartMountRotationData = new Il2CppSystem.Collections.Generic.Dictionary<Part, float>();
         public static Mount PartMount = null;
+        public static PartCategoryData PartCategory;
 
         // Rotation tracking
         public static float PartRotation = 0.0f;
         public static float MountedPartRotation = 0.0f;
-        public static float RotationValue = 15.0f;
+        public static float RotationValue = 45.0f;
         public static float DefaultRotation = 0.0f;
 
         public static float LastPartZ = 0.0f;
@@ -134,6 +137,9 @@ namespace TweaksAndFixes
         // New UI Popups
         public static bool DeleteShipNextTurn = false;
         public static Button.ButtonClickedEvent DeleteShipEvent = null;
+        public static Button.ButtonClickedEvent AskConfirmDeleteShipEvent = null;
+
+        // ////////// General Use Functions ////////// //
 
         public static bool UseNewConstructionLogic()
         {
@@ -150,69 +156,309 @@ namespace TweaksAndFixes
             DeleteShipNextTurn = true;
         }
 
-        // private static void AddConfirmationPopups(Ui ui)
-        // {
-        //     GameObject TopBarChildren = ui.conUpperButtons.GetChild("Layout");
-        // 
-        //     Button DeleteShip = TopBarChildren.GetChild("DeleteShip").GetComponent<Button>();
-        // 
-        //     if (DeleteShipEvent == null) DeleteShipEvent = DeleteShip.onClick;
-        // 
-        //     DeleteShip.onClick = new Button.ButtonClickedEvent();
-        //     DeleteShip.onClick.AddListener(new System.Action(() =>
-        //     {
-        //         ui.ShowConfirmation("Are you sure you want to destroy this design?",
-        //         new System.Action(() =>
-        //         {
-        //             Melon<TweaksAndFixes>.Logger.Msg("yes1");
-        //             // originalEvent.Invoke();
-        //             // DeleteShipNextTurn = true;
-        //             // a = true;
-        //             // DeleteShipEvent.Invoke();
-        //             ui.ConDeleteShip(Patch_Ship.LastCreatedShip);
-        //             Melon<TweaksAndFixes>.Logger.Msg("yes2");
-        //         }),
-        //         new System.Action(() =>
-        //         {
-        //             Melon<TweaksAndFixes>.Logger.Msg("No");
-        //         }));
-        // 
-        //         // MessageBoxUI.MessageBoxQueue queue = new MessageBoxUI.MessageBoxQueue();
-        //         // queue.Header = "Destroy Design";//LocalizeManager.Localize("$TAF_Ui_Retirement_Header");
-        //         // queue.Text = "Are you sure you want to destroy this design?";// Il2CppSystem.String.Format(LocalizeManager.Localize("$TAF_Ui_Retirement_Body"), __instance.CurrentDate.AsDate().Year - 1890, retirementPromptFrequency);
-        //         // queue.Ok = LocalizeManager.Localize("$Ui_Popup_Generic_Yes");
-        //         // queue.Cancel = LocalizeManager.Localize("$Ui_Popup_Generic_No");
-        //         // queue.canBeClosed = false;
-        //         // queue.OnConfirm = new System.Action(() =>
-        //         // {
-        //         //     originalEvent.Invoke();
-        //         // });
-        //         // MessageBoxUI.Messages.Enqueue(queue);
-        //     }));
-        // 
-        // 
-        //     // if (DeleteShipNextTurn)
-        //     // {
-        //     //     originalEvent.Invoke();
-        //     //     DeleteShipNextTurn = false;
-        //     // }
-        // 
-        //     // DeleteShip.onClick.RemoveAllListeners();
-        // 
-        //     // Melon<TweaksAndFixes>.Logger.Msg("Top Bar:");
-        //     // foreach (GameObject child in TopBarChildren)
-        //     // {
-        //     //     if (child == null) continue;
-        //     //     if (child.name.Contains("Space")) continue;
-        //     //     Melon<TweaksAndFixes>.Logger.Msg("  " + child.name);
-        //     // 
-        //     //     Button button = child.GetComponent<Button>();
-        //     //     if (button != null)
-        //     //     {
-        //     //         button.onClick = new Button.ButtonClickedEvent();
-        //     //     }
-        //     // }
-        // }
+        public static void AddConfirmPopupToButton(Button button, string text = default)
+        {
+            if (button.onClick.PrepareInvoke().Count == 1)
+            {
+                if (text == default)
+                {
+                    text = "Are you sure?";
+                }
+                else
+                {
+                    text = LocalizeManager.Localize(text);
+                }
+
+                var baseCall = button.onClick.PrepareInvoke()[0];
+                button.onClick.RemoveAllListeners();
+                button.onClick.AddListener(new System.Action(() =>
+                {
+                    G.ui.ShowConfirmation(text,
+                        new System.Action(() =>
+                        {
+                            baseCall.Invoke(new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(System.Array.Empty<Il2CppSystem.Object>()));
+                        }),
+                        new System.Action(() => { })
+                    );
+                }));
+                button.onClick.AddListener(new System.Action(() => { }));
+            }
+        }
+
+        public static void DisableKeyButton(Button button, System.Action before = null, System.Action after = null)
+        {
+            if (button.onClick.PrepareInvoke().Count == 1)
+            {
+                var baseCall = button.onClick.PrepareInvoke()[0];
+                button.onClick.RemoveAllListeners();
+                button.onClick.AddListener(new System.Action(() =>
+                {
+                    if (!Input.anyKey && !Input.anyKeyDown)
+                    {
+                        before?.Invoke();
+                        baseCall.Invoke(new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(System.Array.Empty<Il2CppSystem.Object>()));
+                        after?.Invoke();
+                    }
+                }));
+                button.onClick.AddListener(new System.Action(() => { }));
+            }
+
+            ModUtils.DestroyChild(button.GetChild("HkBox(Clone)", true));
+        }
+
+        public static void UpdateRotationIncrament()
+        {
+            if (!FixedRotationValue)
+            {
+                RotationValue += 15.0f;
+                if (RotationValue - 0.1 >= 45.0f)
+                {
+                    RotationValue = 15.0f;
+                }
+                // Melon<TweaksAndFixes>.Logger.Msg("Rotation inc: " + RotationValue);
+            }
+        }
+
+        public static void AutoOrient()
+        {
+            if (SelectedPart != null && !FixedRotation)
+            {
+                if (Mounted) MountedPartRotation = 0;
+                else PartRotation = SelectedPart.transform.position.z > 0 ? 0 : 180;
+                // Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + SelectedPart.transform.eulerAngles.y);
+            }
+        }
+
+        public static void UpdateTopBarRotationButton(Ui ui)
+        {
+            GameObject RotationButton = ui.conUpperButtons.GetChild("Layout").GetChild("TAF_Rotation_Button", true);
+
+            if (RotationButton == null)
+            {
+                GameObject template = ui.conUpperButtons.GetChild("Layout").GetChild("Undo");
+                RotationButton = GameObject.Instantiate(template);
+                HorizontalLayoutGroup group = ui.conUpperButtons.GetChild("Layout").GetComponent<HorizontalLayoutGroup>();
+                RotationButton.transform.SetParent(group.transform, false);//ui.conUpperButtons.GetChild("Layout"));
+                RotationButton.transform.SetSiblingIndex(ui.conUpperButtons.GetChild("Layout").GetChildren().Count - 4);
+                RotationButton.name = "TAF_Rotation_Button";
+                // UiExt.SetTooltip(RotationButton.GetComponent<Button>(), "TAF_Rotation_Button_TT", new System.Func<string>(() => { return "Test"; }));
+                Text text = RotationButton.GetChild("Text").GetComponent<Text>();
+                Button button = RotationButton.GetComponent<Button>();
+                button.onClick.RemoveAllListeners();
+                button.onClick.AddListener(new System.Action(() =>
+                {
+                    UpdateRotationIncrament();
+                }));
+                LayoutElement layout = RotationButton.GetComponent<LayoutElement>();
+                layout.preferredWidth = 145;
+            }
+
+            // if (FixedRotationValue) RotationButton.GetComponent<Button>().SetActive(false);
+            // else RotationButton.GetComponent<Button>().SetActive(true);
+            RotationButton.GetChild("Text").GetComponent<Text>().text = $"Incrament | Key:  [G]\n{RotationValue}\u00B0";
+            if (FixedRotationValue) RotationButton.GetComponent<Button>().Interactable(false);
+            else RotationButton.GetComponent<Button>().Interactable(true);
+        }
+
+        public static void UpdateTopBarRotationText(Ui ui)
+        {
+            GameObject RotationText = ui.conUpperButtons.GetChild("Layout").GetChild("TAF_Rotation_Text", true);
+
+            if (RotationText == null)
+            {
+                GameObject template = ui.conUpperButtons.GetChild("Layout").GetChild("Undo");
+                RotationText = GameObject.Instantiate(template);
+                HorizontalLayoutGroup group = ui.conUpperButtons.GetChild("Layout").GetComponent<HorizontalLayoutGroup>();
+                RotationText.transform.SetParent(group.transform, false);//ui.conUpperButtons.GetChild("Layout"));
+                RotationText.transform.SetSiblingIndex(ui.conUpperButtons.GetChild("Layout").GetChildren().Count - 4);
+                RotationText.name = "TAF_Rotation_Text";
+                // UiExt.SetTooltip(RotationButton.GetComponent<Button>(), "TAF_Rotation_Button_TT", new System.Func<string>(() => { return "Test"; }));
+                Button button = RotationText.GetComponent<Button>();
+                button.onClick.RemoveAllListeners();
+                button.onClick.AddListener(new System.Action(() =>
+                {
+                    AutoOrient();
+                }));
+                LayoutElement layout = RotationText.GetComponent<LayoutElement>();
+                layout.preferredWidth = 145;
+
+                // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(ui.constructorUi));
+            }
+
+            string RotationValue;
+
+            if (Mounted)
+            {
+                if (Il2CppSystem.Math.Sign(MountedPartRotation) == 1 || (int)(Il2CppSystem.Math.Abs(MountedPartRotation)) == 0)
+                {
+                    RotationValue = $"{Il2CppSystem.Math.Abs(MountedPartRotation)}\u00B0 + {(int)(DefaultRotation + 0.5f)}\u00B0";
+                }
+                else
+                {
+                    RotationValue = $"{Il2CppSystem.Math.Abs(MountedPartRotation + 360)}\u00B0 + {(int)DefaultRotation + 0.5f}\u00B0";
+                }
+            }
+            else
+            {
+                if (Il2CppSystem.Math.Sign(PartRotation) == 1 || (int)(Il2CppSystem.Math.Abs(PartRotation)) == 0)
+                {
+                    RotationValue = $"{Il2CppSystem.Math.Abs(PartRotation)}\u00B0";
+                }
+                else
+                {
+                    RotationValue = $"{Il2CppSystem.Math.Abs(PartRotation + 360)}\u00B0";
+                }
+            }
+
+            RotationText.GetChild("Text").GetComponent<Text>().text = $"Rotation | Reset: [F]\n{RotationValue}";
+            
+            
+            if (SelectedPart == null || FixedRotationValue) RotationText.GetComponent<Button>().Interactable(false);
+            else RotationText.GetComponent<Button>().Interactable(true);
+        }
+
+        public static void UpdateArmorQualityButton(Ui ui)
+        {
+            GameObject UpdateArmorQualityButton = ui.constructorUi.GetChild("Left").GetChild("Scroll View").GetChild("Viewport").GetChild("Cont").GetChild("FoldArmor").GetChild("Armor").GetChild("TAF_Armour_Quality_Button", true);
+
+            int ArmourQuality = 0;
+
+            if (Patch_Ship.LastCreatedShip != null)
+            {
+                foreach (TechnologyData tech in Patch_Ship.LastCreatedShip.techsActual)
+                {
+                    if (tech.type != "armor_quality") continue;
+
+                    string newStrength = tech.effects["armor_str"][0][0];
+                    ArmourQuality = int.Parse(newStrength);
+                    break;
+                }
+
+                if (ArmourQuality < 0)
+                {
+                    ArmourQuality = 0;
+                    Melon<TweaksAndFixes>.Logger.Error("Constructor `Update Armour Preview Setting` failed to parse armour quality!");
+                }
+            }
+
+            if (UpdateArmorQualityButton == null)
+            {
+                GameObject template = ui.conUpperButtons.GetChild("Layout").GetChild("Undo");
+                UpdateArmorQualityButton = GameObject.Instantiate(template);
+                GameObject parent = ui.constructorUi.GetChild("Left").GetChild("Scroll View").GetChild("Viewport").GetChild("Cont").GetChild("FoldArmor").GetChild("Armor");
+                // HorizontalLayoutGroup group = new HorizontalLayoutGroup();//ui.GetChild("Left").GetChild("Scroll View").GetChild("Viewport").GetChild("Cont").GetChild("FoldArmor").GetComponent<HorizontalLayoutGroup>();
+                // group.SetParent(parent);
+                UpdateArmorQualityButton.transform.SetParent(parent.transform, false);//ui.conUpperButtons.GetChild("Layout"));
+                UpdateArmorQualityButton.transform.SetSiblingIndex(2);//ui.conUpperButtons.GetChild("Layout").GetChildren().Count - 2);
+                UpdateArmorQualityButton.name = "TAF_Armour_Quality_Button";
+                // UiExt.SetTooltip(RotationButton.GetComponent<Button>(), "TAF_Rotation_Button_TT", new System.Func<string>(() => { return "Test"; }));
+                Button button = UpdateArmorQualityButton.GetComponent<Button>();
+                button.onClick.RemoveAllListeners();
+                button.onClick.AddListener(new System.Action(() =>
+                {
+                    G.settings.armorQualityInPen = ArmourQuality;
+                }));
+                LayoutElement layout = UpdateArmorQualityButton.GetComponent<LayoutElement>();
+                layout.preferredWidth = 100;
+                layout.preferredHeight = 15;
+
+                // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(ui.constructorUi));
+            }
+
+            Button button2 = UpdateArmorQualityButton.GetComponent<Button>();
+            button2.onClick.RemoveAllListeners();
+            button2.onClick.AddListener(new System.Action(() =>
+            {
+                G.settings.armorQualityInPen = ArmourQuality;
+            }));
+
+            UpdateArmorQualityButton.GetChild("Text").GetComponent<Text>().text = $"Update Armor Preview Setting";
+
+            if (Patch_Ship.LastCreatedShip == null || (int)(G.settings.armorQualityInPen + 0.05f) == ArmourQuality) UpdateArmorQualityButton.GetComponent<Button>().SetActive(false);
+            else UpdateArmorQualityButton.GetComponent<Button>().SetActive(true);
+        }
+
+        private static void AddConfirmationPopups(Ui ui)
+        {
+            var TopBarChildren = ui.conUpperButtons.GetChild("Layout").GetChildren();
+
+            // ui.conUpperButtons.GetChild("Layout").GetComponent<LayoutGroup>();
+
+            //Melon<TweaksAndFixes>.Logger.Msg("Top Bar:");
+            foreach (GameObject child in TopBarChildren)
+            {
+                if (child == null) continue;
+                if (child.name.Contains("SpaceEater")) child.transform.SetParent(null, false);
+                if (child.name.Contains("Space")) continue;
+                if (child.name == "Undo") continue;
+                if (child.name.StartsWith("TAF")) continue;
+                //Melon<TweaksAndFixes>.Logger.Msg("  " + child.name);
+            
+                Button button = child.GetComponent<Button>();
+                if (button != null)
+                {
+                    string key = "$TAF_Ui_Dockyard_Confirm_Action_" + child.name;
+                    AddConfirmPopupToButton(button, key);
+                }
+            }
+
+            var ShipOptions = ui.conShipTabs.GetChild("Cont").GetChildren();
+            foreach (GameObject child in ShipOptions)
+            {
+                if (child.name == "Ship(Clone)")
+                {
+                    Button button = child.GetChild("Button").GetComponent<Button>();
+                    if (button != null)
+                    {
+                        DisableKeyButton(button);
+                        ModUtils.DestroyChild(button.GetChild("CloneShip", true), false);
+                        ModUtils.DestroyChild(button.GetChild("DeleteShip", true), false);
+                    }
+                }
+            }
+
+            var PartCatagories = ui.constructorUi.GetChild("PartCategories").GetChildren();
+            foreach (GameObject child in PartCatagories)
+            {
+                if (child.name == "PartCategory(Clone)")
+                {
+                    Button button = child.GetChild("Button").GetComponent<Button>();
+                    if (button != null)
+                    {
+                        DisableKeyButton(button);
+                    }
+                }
+            }
+
+            var Parts = ui.constructorUi.GetChild("Parts").GetChild("ScrollRect").GetChild("Viewport").GetChild("Content").GetChildren();
+            foreach (GameObject child in Parts)
+            {
+                if (child.name == "Part(Clone)")
+                {
+                    Button button = child.GetChild("Button").GetComponent<Button>();
+                    if (button != null)
+                    {
+                        DisableKeyButton(button);
+                    }
+                }
+                else if (child.name == "Back")
+                {
+                    Button button = child.GetComponent<Button>();
+                    if (button != null)
+                    {
+                        DisableKeyButton(button, null, new System.Action(() => {
+                            if (Patch_Ship.LastCreatedShip.shipType.name != "bb" && Patch_Ship.LastCreatedShip.shipType.name != "bc" && Patch_Ship.LastCreatedShip.shipType.name != "ca")
+                                child.SetActive(false);
+                            if (Patch_Ship.LastCreatedShip.shipType.name == "ca" && Patch_Ship.LastCreatedShip.hull.data.maxAllowedCaliber != -1 && Patch_Ship.LastCreatedShip.hull.data.maxAllowedCaliber < 9)
+                                child.SetActive(false);
+                            if (PartCategory.name != "gun_main")
+                                child.SetActive(false);
+                        }));
+                    }
+                }
+            }
+
+        }
 
         public static void UpdateSelectedPart(Part part)
         {
@@ -314,6 +560,75 @@ namespace TweaksAndFixes
             }
         }
 
+        [HarmonyPatch(nameof(Ui.Update))]
+        [HarmonyPostfix]
+        internal static void Postfix_Update(Ui __instance)
+        {
+            // New UI elements
+            if (UseNewConstructionLogic() && _InConstructor)
+            {
+                AddConfirmationPopups(__instance);
+
+                UpdateTopBarRotationButton(__instance);
+                UpdateTopBarRotationText(__instance);
+                UpdateArmorQualityButton(__instance);
+            }
+
+            // Debug stuff
+            if (Input.GetKey(KeyCode.J))
+            {
+                if (Input.GetKeyDown(KeyCode.O))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg("CACHED ASSETS: ");
+                    foreach (var res in Util.resCache)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"  {res.key}");
+                    }
+                }
+
+                if (Input.GetKeyDown(KeyCode.I))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg("PLAYER INFO: ");
+                    foreach (var player in CampaignController.Instance.CampaignData.PlayersMajor)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"  {player.Name(false)}:");
+                        // Melon<TweaksAndFixes>.Logger.Msg($"    GDP Growth:          {player.wealthGrowth * 100}%");
+                        // Melon<TweaksAndFixes>.Logger.Msg($"    GDP:                 {player.wealth}$");
+                        // Melon<TweaksAndFixes>.Logger.Msg($"               Inflation | {player.inflation} = {player.ExpensesInflation()}");
+                        // Melon<TweaksAndFixes>.Logger.Msg($"              Budget Off | {player.budgetMod}");
+                        // Melon<TweaksAndFixes>.Logger.Msg($"                 TR Loss | {player.LossTrGDP}");
+                        // Melon<TweaksAndFixes>.Logger.Msg($"                 TR Loss | {player.LossTrIncome}");
+                        // Melon<TweaksAndFixes>.Logger.Msg($"         wealthGrowthMul | {player.wealthGrowthMul}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"                     GDP | {player.NationYearIncome()}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"              GDP Growth | {player.wealthGrowthEffectivePrev * 100}%");
+                        Melon<TweaksAndFixes>.Logger.Msg($"                  Growth | {player.nationBaseIncomeGrowth}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"             Army Budget | {player.yearlyArmyBudget / 1_000_000.0f} Mil$");
+                        Melon<TweaksAndFixes>.Logger.Msg($"             Naval Funds | {player.cash / 1_000_000.0f} Mil$");
+                        Melon<TweaksAndFixes>.Logger.Msg($"            Naval Budget | {player.NavalBudgetPercent() * player.NationYearIncome() / 1_000_000.0f} Mil$");
+                        Melon<TweaksAndFixes>.Logger.Msg($"                Shipyard | {player.ExpensesShipyardBudget()}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"                Training | {player.trainingBudget * 100}% = {player.ExpensesTrainingBudget()}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"                    Tech | {player.techBudget + 50}% = {player.ExpensesTechBudget()}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"           Transport Cap | {player.transportCapacity * 100}%");
+                        Melon<TweaksAndFixes>.Logger.Msg($"    Transport Cap Budget | {player.transportCapacityBudget * 100}% = {player.ExpensesTransportCapacity()}");
+                    }
+                }
+
+                //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.constructorUi));
+                //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.conUpperRight));
+                //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.conShipTypeButtons));
+                //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.conComponentsChoice));
+                //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.conDetails));
+            }
+        }
+
+        [HarmonyPatch(nameof(Ui.ChoosePartCategory))]
+        [HarmonyPostfix]
+        internal static void Postfix_ChoosePartCategory(Ui __instance, PartCategoryData category)
+        {
+            PartCategory = category;
+            // Melon<TweaksAndFixes>.Logger.Msg(Patch_Ship.LastCreatedShip.shipType.name);
+        }
+
 
         [HarmonyPatch(nameof(Ui.UpdateConstructor))]
         [HarmonyPrefix]
@@ -322,12 +637,11 @@ namespace TweaksAndFixes
             _InConstructor = true;
             _InUpdateConstructor = true;
             Patch_Ui_c.Postfix_16(); // just in case we somehow died after running b15 and before b16
-            // AddConfirmationPopups(__instance);
         }
 
         [HarmonyPatch(nameof(Ui.UpdateConstructor))]
         [HarmonyPostfix]
-        internal static void Postfix_UpdateConstructor()
+        internal static void Postfix_UpdateConstructor(Ui __instance)
         {
             if (NeedsConstructionListsClear)
             {
@@ -481,16 +795,7 @@ namespace TweaksAndFixes
 
                 if (SelectedPart != null)
                 {
-
-                    if (!FixedRotationValue && Input.GetKeyDown(KeyCode.G))
-                    {
-                        RotationValue += 15.0f;
-                        if (RotationValue - 0.1 >= 45.0f)
-                        {
-                            RotationValue = 15.0f;
-                        }
-                        // Melon<TweaksAndFixes>.Logger.Msg("Rotation inc: " + RotationValue);
-                    }
+                    if (Input.GetKeyDown(KeyCode.G)) UpdateRotationIncrament();
                 
                     if (!FixedRotation && Input.GetKeyDown(G.settings.Bindings.RotatePartLeft.Code))
                     {
@@ -508,10 +813,11 @@ namespace TweaksAndFixes
                     }
                     else if (!FixedRotation && Input.GetKeyDown(KeyCode.F))
                     {
-                        if (Mounted) MountedPartRotation = 0;
-                        else PartRotation = SelectedPart.transform.position.z > 0 ? 0 : 180;
-                        // Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + SelectedPart.transform.eulerAngles.y);
+                        AutoOrient();
                     }
+
+                    PartRotation %= 360;
+                    MountedPartRotation %= 360;
 
                     if (!IgnoreSoftAutoRotate && SelectedPart.transform.position.z < 9000 && SelectedPart.transform.position.z > -9000)
                     {
@@ -1105,6 +1411,7 @@ namespace TweaksAndFixes
         {
             ClearAllButtons(__instance);
             EnsureAllButtons(__instance);
+            AddConfirmationPopups(__instance);
         }
 
         [HarmonyPatch(nameof(Ui.RefreshConstructorInfo))]

@@ -88,7 +88,7 @@ namespace TweaksAndFixes
                 if (!IgnoreList[reason].Contains(value))
                 {
                     IgnoreList[reason].Add(value);
-                    Melon<TweaksAndFixes>.Logger.Msg("Unknown accuracy modifier: " + reason + " : " + value + " : " + mult);
+                    Melon<TweaksAndFixes>.Logger.Error("Unknown accuracy modifier: " + reason + " : " + value + " : " + mult);
                 }
             }
             else

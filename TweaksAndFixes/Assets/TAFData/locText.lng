@@ -32,3 +32,12 @@ $TAF_Ui_NavalInvasion_ProvinceListCatagories_Options;Options:
 $TAF_Ui_NavalInvasion_ProvinceListCatagories_Insufficient_Tonnage;Lacking Tonnage In Region:
 $TAF_Ui_Retirement_Header;Considering Retirement
 $TAF_Ui_Retirement_Body;After {0} long years of service to your country, perhaps its time to step down.\nWould you like to end the campaign here? If you decline, you will be asked again in {1} months.
+$TAF_Ui_Dockyard_Confirm_Action_Save;Are you sure you want to save this ship?
+$TAF_Ui_Dockyard_Confirm_Action_RandomShip;Are you sure you want to generate a random ship on this hull?
+$TAF_Ui_Dockyard_Confirm_Action_ClearShip;Are you sure you want to clear all parts?
+$TAF_Ui_Dockyard_Confirm_Action_DeleteShip;Are you sure you want to delete this ship permanantly?
+$TAF_Ui_Dockyard_Confirm_Action_CloneShip;Are you sure you want to clone this ship?
+$TAF_Ui_Dockyard_Confirm_Action_Exit;Are you sure you want to leave the Dockyard?
+$TAF_Ui_Dockyard_Confirm_Action_RandomShipSimpleRefit;Are you sure you want to refit ship components automatically?
+$TAF_Ui_Dockyard_Confirm_Action_RefitShip;Are you sure you want to enter Refit Mode?
+$TAF_Ui_Dockyard_Confirm_Action_SwitchPlayerType;Are you sure you want to switch player type?
