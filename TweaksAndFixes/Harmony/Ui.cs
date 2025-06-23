@@ -225,8 +225,6 @@ namespace TweaksAndFixes
             }
         }
 
-        // TODO: Add these buttons to lng file.
-
         public static void UpdateTopBarRotationButton(Ui ui)
         {
             GameObject RotationButton = ui.conUpperButtons.GetChild("Layout").GetChild("TAF_Rotation_Button", true);
@@ -535,25 +533,27 @@ namespace TweaksAndFixes
                 // Same as normal parts, just ignore special rotations
                 else if (Barbette)
                 {
-                    PartRotation = 0;
+                    // PartRotation = 0;
                     RotationValue = 45;
                     FixedRotation = false;
                     FixedRotationValue = false;
                     IgnoreSoftAutoRotate = false;
                     UseDefaultMountRotation = false;
                     UseSpecialDefaultMountRotation = false;
+                    AutoOrient();
                 }
 
                 // Everything else has free rotation
                 else
                 {
-                    PartRotation = 0;
+                    // PartRotation = 0;
                     RotationValue = 45;
                     FixedRotation = false;
                     FixedRotationValue = false;
                     IgnoreSoftAutoRotate = false;
                     UseDefaultMountRotation = false;
                     UseSpecialDefaultMountRotation = true;
+                    AutoOrient();
                 }
             }
         }
