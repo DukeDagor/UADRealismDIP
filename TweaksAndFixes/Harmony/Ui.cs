@@ -540,7 +540,7 @@ namespace TweaksAndFixes
                     IgnoreSoftAutoRotate = false;
                     UseDefaultMountRotation = false;
                     UseSpecialDefaultMountRotation = false;
-                    AutoOrient();
+                    // AutoOrient();
                 }
 
                 // Everything else has free rotation
@@ -553,7 +553,7 @@ namespace TweaksAndFixes
                     IgnoreSoftAutoRotate = false;
                     UseDefaultMountRotation = false;
                     UseSpecialDefaultMountRotation = true;
-                    AutoOrient();
+                    // AutoOrient();
                 }
             }
         }
