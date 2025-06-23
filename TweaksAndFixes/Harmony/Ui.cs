@@ -4,10 +4,6 @@ using UnityEngine;
 using Il2Cpp;
 using UnityEngine.UI;
 using static TweaksAndFixes.ModUtils;
-using Il2CppSystem;
-using static MelonLoader.MelonLogger;
-using static Il2Cpp.CampaignController;
-using Il2CppTMPro;
 using Il2CppUiExt;
 
 #pragma warning disable CS8604
@@ -229,6 +225,8 @@ namespace TweaksAndFixes
             }
         }
 
+        // TODO: Add these buttons to lng file.
+
         public static void UpdateTopBarRotationButton(Ui ui)
         {
             GameObject RotationButton = ui.conUpperButtons.GetChild("Layout").GetChild("TAF_Rotation_Button", true);
@@ -255,7 +253,7 @@ namespace TweaksAndFixes
 
             // if (FixedRotationValue) RotationButton.GetComponent<Button>().SetActive(false);
             // else RotationButton.GetComponent<Button>().SetActive(true);
-            RotationButton.GetChild("Text").GetComponent<Text>().text = $"Incrament | Key:  [G]\n{RotationValue}\u00B0";
+            RotationButton.GetChild("Text").GetComponent<Text>().text = String.Format(LocalizeManager.Localize("$TAF_Ui_Dockyard_TopBar_RotationIncrementControl"), RotationValue) + "\u00B0";
             if (FixedRotationValue) RotationButton.GetComponent<Button>().Interactable(false);
             else RotationButton.GetComponent<Button>().Interactable(true);
         }
@@ -310,7 +308,7 @@ namespace TweaksAndFixes
                 }
             }
 
-            RotationText.GetChild("Text").GetComponent<Text>().text = $"Rotation | Reset: [F]\n{RotationValue}";
+            RotationText.GetChild("Text").GetComponent<Text>().text = String.Format(LocalizeManager.Localize("$TAF_Ui_Dockyard_TopBar_RotationValueControl"), RotationValue);
             
             
             if (SelectedPart == null || FixedRotationValue) RotationText.GetComponent<Button>().Interactable(false);
@@ -372,7 +370,7 @@ namespace TweaksAndFixes
                 G.settings.armorQualityInPen = ArmourQuality;
             }));
 
-            UpdateArmorQualityButton.GetChild("Text").GetComponent<Text>().text = $"Update Armor Preview Setting";
+            UpdateArmorQualityButton.GetChild("Text").GetComponent<Text>().text = LocalizeManager.Localize("$TAF_Ui_Dockyard_ArmorTab_UpdateArmorQualitySetting");
 
             if (Patch_Ship.LastCreatedShip == null || (int)(G.settings.armorQualityInPen + 0.05f) == ArmourQuality) UpdateArmorQualityButton.GetComponent<Button>().SetActive(false);
             else UpdateArmorQualityButton.GetComponent<Button>().SetActive(true);
@@ -565,7 +563,7 @@ namespace TweaksAndFixes
         internal static void Postfix_Update(Ui __instance)
         {
             // New UI elements
-            if (UseNewConstructionLogic() && _InConstructor)
+            if (Config.Param("taf_dockyard_new_logic", 1) == 1)
             {
                 AddConfirmationPopups(__instance);
 
