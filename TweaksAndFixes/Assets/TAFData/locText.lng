@@ -41,3 +41,7 @@ $TAF_Ui_Dockyard_Confirm_Action_Exit;Are you sure you want to leave the Dockyard
 $TAF_Ui_Dockyard_Confirm_Action_RandomShipSimpleRefit;Are you sure you want to refit ship components automatically?
 $TAF_Ui_Dockyard_Confirm_Action_RefitShip;Are you sure you want to enter Refit Mode?
 $TAF_Ui_Dockyard_Confirm_Action_SwitchPlayerType;Are you sure you want to switch player type?
+$TAF_Ui_Dockyard_TopBar_RotationIncrementControl;Increment | Key:  [G]\n{0}
+$TAF_Ui_Dockyard_TopBar_RotationValueControl;Rotation | Reset: [F]\n{0}
+$TAF_Ui_Dockyard_ArmorTab_UpdateArmorQualitySetting;Update Armor Preview Setting
+$TAF_Ui_Predef_Error_MalformedPredefFile;Malformed predefs. Check log: `..\\steamapps\\common\\Ultimate Admiral Dreadnoughts\\MelonLoader\\Latest.log`.
