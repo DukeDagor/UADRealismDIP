@@ -11,7 +11,7 @@ namespace TweaksAndFixes
     [HarmonyPatch(typeof(GameManager))]
     internal class Patch_GameManager
     {
-        private static bool _IsRefreshSharedDesign = false;
+        public static bool _IsRefreshSharedDesign = false;
         
         [HarmonyPrefix]
         [HarmonyPatch(nameof(GameManager.RefreshSharedDesign))]

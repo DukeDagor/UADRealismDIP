@@ -304,8 +304,18 @@ namespace TweaksAndFixes
         internal static void Postfix_ChangeHull(Ship __instance)
         {
             Patch_Ui.NeedsConstructionListsClear = true;
-            LastCreatedShip = __instance;
             _IsInChangeHullWithHuman = false;
+
+            if (Patch_GameManager._IsRefreshSharedDesign)
+            {
+                foreach (var ship in G.GameData.sharedDesignsPerNation[__instance.player.data.name])
+                {
+                    if (ship.Item1.id != __instance.id) continue;
+
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Stored: {ship.Item1.vesselName}: {ship.Item1.tonnage}");
+                    __instance.tonnage = ship.Item1.tonnage;
+                }
+            }
 
             if (G.ui.isConstructorRefitMode)
             {
