@@ -5,6 +5,9 @@ using Il2Cpp;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using Il2CppUiExt;
+using System.Text.Json.Nodes;
+using static MelonLoader.MelonLogger;
+using JetBrains.Annotations;
 
 #pragma warning disable CS8602
 #pragma warning disable CS8604
@@ -19,18 +22,22 @@ namespace TweaksAndFixes
         internal static void Postfix_Start(SaveFilesConverter __instance)
         {
             const string jsonName = "SharedToJSON";
+            const string binName = "SharedToBin";
             const string predefName = "SharedToPredefineds";
             const string predefToName = "PredefinedsToShared";
             var upperButtons = __instance.DeleteAllShared.transform.parent.gameObject;
             var hlg = upperButtons.GetComponent<HorizontalLayoutGroup>();
-            hlg.spacing = 40;
+            hlg.spacing = 35;
             // For some reason the gameobjects stick around but the text/listeners don't, during scene transitions
             Button? sharedToJson = upperButtons.GetChild(jsonName, true)?.GetComponent<Button>();
             if (sharedToJson == null)
                 sharedToJson = GameObject.Instantiate(__instance.DeleteAllCampaign, upperButtons.transform);
+            Button? sharedToBin = upperButtons.GetChild(binName, true)?.GetComponent<Button>();
+            if (sharedToBin == null)
+                sharedToBin = GameObject.Instantiate(__instance.DeleteAllCampaign, upperButtons.transform);
             Button? sharedToPredefs = upperButtons.GetChild(predefName, true)?.GetComponent<Button>();
             if (sharedToPredefs == null)
-                sharedToPredefs = GameObject.Instantiate(__instance.DeleteAllCampaign, upperButtons.transform); ;
+                sharedToPredefs = GameObject.Instantiate(__instance.DeleteAllCampaign, upperButtons.transform);
             Button? predefsToShared = upperButtons.GetChild(predefToName, true)?.GetComponent<Button>();
             if (predefsToShared == null)
                 predefsToShared = GameObject.Instantiate(__instance.DeleteAllCampaign, upperButtons.transform);
@@ -46,6 +53,18 @@ namespace TweaksAndFixes
             {
                 int count = DesignsToJSON();
                 MessageBoxUI.Show(LocalizeManager.Localize("$TAF_Ui_Convert_ConvertedToJSON_Title"), LocalizeManager.Localize("$TAF_Ui_Convert_ConvertedToJSON_Text", count));
+            }));
+
+            sharedToBin.name = binName;
+            sharedToBin.GetComponentInChildren<Il2CppTMPro.TextMeshProUGUI>().text = LocalizeManager.Localize("$TAF_Ui_Convert_ConvertedToBin");
+            sharedToBin.onClick.RemoveAllListeners();
+            loc = sharedToBin.GetComponentInChildren<LocalizeText>(true);
+            if (loc != null)
+                GameObject.Destroy(loc);
+            sharedToBin.onClick.AddListener(new System.Action(() =>
+            {
+                int count = DesignsToBin();
+                MessageBoxUI.Show(LocalizeManager.Localize("$TAF_Ui_Convert_ConvertedToBin_Title"), LocalizeManager.Localize("$TAF_Ui_Convert_ConvertedToBin_Text", count));
             }));
 
             sharedToPredefs.name = predefName;
@@ -75,6 +94,7 @@ namespace TweaksAndFixes
 
         private static int DesignsToJSON()
         {
+
             var prefix = Storage.designsPrefix;
             if (!Directory.Exists(prefix))
                 return 0;
@@ -86,8 +106,34 @@ namespace TweaksAndFixes
                 var store = Util.DeserializeObjectByte<Ship.Store>(File.ReadAllBytes(f));
                 var json = Util.SerializeObject(store);
                 var baseName = Path.GetFileNameWithoutExtension(f);
-                var path = Path.Combine(Path.GetDirectoryName(f), baseName + ".design");
+                var path = Path.Combine(Path.GetDirectoryName(f), baseName + ".json");
                 File.WriteAllText(path, json);
+                ++count;
+            }
+
+            return count;
+        }
+
+        private static int DesignsToBin()
+        {
+            var prefix = Storage.designsPrefix;
+            if (!Directory.Exists(prefix))
+                return 0;
+
+            int count = 0;
+            var files = Directory.GetFiles(prefix, "*.json");
+            foreach (var f in files)
+            {
+                var store = Util.DeserializeObject<Ship.Store>(File.ReadAllText(f));
+                // string oldYear = "" + store.YearCreated;
+                // store.YearCreated += 1;
+                // store.id = Il2CppSystem.Guid.NewGuid();
+                // store.vesselName = Ship.GenerateRandomName(true, G.GameData.shipTypes[store.shipType], G.GameData.players[store.playerName], store.vesselName);
+                var json = Util.SerializeObjectByte(store);
+                var baseName = Path.GetFileNameWithoutExtension(f);
+                var path = Path.Combine(Path.GetDirectoryName(f), baseName + ".bindesign");
+                File.WriteAllBytes(path, json); // .Replace(oldYear, "" + store.YearCreated)
+                File.Delete(f);
                 ++count;
             }
 

@@ -7,6 +7,9 @@ $TAF_Ui_Constr_UpgradeTorpMark;Upgrade\nTorpedo\nMark
 $TAF_Ui_Convert_ConvertedToJSON;Designs to JSON
 $TAF_Ui_Convert_ConvertedToJSON_Title;Converted Designs to JSON
 $TAF_Ui_Convert_ConvertedToJSON_Text;Converted {0} designs
+$TAF_Ui_Convert_ConvertedToBin;Designs to Bin
+$TAF_Ui_Convert_ConvertedToBin_Title;Converted Designs to Bin
+$TAF_Ui_Convert_ConvertedToBin_Text;Converted {0} designs
 $TAF_Ui_Convert_Exported;Designs to Predefined
 $TAF_Ui_Convert_Exported_Title;Exported Predefined Designs
 $TAF_Ui_Convert_Exported_Text;Exported {0} Shared Design ships to {1}
