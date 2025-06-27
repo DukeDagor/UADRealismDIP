@@ -105,22 +105,29 @@ namespace TweaksAndFixes
         // ########## NEW CONSTRUCTOR LOGIC ########## //
 
         public static Ship LastCreatedShip;
+        public static float LastClonedShipWeight = 0;
 
-        // [HarmonyPostfix]
-        // [HarmonyPatch(nameof(Ship.Create))]
-        // internal static void Postfix_Create(Ship __result, Ship design, Player player, bool isTempForBattle = false, bool isPrewarming = false, bool isSharedDesign = false)
-        // {
-        //     // LastCreatedShip = __result;
-        //     // 
-        //     // if (LastCreatedShip == null) return;
-        // 
-        //     // Melon<TweaksAndFixes>.Logger.Msg(LastCreatedShip.Name(false, false));
-        // 
-        //     // foreach (Mount mount in LastCreatedShip.mounts)
-        //     // {
-        //     //     Melon<TweaksAndFixes>.Logger.Msg(LastCreatedShip.Name(false, false) + ": " + mount.caliberMin + " - " + mount.caliberMax);
-        //     // }
-        // }
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Ship.Create))]
+        internal static void Postfix_Create(Ship __result, Ship design, Player player, bool isTempForBattle = false, bool isPrewarming = false, bool isSharedDesign = false)
+        {
+            // LastCreatedShip = __result;
+            // 
+            // if (LastCreatedShip == null) return;
+        
+            // Melon<TweaksAndFixes>.Logger.Msg($"{__result.id} : {__result.tonnage} + {(design != null ? (design.id + " : " + design.tonnage) : "NO DESIGN")}");
+
+            LastClonedShipWeight = 0;
+            if (design != null)
+            {
+                LastClonedShipWeight = design.tonnage;
+            }
+
+            // foreach (Mount mount in LastCreatedShip.mounts)
+            // {
+            //     Melon<TweaksAndFixes>.Logger.Msg(LastCreatedShip.Name(false, false) + ": " + mount.caliberMin + " - " + mount.caliberMax);
+            // }
+        }
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Ship.RemovePart))]
@@ -308,12 +315,16 @@ namespace TweaksAndFixes
         internal static void Postfix_ChangeHull(Ship __instance)
         {
             Patch_Ui.NeedsConstructionListsClear = true;
+            // Melon<TweaksAndFixes>.Logger.Msg($"Changed: {LastCreatedShip?.Name(false, false)} to {__instance.Name(false, false)}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"Changed: {LastCreatedShip?.id} to {__instance.id}");
             LastCreatedShip = __instance;
             _IsInChangeHullWithHuman = false;
 
-            // Melon<TweaksAndFixes>.Logger.Msg($"  Changed: {__instance.Name(false, false)}");
+            // LastClonedShipWeight
+
             if (Patch_GameManager._IsRefreshSharedDesign)
             {
+                // Melon<TweaksAndFixes>.Logger.Msg($"Change Hull in Refresh Shared Design");
                 foreach (var ship in G.GameData.sharedDesignsPerNation[__instance.player.data.name])
                 {
                     if (ship.Item1.id != __instance.id) continue;
@@ -321,6 +332,12 @@ namespace TweaksAndFixes
                     // Melon<TweaksAndFixes>.Logger.Msg($"  Stored: {ship.Item1.vesselName}: {ship.Item1.tonnage}");
                     __instance.tonnage = ship.Item1.tonnage;
                 }
+            }
+            else if (LastClonedShipWeight != 0)
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg($"Change Hull outside Refresh Shared Design: {LastClonedShipWeight} : {__instance.tonnage}");
+                __instance.tonnage = LastClonedShipWeight;
+                LastClonedShipWeight = 0;
             }
 
             if (G.ui.isConstructorRefitMode)
