@@ -325,12 +325,20 @@ namespace TweaksAndFixes
             if (Patch_GameManager._IsRefreshSharedDesign)
             {
                 // Melon<TweaksAndFixes>.Logger.Msg($"Change Hull in Refresh Shared Design");
-                foreach (var ship in G.GameData.sharedDesignsPerNation[__instance.player.data.name])
-                {
-                    if (ship.Item1.id != __instance.id) continue;
 
-                    // Melon<TweaksAndFixes>.Logger.Msg($"  Stored: {ship.Item1.vesselName}: {ship.Item1.tonnage}");
-                    __instance.tonnage = ship.Item1.tonnage;
+                if (!G.GameData.sharedDesignsPerNation.ContainsKey(__instance.player.data.name))
+                {
+                    Melon<TweaksAndFixes>.Logger.Warning($"Failed to find nation {__instance.player.data.name} for Shared Design {__instance.Name(false, false)}.");
+                }
+                else
+                {
+                    foreach (var ship in G.GameData.sharedDesignsPerNation[__instance.player.data.name])
+                    {
+                        if (ship.Item1.id != __instance.id) continue;
+
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  Stored: {ship.Item1.vesselName}: {ship.Item1.tonnage}");
+                        __instance.tonnage = ship.Item1.tonnage;
+                    }
                 }
             }
             else if (LastClonedShipWeight != 0)

@@ -332,6 +332,7 @@ namespace TweaksAndFixes
             GameObject UpdateArmorQualityButton = ui.constructorUi.GetChild("Left").GetChild("Scroll View").GetChild("Viewport").GetChild("Cont").GetChild("FoldArmor").GetChild("Armor").GetChild("TAF_Armour_Quality_Button", true);
 
             int ArmourQuality = 0;
+            bool FoundArmorQuality = false;
 
             if (Patch_Ship.LastCreatedShip != null)
             {
@@ -339,12 +340,21 @@ namespace TweaksAndFixes
                 {
                     if (tech.type != "armor_quality") continue;
 
-                    string newStrength = tech.effects["armor_str"][0][0];
-                    ArmourQuality = int.Parse(newStrength);
+                    ArmourQuality = 0;
+
+                    // If the tech doesn't specify armor_str, assume its 0
+                    if (tech.effects.ContainsKey("armor_str"))
+                    {
+                        string newStrength = tech.effects["armor_str"][0][0];
+                        ArmourQuality = int.Parse(newStrength);
+                    }
+
+                    FoundArmorQuality = true;
+
                     break;
                 }
 
-                if (ArmourQuality < 0)
+                if (!FoundArmorQuality)
                 {
                     ArmourQuality = 0;
                     Melon<TweaksAndFixes>.Logger.Error("Constructor `Update Armour Preview Setting` failed to parse armour quality!");
