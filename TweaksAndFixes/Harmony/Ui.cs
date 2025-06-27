@@ -1040,20 +1040,6 @@ namespace TweaksAndFixes
             _InConstructor = false;
         }
 
-        [HarmonyPatch(nameof(Ui.CloneDesign))]
-        [HarmonyPrefix]
-        internal static void Prefix_CloneDesign(Ui __instance, Ship ship)
-        {
-            Melon<TweaksAndFixes>.Logger.Msg($"Clone A: {ship.id} : {ship.tonnage}");
-        }
-
-        [HarmonyPatch(nameof(Ui.CloneDesign))]
-        [HarmonyPostfix]
-        internal static void Postfix_CloneDesign(Ui __instance, Ship ship)
-        {
-            Melon<TweaksAndFixes>.Logger.Msg($"Clone B: {ship.id} : {ship.tonnage}");
-        }
-
 
 
         // ########## SHIP PREVIEWS ########## //
