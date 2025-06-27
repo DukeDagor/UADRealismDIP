@@ -143,6 +143,12 @@ namespace TweaksAndFixes
 
             if (!Patch_Ui.UseNewConstructionLogic()) return;
 
+            if (part == Patch_Ui.PickupPart && Input.GetMouseButtonUp(0))
+            {
+                Patch_Ui.PickedUpPart = true;
+                // Melon<TweaksAndFixes>.Logger.Msg(part.Name() + ": Might be a pickup");
+            }
+
             if (!_IsInChangeHullWithHuman && Patch_Part.unmatchedParts.Contains(part)) Patch_Part.unmatchedParts.Remove(part);
 
             if (!_IsInChangeHullWithHuman && G.settings.autoMirror && Patch_Part.mirroredParts.ContainsKey(part))
@@ -160,8 +166,6 @@ namespace TweaksAndFixes
                 {
                     Patch_Part.applyMirrorFromTo.Remove(B);
                 }
-
-                // if (Input.GetMouseButtonUp(1)) return;
 
                 if (part == A)
                 {
@@ -304,8 +308,10 @@ namespace TweaksAndFixes
         internal static void Postfix_ChangeHull(Ship __instance)
         {
             Patch_Ui.NeedsConstructionListsClear = true;
+            LastCreatedShip = __instance;
             _IsInChangeHullWithHuman = false;
 
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Changed: {__instance.Name(false, false)}");
             if (Patch_GameManager._IsRefreshSharedDesign)
             {
                 foreach (var ship in G.GameData.sharedDesignsPerNation[__instance.player.data.name])
