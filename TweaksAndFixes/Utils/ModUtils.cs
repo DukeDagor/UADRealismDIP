@@ -171,7 +171,7 @@ namespace TweaksAndFixes
                 AddComponentText<KeyButton>("KeyButton");
                 AddComponentText<TMP_Text>("TMP_Text");
                 Text txt = AddComponentText<Text>("Text");
-                if (txt != null) hierarchy += ": " + txt.text;
+                if (txt != null) hierarchy += ": " + txt.text.Replace("\n", "\\n");
                 AddComponentText<Image>("Image");
                 AddComponentText<Texture2D>("Texture2D");
                 AddComponentText<LayoutGroup>("LayoutGroup");
