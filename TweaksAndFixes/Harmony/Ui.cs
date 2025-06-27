@@ -5,6 +5,8 @@ using Il2Cpp;
 using UnityEngine.UI;
 using static TweaksAndFixes.ModUtils;
 using Il2CppUiExt;
+using static Il2CppMono.Math.BigInteger;
+using static Il2CppSystem.Net.WebCompletionSource;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -134,6 +136,18 @@ namespace TweaksAndFixes
         public static bool DeleteShipNextTurn = false;
         public static Button.ButtonClickedEvent DeleteShipEvent = null;
         public static Button.ButtonClickedEvent AskConfirmDeleteShipEvent = null;
+
+        // Preserve Pickup and Clone rotation
+        private static Vector3 PickupPartPosition;
+        private static float PickupPartRotation;
+        private static float PickupPartMountRotation;
+        private static Vector3 ClonePartPosition;
+        private static float ClonePartRotation;
+        private static float ClonePartMountRotation;
+        public static Part PickupPart = null;
+        public static Part ClonePart = null;
+        public static bool PickedUpPart = false;
+        public static bool ClonedPart = false;
 
         // ////////// General Use Functions ////////// //
 
@@ -628,17 +642,6 @@ namespace TweaksAndFixes
             // Melon<TweaksAndFixes>.Logger.Msg(Patch_Ship.LastCreatedShip.shipType.name);
         }
 
-        private static Vector3 PickupPartPosition;
-        private static float PickupPartRotation;
-        private static float PickupPartMountRotation;
-        private static Vector3 ClonePartPosition;
-        private static float ClonePartRotation;
-        private static float ClonePartMountRotation;
-        public static Part PickupPart = null;
-        public static Part ClonePart = null;
-        public static bool PickedUpPart = false;
-        public static bool ClonedPart = false;
-
         [HarmonyPatch(nameof(Ui.UpdateConstructor))]
         [HarmonyPrefix]
         internal static void Prefix_UpdateConstructor(Ui __instance)
@@ -1035,6 +1038,20 @@ namespace TweaksAndFixes
         internal static void Postfix_ExitConstructor(Ui __instance, bool changeState = true, bool quickLoading = true)
         {
             _InConstructor = false;
+        }
+
+        [HarmonyPatch(nameof(Ui.CloneDesign))]
+        [HarmonyPrefix]
+        internal static void Prefix_CloneDesign(Ui __instance, Ship ship)
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"Clone A: {ship.id} : {ship.tonnage}");
+        }
+
+        [HarmonyPatch(nameof(Ui.CloneDesign))]
+        [HarmonyPostfix]
+        internal static void Postfix_CloneDesign(Ui __instance, Ship ship)
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"Clone B: {ship.id} : {ship.tonnage}");
         }
 
 
