@@ -44,6 +44,7 @@ namespace TweaksAndFixes
             GradeExtensions.LoadData();
             GenArmorData.LoadData();
             AccuraciesExInfo.LoadData();
+            MountOverrideData.LoadData();
         }
 
         private static readonly List<string> _FixKeys = new List<string>();
