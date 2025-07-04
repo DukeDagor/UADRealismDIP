@@ -328,7 +328,7 @@ namespace TweaksAndFixes
 
                 if (!G.GameData.sharedDesignsPerNation.ContainsKey(__instance.player.data.name))
                 {
-                    Melon<TweaksAndFixes>.Logger.Warning($"Failed to find nation {__instance.player.data.name} for Shared Design {__instance.Name(false, false)}.");
+                    // Melon<TweaksAndFixes>.Logger.Warning($"Failed to find nation {__instance.player.data.name} for Shared Design {__instance.Name(false, false)}.");
                 }
                 else
                 {
