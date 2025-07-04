@@ -7,6 +7,8 @@ using static TweaksAndFixes.ModUtils;
 using Il2CppUiExt;
 using static Il2CppMono.Math.BigInteger;
 using static Il2CppSystem.Net.WebCompletionSource;
+using static Il2Cpp.Ui.SkirmishSetup;
+using System.Data;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -93,6 +95,9 @@ namespace TweaksAndFixes
 
 
         // ########## CUSTOM DOCKYARD LOGIC ########## //
+
+        // TODO: Mirror pickup and putdown for child parts
+        // TODO: Fix special rotation ignoring 0* and 180* rotation
 
         // States
         internal static bool _InUpdateConstructor = false;
@@ -353,12 +358,6 @@ namespace TweaksAndFixes
 
                     break;
                 }
-
-                if (!FoundArmorQuality)
-                {
-                    ArmourQuality = 0;
-                    Melon<TweaksAndFixes>.Logger.Error("Constructor `Update Armour Preview Setting` failed to parse armour quality!");
-                }
             }
 
             if (UpdateArmorQualityButton == null)
@@ -488,7 +487,8 @@ namespace TweaksAndFixes
                 // SelectedPartMountRotationData.Clear();
                 SelectedPart = part;
                 // Melon<TweaksAndFixes>.Logger.Msg("Selected part: " + SelectedPart.Name() + " : " + SelectedPart.data.type + " : " + SelectedPart.data.name);
-            
+                // Melon<TweaksAndFixes>.Logger.Msg($"Selected part: {ModUtils.DumpHierarchy(part.gameObject)}");
+
                 // Why be consistant when you can have no sensable typeing system?
                 Casemate = SelectedPart.data.name.StartsWith("casemate");
                 SideGun = SelectedPart.data.name.EndsWith("side");
@@ -636,6 +636,269 @@ namespace TweaksAndFixes
                     }
                 }
 
+                if (Input.GetKeyDown(KeyCode.L))
+                {
+                    string finalCount = "";
+
+                    HashSet<string> parsedModels = new HashSet<string>();
+
+                    string MountObjToCSV(GameObject mount)
+                    {
+                        Mount data = mount.GetComponent<Mount>();
+
+                        string gunType = data.center ? "center" : (data.side ? "side" : "");
+
+                        string ParamOrNone(float param)
+                        {
+                            return (int)(param + 0.01) == 0 ? "" : param.ToString();
+                        }
+
+                        string validMounts = string.Empty;
+
+                        if (data.towerMain) validMounts += ",tower_main";
+                        if (data.towerSec) validMounts += ",tower_sec";
+                        if (data.funnel) validMounts += ",funnel";
+                        if (data.siBarbette) validMounts += ",si_barbette";
+                        if (data.barbette) validMounts += ",barbette";
+                        if (data.casemate) validMounts += ",casemate";
+                        if (data.subTorpedo) validMounts += ",sub_torpedo";
+                        if (data.deckTorpedo) validMounts += ",deck_torpedo";
+                        if (data.special) validMounts += ",special";
+                        validMounts = validMounts.TrimStart(',');
+
+                        if (validMounts.Length > 0) validMounts = $"\"{validMounts}\"";
+
+                        string collisionChecks = string.Empty;
+
+                        if (data.ignoreCollisionCheck) collisionChecks += ",ignore_all";
+                        if (data.ignoreParent) collisionChecks += ",ignore_parent";
+                        if (data.ignoreExpand) collisionChecks += ",ignore_scale";
+                        if (data.ignoreHeight) collisionChecks += ",ignore_height";
+                        if (data.ignoreFireAngleCheck) collisionChecks += ",ignore_fire_angle_check";
+                        if (data.casemateIgnoreCollision) collisionChecks += ",casemate_ignore_collision";
+                        collisionChecks = collisionChecks.TrimStart(',');
+
+                        if (collisionChecks.Length > 0) collisionChecks = $"\"{collisionChecks}\"";
+
+                        string firingAngleOrientation = data.rotateLeftRight ? "starboard/port" : (data.rotateForwardBack ? "fore/aft" : "");
+
+                        string output = $"{gunType},{validMounts},{ParamOrNone(data.caliberMin)},{ParamOrNone(data.caliberMax)},{ParamOrNone(data.barrelsMin)},{ParamOrNone(data.barrelsMax)},{collisionChecks},{ParamOrNone(data.angleLeft)},{ParamOrNone(data.angleRight)},{firingAngleOrientation},{(data.rotateSame ? 1 : "")}";
+
+                        return output;
+                    }
+
+                    foreach (var data in G.GameData.parts)
+                    {
+                        // if (data.value.type != "barbette") continue;
+
+                        if (parsedModels.Contains(data.Value.model))
+                        {
+                            continue;
+                        }
+
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Loading: {data.Key}...");
+                        GameObject obj = Util.ResourcesLoad<GameObject>(data.Value.model, false);
+
+                        parsedModels.Add(data.Value.model);
+
+                        if (obj == null)
+                        {
+                            // Melon<TweaksAndFixes>.Logger.Msg($"  Failed to load: {data.Value.nameUi}");
+                            continue;
+                        }
+
+                        var children = obj.GetChildren();
+                        bool hasMounts = false;
+                        string partCount = $"\n# {data.Value.model}:";
+                        int count = 0;
+
+                        if (data.Value.type == "hull")
+                        {
+                            // Hierarchy:
+                            //  Visual:
+                            //    Sections:
+                            //      Stern/Middle/Bow
+
+                            // Melon<TweaksAndFixes>.Logger.Msg($"\n{ModUtils.DumpHierarchy(obj)}");
+
+                            children = obj.GetChild("Visual").GetChild("Sections").GetChildren();
+                        }
+
+                        for (int i = children.Count - 1; i >= 0; i--)
+                        {
+                            GameObject child = children[i];
+
+                            if (child == null) continue;
+
+                            if (data.Value.type == "hull")
+                            {
+                                partCount += $"\n#   {child.name}:";
+
+                                int subCount = 0;
+                                var subChildren = child.GetChildren();
+                                bool hasSubMount = false;
+
+                                for (int j = subChildren.Count - 1; j >= 0; j--)
+                                {
+                                    GameObject subChild = subChildren[j];
+
+                                    if (subChild == null) continue;
+                                    
+                                    if (!subChild.name.StartsWith("Mount")) continue;
+
+                                    subCount++;
+
+                                    if (subChild.name.StartsWith("Mount:tower_main") || subChild.name.StartsWith("Mount:tower_sec") || subChild.name.StartsWith("Mount:funnel") || subChild.name.StartsWith("Mount:si_barbette"))
+                                    {
+                                         // subChild.transform.SetParent(null);
+                                         // subChild.TryDestroy();
+                                         continue;
+                                    }
+
+                                    if ((int)subChild.transform.position.x == 0)
+                                    {
+                                        continue;
+                                    }
+
+                                    hasMounts = true;
+                                    hasSubMount = true;
+
+                                    // Melon<TweaksAndFixes>.Logger.Msg($"HULL MOUNT: {data.Key}/{child.name}");
+
+                                    partCount += $"\n{subCount},,\"{data.Value.model}/{child.name}\",{subChild.transform.eulerAngles.y},\"{subChild.transform.position}\",{MountObjToCSV(subChild)}";
+                                }
+
+                                if (!hasSubMount)
+                                {
+                                    partCount = partCount[0..^($"\n#   {child.name}:").Count()];
+                                }
+
+                                continue;
+                            }
+
+                            if (!child.name.StartsWith("Mount")) continue;
+
+                            count++;
+
+                            if (data.Value.type == "barbette")
+                            {
+                                if (!child.name.StartsWith("Mount:barbette"))
+                                {
+                                    // child.transform.SetParent(null);
+                                    // child.TryDestroy();
+                                    continue;
+                                }
+                            }
+                            else if (data.Value.type == "tower_main")
+                            {
+                                if (child.name.StartsWith("Mount:tower_sec") || child.name.StartsWith("Mount:si_barbette"))
+                                {
+                                    // child.transform.SetParent(null);
+                                    // child.TryDestroy();
+                                    continue;
+                                }
+                            }
+                            else if (data.Value.type == "tower_sec")
+                            {
+                                if (child.name.StartsWith("Mount:tower_main") || child.name.StartsWith("Mount:si_barbette"))
+                                {
+                                    // child.transform.SetParent(null);
+                                    // child.TryDestroy();
+                                    continue;
+                                }
+                            }
+
+                            partCount += $"\n{count},,\"{data.Value.model}\",{child.transform.eulerAngles.y},\"{child.transform.position}\",{MountObjToCSV(child)}";
+                            hasMounts = true;
+                            // if (data.Value.type == "tower_main") { }
+
+                            // if (child.name.StartsWith("Mount:barbette")) continue;
+
+                            // hasMounts = true;
+                            // break;
+                        }
+
+                        if (hasMounts)
+                        {
+                            finalCount += $"{partCount}";
+                        }
+
+
+                        // var children = obj.GetChildren();
+                        // 
+                        // for (int i = children.Count - 1; i >= 0; i--)
+                        // {
+                        //     GameObject child = children[i];
+                        // 
+                        //     if (!child.name.StartsWith("Mount")) continue;
+                        // 
+                        //     if (child.name.StartsWith("Mount:barbette")) continue;
+                        // 
+                        //     child.transform.SetParent(null);
+                        //     child.TryDestroy();
+                        // }
+                        // 
+                        // Melon<TweaksAndFixes>.Logger.Msg($"\n{ModUtils.DumpHierarchy(obj)}");
+                    }
+
+                    foreach (var data in G.GameData.partModels)
+                    {
+                        foreach (var model in data.Value.models)
+                        {
+
+                            // if (data.value.type != "barbette") continue;
+
+                            if (parsedModels.Contains(model.Value))
+                            {
+                                continue;
+                            }
+
+                            // Melon<TweaksAndFixes>.Logger.Msg($"Loading: {data.Key}...");
+                            GameObject obj = Util.ResourcesLoad<GameObject>(model.Value, false);
+
+                            parsedModels.Add(model.Value);
+
+                            if (obj == null)
+                            {
+                                // Melon<TweaksAndFixes>.Logger.Msg($"  Failed to load: {data.Value.nameUi}");
+                                continue;
+                            }
+
+                            var children = obj.GetChildren();
+                            bool hasMounts = false;
+                            string partCount = $"\n# {model.Value}:";
+                            int count = 0;
+
+                            for (int i = children.Count - 1; i >= 0; i--)
+                            {
+                                GameObject child = children[i];
+
+                                if (child == null) continue;
+
+                                if (!child.name.StartsWith("Mount")) continue;
+
+                                count++;
+
+                                //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.constructorUi));
+                                partCount += $"\n{count},,\"{model.Value}\",{child.transform.eulerAngles.y},\"{child.transform.position}\",{MountObjToCSV(child)}";
+                                hasMounts = true;
+
+                                if (hasMounts)
+                                {
+                                    finalCount += $"{partCount}";
+                                }
+                            }
+                        }
+                    }
+
+                    File.WriteAllText(Config._BasePath + "\\mounts.txt", finalCount);
+                }
+
+                if (Input.GetKeyDown(KeyCode.P))
+                {
+                    MountOverrideData.OverrideMountData();
+                }
+
                 //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.constructorUi));
                 //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.conUpperRight));
                 //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.conShipTypeButtons));
@@ -650,6 +913,36 @@ namespace TweaksAndFixes
         {
             PartCategory = category;
             // Melon<TweaksAndFixes>.Logger.Msg(Patch_Ship.LastCreatedShip.shipType.name);
+        }
+
+        [HarmonyPatch(nameof(Ui.RemoveChildForPart))]
+        [HarmonyPrefix]
+        internal static bool Prefix_RemoveChildForPart(Ui __instance, Ship ship, Part testPart)
+        {
+            // Melon<TweaksAndFixes>.Logger.Msg(ship.vesselName + " : " + testPart.name);
+
+            List<Part> children = new List<Part>();
+
+            foreach (var pair in ship.mountsUsed)
+            {
+                if (pair.Key == null || pair.Value == null || testPart == null || testPart.gameObject.GetChildren().Count == 0)
+                {
+                    continue;
+                }
+
+                if (pair.Key.parentPart == testPart || pair.Key.gameObject.GetParent() == testPart.gameObject.GetChildren()[0])
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Found Child: {pair.Value.name}");
+                    children.Add(pair.Value);
+                }
+            }
+
+            foreach (var child in children)
+            {
+                ship.RemovePart(child);
+            }
+
+            return false;
         }
 
         [HarmonyPatch(nameof(Ui.UpdateConstructor))]
@@ -967,7 +1260,7 @@ namespace TweaksAndFixes
                     {
                         int MountDefaultRotation = (int)(Il2CppSystem.Math.Abs(SelectedPart.mount.transform.rotation.eulerAngles.y) + 0.1);
 
-                        if ((MountDefaultRotation != 0 && MountDefaultRotation != 180) || SelectedPart.mount.parentPart.data.isTowerAny || SelectedPart.mount.parentPart.data.isFunnel)
+                        if (SelectedPart.mount.parentPart.data.isTowerAny || SelectedPart.mount.parentPart.data.isFunnel)
                         {
                             DefaultRotation = SelectedPart.mount.transform.rotation.eulerAngles.y;
                             Mounted = true;
