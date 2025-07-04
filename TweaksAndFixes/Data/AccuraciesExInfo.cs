@@ -13,17 +13,17 @@ namespace TweaksAndFixes.Data
     {
         private static readonly Dictionary<string, AccuraciesExInfo> _Data = new Dictionary<string, AccuraciesExInfo>();
 
-        [Serializer.Field] public string name;
-        [Serializer.Field] public string subname;
-        [Serializer.Field] public int enabled;
-        [Serializer.Field] public string name_override;
-        [Serializer.Field] public string subname_override;
-        [Serializer.Field] public float replace;
-        [Serializer.Field] public float multiplier;
-        [Serializer.Field] public float bonus;
-        [Serializer.Field] public float min;
-        [Serializer.Field] public float max;
-        [Serializer.Field] public string comment;
+        [Serializer.Field] public string name = string.Empty;
+        [Serializer.Field] public string subname = string.Empty;
+        [Serializer.Field] public int enabled = 0;
+        [Serializer.Field] public string name_override = string.Empty;
+        [Serializer.Field] public string subname_override = string.Empty;
+        [Serializer.Field] public float replace = 0;
+        [Serializer.Field] public float multiplier = 0;
+        [Serializer.Field] public float bonus = 0;
+        [Serializer.Field] public float min = 0;
+        [Serializer.Field] public float max = 0;
+        [Serializer.Field] public string comment = string.Empty;
 
         public static bool HasEntries()
         {

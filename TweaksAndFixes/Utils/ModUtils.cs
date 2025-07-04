@@ -176,6 +176,7 @@ namespace TweaksAndFixes
                 AddComponentText<Texture2D>("Texture2D");
                 AddComponentText<LayoutGroup>("LayoutGroup");
                 AddComponentText<LayoutElement>("LayoutElement");
+                AddComponentText<Mount>("Mount");
 
                 // int rCount = go.GetComponents<Renderer>().Length;
                 // int mCount = go.GetComponents<MeshFilter>().Length;
