@@ -244,7 +244,7 @@ namespace TweaksAndFixes
                 return false;
             }
 
-            if (Config.Param("taf_predef_debug_enable", 1) == 1) // Check for predef problems
+            if (Config.Param("taf_predef_debug_enable", 0) == 1) // Check for predef problems
             {
                 int min = Config.Param("taf_predef_debug_min_ship_count", 5);
                 int max = Config.Param("taf_predef_debug_max_ship_count", 15);
@@ -471,18 +471,27 @@ namespace TweaksAndFixes
             {
                 var data = _predefFileData[i];
                 if (!data.loadedData || data.skipChance > UnityEngine.Random.value || !data.yearsPerPlayer.TryGetValue(pName, out var ypp))
+                {
+                    Melon<TweaksAndFixes>.Logger.Error($"Predefined designs: {pName} not found.");
+
                     continue;
+                }
 
                 string sppName =  i == _lastValidData ? pName : $"{i}_{pName}";
 
-                int tries = 0;
+                int tries = -10;
                 for (int j = ypp.Count; j-- > 0;)
                 {
                     int year = ypp[j];
                     if (year > maxTechYear)
+                    {
                         continue;
+                    }
                     if (data.yearRange >= 0 ? year < maxTechYear - data.yearRange : tries++ > 0)
+                    {
+                        if (tries >= 0) Melon<TweaksAndFixes>.Logger.Error($"Predefined designs: After 10 tries, failed to find design of type {type.name} for {player.Name(false)} in year {desiredYear}.");
                         break;
+                    }
 
                     if (!CampaignController.Instance._currentDesigns.shipsPerYear.TryGetValue(year, out var spy) || !spy.shipsPerPlayer.TryGetValue(sppName, out var spp))
                     {
@@ -508,13 +517,34 @@ namespace TweaksAndFixes
                         }
                         continue;
                     }
+                    
                     var ship = spp.RandomShipOfType(player, type);
+
+                    if (type.name == "tb" && ship == null)
+                    {
+                        var shipList = spp.shipsPerType[type.name];
+
+                        int index = UnityEngine.Random.RandomRange(0, shipList.Count - 1);
+
+                        ship = shipList[index];
+                    }
+
+                    // if (spp.shipsPerType[type.name] != null)
+                    // {
+                    //     Melon<TweaksAndFixes>.Logger.Error($"{year}: Searching through {spp.shipsPerType[type.name].Count} designs of type {type.name} for {player.Name(false)}...");
+                    // }
+
                     if (ship != null)
                     {
                         if (Config.DontClobberTechForPredefs)
                             CampaignControllerM.CleanupSDCaches();
+                        // Melon<TweaksAndFixes>.Logger.Error($"  Found {ship.hullName} in {10 + tries} tries.");
                         return ship;
                     }
+                    // else
+                    // {
+                    //     Melon<TweaksAndFixes>.Logger.Error($"  Failed after {10 + tries} tries, trying again...");
+                    // }
                 }
             }
             if (Config.DontClobberTechForPredefs)
