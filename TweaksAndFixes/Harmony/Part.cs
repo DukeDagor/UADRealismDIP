@@ -12,6 +12,7 @@ using Il2CppInterop.Runtime.Startup;
 using static Il2Cpp.Ship;
 using static MelonLoader.MelonLogger;
 using Il2CppSystem.Linq;
+using static MelonLoader.Modules.MelonModule;
 
 #pragma warning disable CS8603
 
@@ -162,6 +163,120 @@ namespace TweaksAndFixes
         }
 
 
+
+        [HarmonyPatch(nameof(Part.CalcFireSectorNonAlloc))]
+        [HarmonyPostfix]
+        internal static void Postfix_CalcFireSectorNonAlloc(Part __instance, ref Part.FireSectorInfo fireSector)
+        {
+            if (__instance.mount == null) return;
+
+            if ((int)__instance.mount.angleRight == 0 && (int)__instance.mount.angleLeft == 0) return;
+            
+            bool hasBreak = false;
+
+            float startAngle = __instance.mount.transform.eulerAngles.y + __instance.mount.angleLeft;
+
+            if (startAngle < 0)
+            {
+                startAngle += 360;
+                hasBreak = true;
+            }
+
+            float endAngle = __instance.mount.transform.eulerAngles.y + __instance.mount.angleRight;
+            
+            if (endAngle > 360)
+            {
+                endAngle -= 360;
+                hasBreak = true;
+            }
+
+            fireSector.groupsAll.Clear();
+            fireSector.groupsShoot.Clear();
+
+            if (!hasBreak)
+            {
+                Il2CppSystem.Collections.Generic.HashSet<Part.SectorStep> badGroupA = new();
+                Il2CppSystem.Collections.Generic.HashSet<Part.SectorStep> shootGroup = new();
+                Il2CppSystem.Collections.Generic.HashSet<Part.SectorStep> badGroupB = new();
+
+                bool foundShoot = false;
+
+                foreach (var sector in fireSector.steps)
+                {
+                    if (sector.Key > startAngle && sector.Key < endAngle)
+                    {
+                        sector.Value.status = Part.SectorStep.Status.Shoot;
+                        
+                        shootGroup.Add(sector.Value);
+                        foundShoot = true;
+                    }
+                    else
+                    {
+                        sector.Value.status = Part.SectorStep.Status.Bad;
+
+                        if (!foundShoot)
+                        {
+                            badGroupA.Add(sector.Value);
+                        }
+                        else
+                        {
+                            badGroupB.Add(sector.Value);
+                        }
+                    }
+                }
+
+                fireSector.shootableAngleTotal = endAngle - startAngle;
+                
+                if (badGroupA.Count > 0) fireSector.groupsAll.Add(badGroupA);
+                fireSector.groupsAll.Add(shootGroup);
+                if (badGroupB.Count > 0) fireSector.groupsAll.Add(badGroupB);
+
+                fireSector.groupsShoot.Add(shootGroup);
+            }
+            else
+            {
+                Il2CppSystem.Collections.Generic.HashSet<Part.SectorStep> shootGroupA = new();
+                Il2CppSystem.Collections.Generic.HashSet<Part.SectorStep> badGroup = new();
+                Il2CppSystem.Collections.Generic.HashSet<Part.SectorStep> shootGroupB = new();
+
+                bool foundBad = false;
+
+                foreach (var sector in fireSector.steps)
+                {
+                    if ((sector.Key > startAngle && sector.Key <= 360) || (sector.Key < endAngle && sector.Key >= 0))
+                    {
+                        sector.Value.status = Part.SectorStep.Status.Shoot;
+
+                        if (!foundBad)
+                        {
+                            shootGroupA.Add(sector.Value);
+                        }
+                        else
+                        {
+                            shootGroupB.Add(sector.Value);
+                        }
+                    }
+                    else
+                    {
+                        sector.Value.status = Part.SectorStep.Status.Bad;
+
+                        badGroup.Add(sector.Value);
+                        foundBad = true;
+                    }
+                }
+
+                fireSector.shootableAngleTotal = (endAngle) + (360 - startAngle);
+
+                if (shootGroupA.Count > 0) fireSector.groupsAll.Add(shootGroupA);
+                fireSector.groupsAll.Add(badGroup);
+                if (shootGroupB.Count > 0) fireSector.groupsAll.Add(shootGroupB);
+
+                if (shootGroupA.Count > 0) fireSector.groupsShoot.Add(shootGroupA);
+                if (shootGroupB.Count > 0) fireSector.groupsShoot.Add(shootGroupB);
+            }
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Start: {startAngle} : End {endAngle} : {(hasBreak ? "BROKEN" : "CONTINUOUS")} : Total Angle: {fireSector.shootableAngleTotal}");
+        }
 
 
 

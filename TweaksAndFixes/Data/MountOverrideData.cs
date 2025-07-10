@@ -2,16 +2,8 @@
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
-using System.Collections.Generic;
-using System.Reflection;
-using MelonLoader.CoreClrUtils;
-using TweaksAndFixes.Data;
 using Il2CppSystem.Linq;
-using UnityEngine;
-using Il2Cpp;
 using static TweaksAndFixes.Serializer;
-using System.Drawing;
-using System;
 
 namespace TweaksAndFixes
 {
@@ -20,8 +12,9 @@ namespace TweaksAndFixes
         private static readonly Dictionary<string, MountOverrideData> _Data = new();
         private static readonly Dictionary<string, Dictionary<int, MountOverrideData>> _ParentToData = new();
         private static readonly Dictionary<string, List<MountOverrideData>> _ParentToNewData = new();
-        private static readonly Dictionary<string, List<int>> _ParentToDeletedMounts = new();
-        private static GameObject MountTemplate = new GameObject();
+        public static GameObject MountTemplate = new GameObject();
+        public static GameObject canary = new();
+        public static Dictionary<string, GameObject> localCache = new();
 
         [Serializer.Field] public int index = -1;
         [Serializer.Field] public int enabled = 0;
@@ -48,7 +41,7 @@ namespace TweaksAndFixes
         public string[] collisionParsed = Array.Empty<string>();
 
         public static string[] VALID_ACCEPT_TYPES = { "any", "tower_main", "tower_sec", "funnel", "si_barbette", "barbette", "casemate", "sub_torpedo", "deck_torpedo", "special" };
-        public static string[] VALID_COLLISION_TYPES = { "check_all", "ignore_all", "ignore_parent", "ignore_scale", "ignore_height", "ignore_fire_angle_check", "casemate_ignore_collision" };
+        public static string[] VALID_COLLISION_TYPES = { "check_all", "ignore_collision_check", "ignore_parent", "ignore_expand", "ignore_height", "ignore_fire_angle_check", "casemate_ignore_collision" };
 
         public static bool HasEntries()
         {
@@ -61,6 +54,11 @@ namespace TweaksAndFixes
             if (rotation > 360) rotation %= 360;
             else if (rotation < 0) rotation = 360 - ((-rotation) % 360);
 
+            if (angle_right - angle_left > 360)
+            {
+                Melon<TweaksAndFixes>.Logger.Error($"MountOverrideData: [{parent + " | " + index}] Invalid angle_left/angle_right. Sum of absolute value of angles is greter than 360: `{angle_left} + {-angle_right}`");
+            }
+            
             var posData = position[1..^1].Replace(" ", "").Split(",");
             if (posData.Length == 3)
             {
@@ -146,12 +144,21 @@ namespace TweaksAndFixes
 
             if (!mountOverride.collisionParsed.Contains("check_all"))
             {
-                mount.ignoreCollisionCheck = mountOverride.collisionParsed.Contains("ignore_all");
+                mount.ignoreCollisionCheck = mountOverride.collisionParsed.Contains("ignore_collision_check");
                 mount.ignoreParent = mountOverride.collisionParsed.Contains("ignore_parent");
-                mount.ignoreExpand = mountOverride.collisionParsed.Contains("ignore_scale");
+                mount.ignoreExpand = mountOverride.collisionParsed.Contains("ignore_expand");
                 mount.ignoreHeight = mountOverride.collisionParsed.Contains("ignore_height");
                 mount.ignoreFireAngleCheck = mountOverride.collisionParsed.Contains("ignore_fire_angle_check");
                 mount.casemateIgnoreCollision = mountOverride.collisionParsed.Contains("casemate_ignore_collision");
+            }
+            else
+            {
+                mount.ignoreCollisionCheck = false;
+                mount.ignoreParent = false;
+                mount.ignoreExpand = false;
+                mount.ignoreHeight = false;
+                mount.ignoreFireAngleCheck = false;
+                mount.casemateIgnoreCollision = false;
             }
 
             mount.angleLeft = mountOverride.angle_left;
@@ -163,89 +170,9 @@ namespace TweaksAndFixes
             mount.rotateSame = mountOverride.rotate_same == 1;
         }
 
-        /*
-        public static void OverrideMountData2()
-        {
-            foreach (var parent in _ParentToData)
-            {
-                // Melon<TweaksAndFixes>.Logger.Msg($"{parent.Key}: {parent.Value.Count}");
-
-                GameObject parentObj = Util.ResourcesLoad<GameObject>(parent.Key, false);
-
-                if (parent.Value[0].parent.Contains('/'))
-                {
-                    var children = parentObj.GetChild("Visual").GetChild("Sections").GetChildren();
-                    Dictionary<string, Il2CppSystem.Collections.Generic.List<GameObject>> subChildren = new Dictionary<string, Il2CppSystem.Collections.Generic.List<GameObject>>();
-
-                    foreach (GameObject child in children)
-                    {
-                        subChildren[child.name] = child.GetChildren();
-                        // Melon<TweaksAndFixes>.Logger.Msg($" {child.name}: {subChildren[child.name].Count}");
-                    }
-
-                    foreach (var mountOverride in parent.Value)
-                    {
-                        string subParentName = mountOverride.parent.Split('/')[1];
-
-                        if (subChildren[subParentName].Count <= mountOverride.index || mountOverride.index == -1)
-                        {
-                            Melon<TweaksAndFixes>.Logger.Error($"Invalid mount override index {mountOverride.index} for parent {mountOverride.parent}.");
-                            continue;
-                        }
-
-                        Mount mount = subChildren[subParentName][mountOverride.index].GetComponent<Mount>();
-
-                        if (mount == null)
-                        {
-                            Melon<TweaksAndFixes>.Logger.Error($"Invalid mount override, {mountOverride.index} in parent {mountOverride.parent} is not a Mount.");
-                            continue;
-                        }
-
-                        // if (mountOverride.enabled == 0)
-                        // {
-                        //     children[mountOverride.index].transform.SetParent(null);
-                        // }
-
-                        UpdateMountParamiters(mount, mountOverride);
-                    }
-                }
-                else
-                {
-                    var children = parentObj.GetChildren();
-
-                    foreach (var mountOverride in parent.Value)
-                    {
-                        if (children.Count <= mountOverride.index || mountOverride.index == -1)
-                        {
-                            Melon<TweaksAndFixes>.Logger.Error($"Invalid mount override index {mountOverride.index} for parent {mountOverride.parent}.");
-                            continue;
-                        }
-
-                        Mount mount = children[mountOverride.index].GetComponent<Mount>();
-
-                        if (mount == null)
-                        {
-                            Melon<TweaksAndFixes>.Logger.Error($"Invalid mount override, {mountOverride.index} in parent {mountOverride.parent} is not a Mount.");
-                            continue;
-                        }
-
-                        // if (mountOverride.enabled == 0)
-                        // {
-                        //     children[mountOverride.index].transform.SetParent(null);
-                        // }
-
-                        UpdateMountParamiters(mount, mountOverride);
-                    }
-                }
-            }
-        }
-        */
-
         public static void OverrideMountData()
         {
             HashSet<string> parsedModels = new HashSet<string>();
-
-            //Mount template = GameObject.Instantiate(Util.ResourcesLoad<GameObject>("nelson_barbette_b", true).GetChildren()[7].GetComponent<Mount>());
 
             MountTemplate = new GameObject();
             MountTemplate.name = "TAF Mount Template";
@@ -254,15 +181,8 @@ namespace TweaksAndFixes
             MountTemplate.transform.rotation = new Quaternion();
             MountTemplate.AddComponent<Mount>();
 
-            // Melon<TweaksAndFixes>.Logger.Msg($"  Template: {(MountTemplate != null ? MountTemplate.name : "NULL")}");
-            // Melon<TweaksAndFixes>.Logger.Msg($"  Template: {ModUtils.DumpHierarchy(MountTemplate)}");
-
-            // Melon<TweaksAndFixes>.Logger.Msg($"  Template: {Util.ResourcesLoad<GameObject>("nelson_barbette_b", false).GetChildren().Count}");
-
             foreach (var data in G.GameData.parts)
             {
-                // if (data.value.type != "barbette") continue;
-
                 bool isAutoOverrideType = data.Value.type == "barbette" || data.Value.type == "tower_main" || data.Value.type == "tower_sec";
                 bool hasManualOverride = _ParentToData.ContainsKey(data.Value.model);
                 bool hasNewMounts = _ParentToNewData.ContainsKey(data.Value.model);
@@ -273,7 +193,7 @@ namespace TweaksAndFixes
                 }
 
                 // Melon<TweaksAndFixes>.Logger.Msg($"Loading: {data.Key}...");
-                GameObject obj = Util.ResourcesLoad<GameObject>(data.Value.model, false);
+                GameObject obj = Util.ResourcesLoad<GameObject>(data.Value.model);
 
                 parsedModels.Add(data.Value.model);
 
@@ -317,7 +237,7 @@ namespace TweaksAndFixes
 
                             if (subChild == null) continue;
 
-                            if (subChild.name.StartsWith("TAF"))
+                            if (subChild.name.StartsWith("mount:TAF_"))
                             {
                                 subChild.transform.SetParent(null);
                                 subChild.TryDestroy();
@@ -359,6 +279,9 @@ namespace TweaksAndFixes
                                 continue;
                             }
 
+                            // child.TryDestroyComponent<Mount>();
+                            // Mount subMount = child.AddComponent<Mount>();
+
                             if (_ParentToData[data.Value.model + "/" + child.name][count].enabled != 0)
                             {
                                 subChild.transform.SetParent(null);
@@ -370,12 +293,28 @@ namespace TweaksAndFixes
 
                             // Update paramiters
                             UpdateMountParamiters(subMount, _ParentToData[data.Value.model + "/" + child.name][count]);
+                            // subMount.packNumber = subMount.packNumber;
+                        }
+
+                        if (_ParentToNewData.ContainsKey(data.Value.model + "/" + child.name))
+                        {
+                            foreach (MountOverrideData newData in _ParentToNewData[data.Value.model + "/" + child.name])
+                            {
+                                GameObject newMount = GameObject.Instantiate(MountTemplate);
+
+                                newMount.transform.SetParent(child);
+                                newMount.name = $"mount:TAF_{child.GetChildren().Count}";
+                                
+                                UpdateMountParamiters(newMount.GetComponent<Mount>(), newData);
+
+                                canary = newMount;
+                            }
                         }
 
                         continue;
                     }
 
-                    if (child.name.StartsWith("TAF"))
+                    if (child.name.StartsWith("mount:TAF_"))
                     {
                         child.transform.SetParent(null);
                         child.TryDestroy();
@@ -438,6 +377,9 @@ namespace TweaksAndFixes
                         continue;
                     }
 
+                    // child.TryDestroyComponent<Mount>();
+                    // Mount mount = child.AddComponent<Mount>();
+
                     if (_ParentToData[data.Value.model][count].enabled == 0)
                     {
                         child.transform.position = new Vector3(-100000, -100000, -100000);
@@ -448,20 +390,23 @@ namespace TweaksAndFixes
 
                     // Update paramiters
                     UpdateMountParamiters(mount, _ParentToData[data.Value.model][count]);
+                    // mount.packNumber = mount.packNumber;
                 }
-
+                
                 if (hasNewMounts)
                 {
                     foreach (MountOverrideData newData in _ParentToNewData[data.Value.model])
                     {
-                        GameObject newMount = GameObject.Instantiate(children[7]);
+                        GameObject newMount = GameObject.Instantiate(MountTemplate);
 
                         newMount.transform.SetParent(obj);
-                        newMount.name = "mount:barbette(0-6)";
+                        newMount.name = $"mount:TAF_{obj.GetChildren().Count}";
 
                         UpdateMountParamiters(newMount.GetComponent<Mount>(), newData);
+
+                        canary = newMount;
                     }
-                    Melon<TweaksAndFixes>.Logger.Msg($"New Higherarchy:\n{ModUtils.DumpHierarchy(obj)}");
+                    // Melon<TweaksAndFixes>.Logger.Msg($"New Higherarchy:\n{ModUtils.DumpHierarchy(obj)}");
                 }
             }
 
@@ -472,14 +417,15 @@ namespace TweaksAndFixes
                     // if (data.value.type != "barbette") continue;
 
                     bool hasManualOverride = _ParentToData.ContainsKey(model.Value);
+                    bool hasNewMounts = _ParentToNewData.ContainsKey(model.Value);
 
-                    if (!hasManualOverride || parsedModels.Contains(model.Value))
+                    if (!hasManualOverride || hasNewMounts || parsedModels.Contains(model.Value))
                     {
                         continue;
                     }
 
                     // Melon<TweaksAndFixes>.Logger.Msg($"Loading: {data.Key}...");
-                    GameObject obj = Util.ResourcesLoad<GameObject>(model.Value, false);
+                    GameObject obj = Util.ResourcesLoad<GameObject>(model.Value);
 
                     parsedModels.Add(model.Value);
 
@@ -498,7 +444,7 @@ namespace TweaksAndFixes
 
                         if (child == null) continue;
 
-                        if (child.name.StartsWith("TAF"))
+                        if (child.name.StartsWith("mount:TAF_"))
                         {
                             child.transform.SetParent(null);
                             child.TryDestroy();
@@ -524,6 +470,9 @@ namespace TweaksAndFixes
                             continue;
                         }
 
+                        // child.TryDestroyComponent<Mount>();
+                        // Mount mount = child.AddComponent<Mount>();
+
                         if (_ParentToData[model.Value][count].enabled == 0)
                         {
                             child.transform.position = new Vector3(-100000, -100000, -100000);
@@ -534,9 +483,24 @@ namespace TweaksAndFixes
 
                         // Update paramiters
                         UpdateMountParamiters(mount, _ParentToData[model.Value][count]);
+                        mount.packNumber = mount.packNumber;
                     }
 
+                    if (hasNewMounts)
+                    {
+                        foreach (MountOverrideData newData in _ParentToNewData[model.Value])
+                        {
+                            GameObject newMount = GameObject.Instantiate(MountTemplate);
 
+                            newMount.transform.SetParent(obj);
+                            newMount.name = $"mount:TAF_{obj.GetChildren().Count}";
+
+                            UpdateMountParamiters(newMount.GetComponent<Mount>(), newData);
+
+                            canary = newMount;
+                        }
+                        // Melon<TweaksAndFixes>.Logger.Msg($"New Higherarchy:\n{ModUtils.DumpHierarchy(obj)}");
+                    }
                 }
             }
 
@@ -569,7 +533,6 @@ namespace TweaksAndFixes
     [HarmonyPatch(typeof(Util))]
     internal class Util_Clear_Resource_Cache
     {
-
         [HarmonyPatch(nameof(Util.ClearResourcesCache))]
         [HarmonyPostfix]
         internal static void Postfix_ClearResourcesCache()
@@ -579,45 +542,4 @@ namespace TweaksAndFixes
             Melon<TweaksAndFixes>.Logger.Msg($"Done!");
         }
     }
-
-    // [HarmonyPatch(typeof(Part))]
-    // internal class Patch_Part_Create
-    // {
-    //     internal static MethodBase TargetMethod()
-    //     {
-    //         //return AccessTools.Method(typeof(Part), nameof(Part.CanPlace), new Type[] { typeof(string).MakeByRefType(), typeof(List<Part>).MakeByRefType(), typeof(List<Collider>).MakeByRefType() });
-    // 
-    //         return typeof(Util).GetMethod(nameof(Part.Create));
-    //     }
-    // 
-    //     static void Postfix()
-    //     {
-    //     }
-    // }
-
-    // Util.ResourcesLoad
-    // [HarmonyPatch(typeof(Util))]
-    // internal class Patch_Util
-    // {
-    //     internal static MethodBase TargetMethod()
-    //     {
-    //         //return AccessTools.Method(typeof(Part), nameof(Part.CanPlace), new Type[] { typeof(string).MakeByRefType(), typeof(List<Part>).MakeByRefType(), typeof(List<Collider>).MakeByRefType() });
-    // 
-    //         var refference = typeof(Util).GetMethod(nameof(Util.ResourcesLoad));
-    // 
-    //         if (refference != null)
-    //         {
-    //             return refference.MakeGenericMethod(typeof(UnityEngine.GameObject));
-    //         }
-    //         else
-    //         {
-    //             Melon<TweaksAndFixes>.Logger.Error("Failed to find TargetMethod: Util.ResourcesLoad");
-    //             return null;
-    //         }
-    //     }
-    // 
-    //     static void Postfix()
-    //     {
-    //     }
-    // }
 }

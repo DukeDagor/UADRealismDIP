@@ -597,6 +597,14 @@ namespace TweaksAndFixes
                 UpdateArmorQualityButton(__instance);
             }
 
+            if (MountOverrideData.canary == null)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Reloading Mount Overrides after indirect cache clear...");
+                MountOverrideData.OverrideMountData();
+                MountOverrideData.canary = new();
+                Melon<TweaksAndFixes>.Logger.Msg($"Done!");
+            }
+
             // Debug stuff
             if (Input.GetKey(KeyCode.J))
             {
@@ -621,13 +629,15 @@ namespace TweaksAndFixes
                         // Melon<TweaksAndFixes>.Logger.Msg($"              Budget Off | {player.budgetMod}");
                         // Melon<TweaksAndFixes>.Logger.Msg($"                 TR Loss | {player.LossTrGDP}");
                         // Melon<TweaksAndFixes>.Logger.Msg($"                 TR Loss | {player.LossTrIncome}");
-                        // Melon<TweaksAndFixes>.Logger.Msg($"         wealthGrowthMul | {player.wealthGrowthMul}");
                         Melon<TweaksAndFixes>.Logger.Msg($"                     GDP | {player.NationYearIncome()}");
                         Melon<TweaksAndFixes>.Logger.Msg($"              GDP Growth | {player.wealthGrowthEffectivePrev * 100}%");
                         Melon<TweaksAndFixes>.Logger.Msg($"                  Growth | {player.nationBaseIncomeGrowth}");
                         Melon<TweaksAndFixes>.Logger.Msg($"             Army Budget | {player.yearlyArmyBudget / 1_000_000.0f} Mil$");
                         Melon<TweaksAndFixes>.Logger.Msg($"             Naval Funds | {player.cash / 1_000_000.0f} Mil$");
-                        Melon<TweaksAndFixes>.Logger.Msg($"            Naval Budget | {player.NavalBudgetPercent() * player.NationYearIncome() / 1_000_000.0f} Mil$");
+                        Melon<TweaksAndFixes>.Logger.Msg($"    Naval Budget Percent | {player.NavalBudgetPercent()}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"                  Budget | {player.Budget()}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"                Expenses | {player.Expenses()}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"              Net Budget | {player.Budget() - player.Expenses()}");
                         Melon<TweaksAndFixes>.Logger.Msg($"                Shipyard | {player.ExpensesShipyardBudget()}");
                         Melon<TweaksAndFixes>.Logger.Msg($"                Training | {player.trainingBudget * 100}% = {player.ExpensesTrainingBudget()}");
                         Melon<TweaksAndFixes>.Logger.Msg($"                    Tech | {player.techBudget + 50}% = {player.ExpensesTechBudget()}");
@@ -648,9 +658,9 @@ namespace TweaksAndFixes
 
                         string gunType = data.center ? "center" : (data.side ? "side" : "");
 
-                        string ParamOrNone(float param)
+                        string ParamOrNone(float param, float pair = 0)
                         {
-                            return (int)(param + 0.01) == 0 ? "" : param.ToString();
+                            return ((int)(param + 0.01) == 0) && ((int)(pair + 0.01) == 0) ? "" : param.ToString();
                         }
 
                         string validMounts = string.Empty;
@@ -670,9 +680,9 @@ namespace TweaksAndFixes
 
                         string collisionChecks = string.Empty;
 
-                        if (data.ignoreCollisionCheck) collisionChecks += ",ignore_all";
+                        if (data.ignoreCollisionCheck) collisionChecks += ",ignore_collision_check";
                         if (data.ignoreParent) collisionChecks += ",ignore_parent";
-                        if (data.ignoreExpand) collisionChecks += ",ignore_scale";
+                        if (data.ignoreExpand) collisionChecks += ",ignore_expand";
                         if (data.ignoreHeight) collisionChecks += ",ignore_height";
                         if (data.ignoreFireAngleCheck) collisionChecks += ",ignore_fire_angle_check";
                         if (data.casemateIgnoreCollision) collisionChecks += ",casemate_ignore_collision";
@@ -682,7 +692,7 @@ namespace TweaksAndFixes
 
                         string firingAngleOrientation = data.rotateLeftRight ? "starboard/port" : (data.rotateForwardBack ? "fore/aft" : "");
 
-                        string output = $"{gunType},{validMounts},{ParamOrNone(data.caliberMin)},{ParamOrNone(data.caliberMax)},{ParamOrNone(data.barrelsMin)},{ParamOrNone(data.barrelsMax)},{collisionChecks},{ParamOrNone(data.angleLeft)},{ParamOrNone(data.angleRight)},{firingAngleOrientation},{(data.rotateSame ? 1 : "")}";
+                        string output = $"{gunType},{validMounts},{ParamOrNone(data.caliberMin)},{ParamOrNone(data.caliberMax)},{ParamOrNone(data.barrelsMin)},{ParamOrNone(data.barrelsMax)},{collisionChecks},{ParamOrNone(data.angleLeft, data.angleRight)},{ParamOrNone(data.angleRight, data.angleLeft)},{firingAngleOrientation},{(data.rotateSame ? 1 : "")}";
 
                         return output;
                     }
@@ -896,7 +906,63 @@ namespace TweaksAndFixes
 
                 if (Input.GetKeyDown(KeyCode.P))
                 {
-                    MountOverrideData.OverrideMountData();
+
+                }
+
+                if (Input.GetKeyDown(KeyCode.M))
+                {
+                    if (SelectedPart != null)
+                    {
+                        if (SelectedPart.mount != null)
+                        {
+                            Mount mount = SelectedPart.mount;
+
+                            GameObject parent = mount.gameObject.GetParent();
+
+                            Melon<TweaksAndFixes>.Logger.Msg($"\n{parent.name.Replace("(Clone)", "")}");
+                            Melon<TweaksAndFixes>.Logger.Msg($"\n{ModUtils.DumpHierarchy(parent.GetParent())}");
+
+                        }
+                    }
+                    else
+                    {
+                        Part part = __instance.FindPartUnderMouseCursor();
+
+                        if (part != null)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"\n{part.gameObject.GetChildren()[0].name.Replace("(Clone)", "")}");
+                            Melon<TweaksAndFixes>.Logger.Msg($"\n{ModUtils.DumpHierarchy(part.gameObject)}");
+
+                            Part.FireSectorInfo info = new Part.FireSectorInfo();
+
+                            part.CalcFireSectorNonAlloc(info);
+
+                            if (info != null)
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"Total Angle: {info.shootableAngleTotal} | Incrament {info.stepAngle} | Steps Count: {info.stepsTotal}");
+
+                                Melon<TweaksAndFixes>.Logger.Msg($"Steps:");
+                                foreach (var sector in info.steps)
+                                {
+                                    Melon<TweaksAndFixes>.Logger.Msg($"  {sector.Key,4} : {sector.Value.status}");
+                                }
+
+                                Melon<TweaksAndFixes>.Logger.Msg($"Groups:");
+                                foreach (var group in info.groupsAll)
+                                {
+                                    Melon<TweaksAndFixes>.Logger.Msg($"  Group:");
+                                    foreach (var sector in group)
+                                    {
+                                        Melon<TweaksAndFixes>.Logger.Msg($"    {sector.status}");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"NO FIRE SECTOR");
+                            }
+                        }
+                    }
                 }
 
                 //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.constructorUi));
