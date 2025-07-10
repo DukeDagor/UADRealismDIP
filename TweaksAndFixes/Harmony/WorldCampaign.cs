@@ -9,12 +9,15 @@ using Il2CppTMPro;
 using Il2CppUiExt;
 using static TweaksAndFixes.Config;
 using static MelonLoader.MelonLogger;
+using System.Diagnostics;
 
 namespace TweaksAndFixes
 {
     [HarmonyPatch(typeof(WorldCampaign))]
     internal class Patch_WorldCampaign
     {
+        private static bool HasDestroyedSubmarineButton = false;
+
         [HarmonyPatch(nameof(WorldCampaign.CreateWorld))]
         [HarmonyPostfix]
         internal static void Postfix_CreateWorld(WorldCampaign __instance)
@@ -30,12 +33,17 @@ namespace TweaksAndFixes
                 rightBoarder.TryDestroy();
             }
 
-            if (Config.Param("taf_hide_submarine_managment_buttons", 0) == 1)
+            if (Config.Param("taf_hide_submarine_managment_buttons", 0) == 1 && !HasDestroyedSubmarineButton)
             {
                 GameObject submarines = G.ui.GetChild("WorldEx").GetChild("TopPanel").GetChild("Tabs").GetChild("Buttons").GetChild("Submarines");
 
-                submarines.transform.SetParent(null);
-                submarines.SetActive(false);
+                if (submarines != null)
+                {
+                    submarines.transform.SetParent(null);
+                    submarines.SetActive(false);
+                }
+
+                HasDestroyedSubmarineButton = true;
             }
         }
     }
