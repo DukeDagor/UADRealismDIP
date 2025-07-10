@@ -9,6 +9,7 @@ using static Il2CppMono.Math.BigInteger;
 using static Il2CppSystem.Net.WebCompletionSource;
 using static Il2Cpp.Ui.SkirmishSetup;
 using System.Data;
+using static MelonLoader.MelonLogger;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -337,26 +338,18 @@ namespace TweaksAndFixes
             GameObject UpdateArmorQualityButton = ui.constructorUi.GetChild("Left").GetChild("Scroll View").GetChild("Viewport").GetChild("Cont").GetChild("FoldArmor").GetChild("Armor").GetChild("TAF_Armour_Quality_Button", true);
 
             int ArmourQuality = 0;
-            bool FoundArmorQuality = false;
 
             if (Patch_Ship.LastCreatedShip != null)
             {
                 foreach (TechnologyData tech in Patch_Ship.LastCreatedShip.techsActual)
                 {
-                    if (tech.type != "armor_quality") continue;
+                    // if (tech.type != "armor_quality") continue;
 
-                    ArmourQuality = 0;
-
-                    // If the tech doesn't specify armor_str, assume its 0
                     if (tech.effects.ContainsKey("armor_str"))
                     {
                         string newStrength = tech.effects["armor_str"][0][0];
-                        ArmourQuality = int.Parse(newStrength);
+                        ArmourQuality += int.Parse(newStrength);
                     }
-
-                    FoundArmorQuality = true;
-
-                    break;
                 }
             }
 
@@ -395,6 +388,14 @@ namespace TweaksAndFixes
 
             if (Patch_Ship.LastCreatedShip == null || (int)(G.settings.armorQualityInPen + 0.05f) == ArmourQuality) UpdateArmorQualityButton.GetComponent<Button>().SetActive(false);
             else UpdateArmorQualityButton.GetComponent<Button>().SetActive(true);
+        }
+
+        public static void UpdateShipTypeButtons(Ui ui)
+        {
+            // __instance.conUpperRight
+            ui.conUpperRight.transform.position = new Vector3(2591.9f, 960.0f, 0.0f);
+            ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip").SetActive(true);
+            ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip").UiVisible(true);
         }
 
         private static void AddConfirmationPopups(Ui ui)
@@ -595,7 +596,10 @@ namespace TweaksAndFixes
                 UpdateTopBarRotationButton(__instance);
                 UpdateTopBarRotationText(__instance);
                 UpdateArmorQualityButton(__instance);
+                UpdateShipTypeButtons(__instance);
             }
+
+            
 
             if (MountOverrideData.canary == null)
             {
@@ -906,7 +910,7 @@ namespace TweaksAndFixes
 
                 if (Input.GetKeyDown(KeyCode.P))
                 {
-
+                    Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(__instance.conUpperRight));
                 }
 
                 if (Input.GetKeyDown(KeyCode.M))
@@ -965,7 +969,6 @@ namespace TweaksAndFixes
                     }
                 }
 
-                //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.constructorUi));
                 //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.conUpperRight));
                 //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.conShipTypeButtons));
                 //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.conComponentsChoice));
