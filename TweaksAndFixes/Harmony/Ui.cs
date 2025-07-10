@@ -404,7 +404,6 @@ namespace TweaksAndFixes
 
             // ui.conUpperButtons.GetChild("Layout").GetComponent<LayoutGroup>();
 
-            //Melon<TweaksAndFixes>.Logger.Msg("Top Bar:");
             foreach (GameObject child in TopBarChildren)
             {
                 if (child == null) continue;
@@ -478,6 +477,8 @@ namespace TweaksAndFixes
                 }
             }
 
+            AddConfirmPopupToButton(ui.FleetWindow.Delete, "$TAF_Ui_FleetWindow_Confirm_Action_Delete");
+            AddConfirmPopupToButton(ui.FleetWindow.Scrap, "$TAF_Ui_FleetWindow_Confirm_Action_Scrap");
         }
 
         public static void UpdateSelectedPart(Part part)
@@ -588,19 +589,25 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_Update(Ui __instance)
         {
+            GameObject bugReporter = __instance.commonUi.GetChild("Options").GetChild("BugReport");
+
+            bugReporter.SetActive(false);
+            bugReporter.UiVisible(false);
+
+            if (Config.Param("taf_add_confirmation_popups", 1) == 1)
+            {
+                AddConfirmationPopups(__instance);
+            }
+
             // New UI elements
             if (Config.Param("taf_dockyard_new_logic", 1) == 1)
             {
-                AddConfirmationPopups(__instance);
-
                 UpdateTopBarRotationButton(__instance);
                 UpdateTopBarRotationText(__instance);
                 UpdateArmorQualityButton(__instance);
                 UpdateShipTypeButtons(__instance);
             }
-
             
-
             if (MountOverrideData.canary == null)
             {
                 Melon<TweaksAndFixes>.Logger.Msg($"Reloading Mount Overrides after indirect cache clear...");
@@ -910,7 +917,8 @@ namespace TweaksAndFixes
 
                 if (Input.GetKeyDown(KeyCode.P))
                 {
-                    Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(__instance.conUpperRight));
+                    Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(__instance.gameObject));
+                    Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(__instance.commonUi));
                 }
 
                 if (Input.GetKeyDown(KeyCode.M))
