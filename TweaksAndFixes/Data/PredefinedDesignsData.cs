@@ -14,6 +14,7 @@ using UnityEngine.UI;
 using Il2CppTMPro;
 using System.ComponentModel.Design;
 using UnityEngine.Windows.Speech;
+using MelonLoader.TinyJSON;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8602
@@ -463,7 +464,7 @@ namespace TweaksAndFixes
         {
             string pName = player.data.name;
 
-            int maxTechYear = Config.DontClobberTechForPredefs ? CampaignControllerM.CachePlayerTechs(player, true) : desiredYear;
+            int maxTechYear = desiredYear; //Config.DontClobberTechForPredefs ? CampaignControllerM.CachePlayerTechs(player, true) : desiredYear;
             if (maxTechYear < Config.StartingYear)
                 maxTechYear = Config.StartingYear;
 
@@ -472,8 +473,6 @@ namespace TweaksAndFixes
                 var data = _predefFileData[i];
                 if (!data.loadedData || data.skipChance > UnityEngine.Random.value || !data.yearsPerPlayer.TryGetValue(pName, out var ypp))
                 {
-                    Melon<TweaksAndFixes>.Logger.Error($"Predefined designs: {pName} not found.");
-
                     continue;
                 }
 
@@ -517,17 +516,17 @@ namespace TweaksAndFixes
                         }
                         continue;
                     }
-                    
+
                     var ship = spp.RandomShipOfType(player, type);
 
-                    if (type.name == "tb" && ship == null)
-                    {
-                        var shipList = spp.shipsPerType[type.name];
-
-                        int index = UnityEngine.Random.RandomRange(0, shipList.Count - 1);
-
-                        ship = shipList[index];
-                    }
+                    // if (ship == null && spp.shipsPerType.ContainsKey(type.name) && spp.shipsPerType[type.name].Count > 0)
+                    // {
+                    //      var shipList = spp.shipsPerType[type.name];
+                    //  
+                    //      int index = UnityEngine.Random.RandomRange(0, shipList.Count - 1);
+                    //  
+                    //      ship = shipList[index];
+                    // }
 
                     // if (spp.shipsPerType[type.name] != null)
                     // {
@@ -536,9 +535,9 @@ namespace TweaksAndFixes
 
                     if (ship != null)
                     {
-                        if (Config.DontClobberTechForPredefs)
-                            CampaignControllerM.CleanupSDCaches();
-                        // Melon<TweaksAndFixes>.Logger.Error($"  Found {ship.hullName} in {10 + tries} tries.");
+                        // if (Config.DontClobberTechForPredefs)
+                        //     CampaignControllerM.CleanupSDCaches();
+                        // Melon<TweaksAndFixes>.Logger.Error($"  Found {ship.hullName} in {desiredYear} from {year}.");
                         return ship;
                     }
                     // else
@@ -547,8 +546,8 @@ namespace TweaksAndFixes
                     // }
                 }
             }
-            if (Config.DontClobberTechForPredefs)
-                CampaignControllerM.CleanupSDCaches();
+            // if (Config.DontClobberTechForPredefs)
+            //     CampaignControllerM.CleanupSDCaches();
 
             return null;
         }
@@ -674,4 +673,27 @@ namespace TweaksAndFixes
             numInputObj.FindDeepChild("Placeholder").GetComponent<TextMeshProUGUI>().text = LocalizeManager.Localize("$TAF_Ui_BatchShipGenerator_NumShips");
         }
     }
+
+    // ShipsPerPlayer.RandomShipOfType
+    // 
+    // [HarmonyPatch(typeof(ShipsPerPlayer))]
+    // internal class ShipsPerPlayer_RandomShipOfType
+    // {
+    //     [HarmonyPatch(nameof(ShipsPerPlayer.RandomShipOfType))]
+    //     [HarmonyPrefix]
+    //     internal static bool Postfix_RandomShipOfType(ShipsPerPlayer __instance, ref Ship.Store __result, Player player, ShipType shipType)
+    //     {
+    //         Melon<TweaksAndFixes>.Logger.Error($"{player.Name(false)} has {__instance.validDesigns.Count} valid designs.");
+    // 
+    //         var shipList = __instance.shipsPerType[shipType.name];
+    // 
+    //         if (shipList.Count == 0) return false;
+    // 
+    //         int index = UnityEngine.Random.RandomRange(0, shipList.Count - 1);
+    // 
+    //         __result = shipList[index];
+    // 
+    //         return false;
+    //     }
+    // }
 }
