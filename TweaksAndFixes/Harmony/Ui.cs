@@ -594,6 +594,21 @@ namespace TweaksAndFixes
             bugReporter.SetActive(false);
             bugReporter.UiVisible(false);
 
+            // CampaignZoomSpeed;
+
+            // if (Cam.Instance != null)
+            // {
+            //     Cam.Instance.borderScrollSize = 0;
+            //     Cam.Instance.borderScrollSensitivity = 0;
+            // }
+            // 
+            // if (CameraController.instance != null)
+            // {
+            //     CameraController.instance.zoomAcceleration = 100;
+            //     CameraController.instance.zoomDeceleration = 100;
+            //     CameraController.instance.startCameraMoveBorder = 0;
+            // }
+
             if (Config.Param("taf_add_confirmation_popups", 1) == 1)
             {
                 AddConfirmationPopups(__instance);
@@ -1963,6 +1978,20 @@ namespace TweaksAndFixes
                     _BarbetteData = null;
                 }
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(Cam))]
+    internal class Patch_Cam
+    {
+        [HarmonyPatch(nameof(Cam.Update))]
+        [HarmonyPostfix]
+        internal static void Postfix_CameraController(Cam __instance)
+        {
+            __instance.borderScrollSize = 0;
+            __instance.borderScrollSensitivity = 0;
+            __instance.CampaignZoomSpeed = 100;
+            __instance.BattleZoomSpeed = 100;
         }
     }
 }
