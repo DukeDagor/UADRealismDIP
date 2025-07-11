@@ -181,6 +181,8 @@ namespace TweaksAndFixes
             MountTemplate.transform.rotation = new Quaternion();
             MountTemplate.AddComponent<Mount>();
 
+            bool DisableStickyMounts = Config.Param("taf_mounts_sticky_disable", 1) == 1;
+
             foreach (var data in G.GameData.parts)
             {
                 bool isAutoOverrideType = data.Value.type == "barbette" || data.Value.type == "tower_main" || data.Value.type == "tower_sec";
@@ -329,6 +331,8 @@ namespace TweaksAndFixes
 
                     if (!hasOverride)
                     {
+                        if (!DisableStickyMounts) continue;
+
                         if (data.Value.type == "barbette")
                         {
                             if (!child.name.StartsWith("Mount:barbette"))
