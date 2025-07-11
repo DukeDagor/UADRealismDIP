@@ -69,7 +69,7 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static void Prefix_ChooseComponentType()
         {
-            SpriteDatabase.Instance.OverrideResources();
+            // SpriteDatabase.Instance.OverrideResources();
         }
 
 
@@ -625,8 +625,11 @@ namespace TweaksAndFixes
             
             if (MountOverrideData.canary == null)
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"Reloading Mount Overrides after indirect cache clear...");
+                Melon<TweaksAndFixes>.Logger.Msg($"Reloading overrides after indirect cache clear...");
+                Melon<TweaksAndFixes>.Logger.Msg($"Reloading Mount Overrides");
                 MountOverrideData.OverrideMountData();
+                SpriteDatabase.Instance.OverrideResources();
+                FlagDatabase.Recreate();
                 MountOverrideData.canary = new();
                 Melon<TweaksAndFixes>.Logger.Msg($"Done!");
             }
@@ -1910,7 +1913,7 @@ namespace TweaksAndFixes
         internal static void Prefix_RefreshConstructorInfo(Ui __instance)
         {
             ClearAllButtons(__instance);
-            SpriteDatabase.Instance.OverrideResources();
+            // SpriteDatabase.Instance.OverrideResources();
         }
 
         [HarmonyPatch(nameof(Ui.RefreshConstructorInfo))]

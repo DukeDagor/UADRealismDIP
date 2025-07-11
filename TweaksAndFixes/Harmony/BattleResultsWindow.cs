@@ -16,7 +16,7 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static void Prefix_InitCommon()
         {
-            FlagDatabase.Recreate();
+            // FlagDatabase.Recreate();
         }
     }
 }
