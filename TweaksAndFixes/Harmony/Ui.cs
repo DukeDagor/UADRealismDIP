@@ -10,6 +10,7 @@ using static Il2CppSystem.Net.WebCompletionSource;
 using static Il2Cpp.Ui.SkirmishSetup;
 using System.Data;
 using static MelonLoader.MelonLogger;
+using Il2CppTMPro;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -337,7 +338,7 @@ namespace TweaksAndFixes
         {
             GameObject UpdateArmorQualityButton = ui.constructorUi.GetChild("Left").GetChild("Scroll View").GetChild("Viewport").GetChild("Cont").GetChild("FoldArmor").GetChild("Armor").GetChild("TAF_Armour_Quality_Button", true);
 
-            int ArmourQuality = 0;
+            float ArmourQuality = 0;
 
             if (Patch_Ship.LastCreatedShip != null)
             {
@@ -348,7 +349,16 @@ namespace TweaksAndFixes
                     if (tech.effects.ContainsKey("armor_str"))
                     {
                         string newStrength = tech.effects["armor_str"][0][0];
-                        ArmourQuality += int.Parse(newStrength);
+
+                        float parsed = 0;
+
+                        if (!float.TryParse(newStrength, out parsed))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {tech.name}: armor_str({tech.effects["armor_str"][0][0]}).");
+                            continue;
+                        }
+
+                        ArmourQuality += parsed;
                     }
                 }
             }
