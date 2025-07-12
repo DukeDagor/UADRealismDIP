@@ -528,6 +528,10 @@ namespace TweaksAndFixes
                 return;
             }
 
+            _Data.Clear();
+            _ParentToData.Clear();
+            _ParentToNewData.Clear();
+
             Serializer.CSV.Read<List<MountOverrideData>, MountOverrideData>(text, list, true, true);
 
             Melon<TweaksAndFixes>.Logger.Msg($"Loaded {list.Count} mount overrides.");

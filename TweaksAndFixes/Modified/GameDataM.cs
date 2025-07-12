@@ -137,6 +137,8 @@ namespace TweaksAndFixes
 
                 AccuraciesExInfo.LoadData();
 
+                MountOverrideData.LoadData();
+
                 text = GameDataM.GetText("randParts");
                 if (text != null)
                 {
