@@ -163,15 +163,8 @@ namespace TweaksAndFixes
         }
 
 
-
-        [HarmonyPatch(nameof(Part.CalcFireSectorNonAlloc))]
-        [HarmonyPostfix]
-        internal static void Postfix_CalcFireSectorNonAlloc(Part __instance, ref Part.FireSectorInfo fireSector)
+        private static void OverrideFiringAngle(Part __instance, ref Part.FireSectorInfo fireSector)
         {
-            if (__instance.mount == null) return;
-
-            if ((int)__instance.mount.angleRight == 0 && (int)__instance.mount.angleLeft == 0) return;
-            
             bool hasBreak = false;
 
             float startAngle = __instance.mount.transform.eulerAngles.y + __instance.mount.angleLeft;
@@ -183,7 +176,7 @@ namespace TweaksAndFixes
             }
 
             float endAngle = __instance.mount.transform.eulerAngles.y + __instance.mount.angleRight;
-            
+
             if (endAngle > 360)
             {
                 endAngle -= 360;
@@ -206,7 +199,7 @@ namespace TweaksAndFixes
                     if (sector.Key > startAngle && sector.Key < endAngle)
                     {
                         sector.Value.status = Part.SectorStep.Status.Shoot;
-                        
+
                         shootGroup.Add(sector.Value);
                         foundShoot = true;
                     }
@@ -226,7 +219,7 @@ namespace TweaksAndFixes
                 }
 
                 fireSector.shootableAngleTotal = endAngle - startAngle;
-                
+
                 if (badGroupA.Count > 0) fireSector.groupsAll.Add(badGroupA);
                 fireSector.groupsAll.Add(shootGroup);
                 if (badGroupB.Count > 0) fireSector.groupsAll.Add(badGroupB);
@@ -274,6 +267,108 @@ namespace TweaksAndFixes
                 if (shootGroupA.Count > 0) fireSector.groupsShoot.Add(shootGroupA);
                 if (shootGroupB.Count > 0) fireSector.groupsShoot.Add(shootGroupB);
             }
+        }
+
+        private static void MergeFiringAngle(Part __instance, ref Part.FireSectorInfo fireSector)
+        {
+            bool hasBreak = false;
+
+            float startAngle = __instance.mount.transform.eulerAngles.y + __instance.mount.angleLeft;
+
+            if (startAngle < 0)
+            {
+                startAngle += 360;
+                hasBreak = true;
+            }
+
+            float endAngle = __instance.mount.transform.eulerAngles.y + __instance.mount.angleRight;
+
+            if (endAngle > 360)
+            {
+                endAngle -= 360;
+                hasBreak = true;
+            }
+
+            fireSector.groupsAll.Clear();
+            fireSector.groupsShoot.Clear();
+            fireSector.shootableAngleTotal = 0;
+
+            if (!hasBreak)
+            {
+                foreach (var sector in fireSector.steps)
+                {
+                    if (sector.Key <= startAngle || sector.Key >= endAngle)
+                    {
+                        sector.Value.status = Part.SectorStep.Status.Bad;
+                    }
+                }
+            }
+            else
+            {
+                foreach (var sector in fireSector.steps)
+                {
+                    if (!(sector.Key > startAngle && sector.Key <= 360) && !(sector.Key < endAngle && sector.Key >= 0))
+                    {
+                        sector.Value.status = Part.SectorStep.Status.Bad;
+                    }
+                }
+
+            }
+
+            Il2CppSystem.Collections.Generic.HashSet<Part.SectorStep> group = new();
+            Part.SectorStep lastSector = new();
+            float groupStartAngle = 0;
+            float lastSectorAngle = 0;
+
+            Melon<TweaksAndFixes>.Logger.Msg($"\nGrouping angles:");
+            foreach (var sector in fireSector.steps)
+            {
+                if (group.Count != 0 && lastSector.status != sector.Value.status)
+                {
+                    fireSector.groupsAll.Add(group);
+
+                    if (lastSector.status == Part.SectorStep.Status.Shoot)
+                    {
+                        fireSector.groupsShoot.Add(group);
+                        fireSector.shootableAngleTotal += lastSectorAngle - groupStartAngle + fireSector.stepAngle;
+                    }
+
+                    groupStartAngle = sector.Key;
+                    group = new();
+                }
+
+                group.Add(sector.Value);
+                lastSectorAngle = sector.Key;
+                lastSector = sector.Value;
+            }
+
+            fireSector.groupsAll.Add(group);
+
+            if (lastSector.status == Part.SectorStep.Status.Shoot)
+            {
+                fireSector.groupsShoot.Add(group);
+                fireSector.shootableAngleTotal += lastSectorAngle - groupStartAngle + fireSector.stepAngle;
+            }
+        }
+
+
+        [HarmonyPatch(nameof(Part.CalcFireSectorNonAlloc))]
+        [HarmonyPostfix]
+        internal static void Postfix_CalcFireSectorNonAlloc(Part __instance, ref Part.FireSectorInfo fireSector)
+        {
+            if (__instance.mount == null) return;
+
+            if ((int)__instance.mount.angleRight == 0 && (int)__instance.mount.angleLeft == 0) return;
+            
+            if (__instance.mount.ignoreExpand && __instance.mount.ignoreParent)
+            {
+                OverrideFiringAngle(__instance, ref fireSector);
+            }
+            else
+            {
+                MergeFiringAngle(__instance, ref fireSector);
+            }
+
 
             // Melon<TweaksAndFixes>.Logger.Msg($"Start: {startAngle} : End {endAngle} : {(hasBreak ? "BROKEN" : "CONTINUOUS")} : Total Angle: {fireSector.shootableAngleTotal}");
         }
