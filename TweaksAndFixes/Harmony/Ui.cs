@@ -11,6 +11,11 @@ using static Il2Cpp.Ui.SkirmishSetup;
 using System.Data;
 using static MelonLoader.MelonLogger;
 using Il2CppTMPro;
+using System.Reflection.Metadata.Ecma335;
+using System.Xml.Linq;
+using System.Text;
+using static TweaksAndFixes.Serializer;
+using System.Drawing;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -604,21 +609,6 @@ namespace TweaksAndFixes
             bugReporter.SetActive(false);
             bugReporter.UiVisible(false);
 
-            // CampaignZoomSpeed;
-
-            // if (Cam.Instance != null)
-            // {
-            //     Cam.Instance.borderScrollSize = 0;
-            //     Cam.Instance.borderScrollSensitivity = 0;
-            // }
-            // 
-            // if (CameraController.instance != null)
-            // {
-            //     CameraController.instance.zoomAcceleration = 100;
-            //     CameraController.instance.zoomDeceleration = 100;
-            //     CameraController.instance.startCameraMoveBorder = 0;
-            // }
-
             if (Config.Param("taf_add_confirmation_popups", 1) == 1)
             {
                 AddConfirmationPopups(__instance);
@@ -656,256 +646,75 @@ namespace TweaksAndFixes
                     }
                 }
 
-                if (Input.GetKeyDown(KeyCode.I))
+                else if (Input.GetKeyDown(KeyCode.I))
                 {
                     Melon<TweaksAndFixes>.Logger.Msg("PLAYER INFO: ");
                     foreach (var player in CampaignController.Instance.CampaignData.PlayersMajor)
                     {
-                        Melon<TweaksAndFixes>.Logger.Msg($"  {player.Name(false)}:");
-                        // Melon<TweaksAndFixes>.Logger.Msg($"    GDP Growth:          {player.wealthGrowth * 100}%");
-                        // Melon<TweaksAndFixes>.Logger.Msg($"    GDP:                 {player.wealth}$");
-                        // Melon<TweaksAndFixes>.Logger.Msg($"               Inflation | {player.inflation} = {player.ExpensesInflation()}");
-                        // Melon<TweaksAndFixes>.Logger.Msg($"              Budget Off | {player.budgetMod}");
-                        // Melon<TweaksAndFixes>.Logger.Msg($"                 TR Loss | {player.LossTrGDP}");
-                        // Melon<TweaksAndFixes>.Logger.Msg($"                 TR Loss | {player.LossTrIncome}");
-                        Melon<TweaksAndFixes>.Logger.Msg($"                     GDP | {player.NationYearIncome()}");
-                        Melon<TweaksAndFixes>.Logger.Msg($"              GDP Growth | {player.wealthGrowthEffectivePrev * 100}%");
-                        Melon<TweaksAndFixes>.Logger.Msg($"                  Growth | {player.nationBaseIncomeGrowth}");
-                        Melon<TweaksAndFixes>.Logger.Msg($"             Army Budget | {player.yearlyArmyBudget / 1_000_000.0f} Mil$");
-                        Melon<TweaksAndFixes>.Logger.Msg($"             Naval Funds | {player.cash / 1_000_000.0f} Mil$");
-                        Melon<TweaksAndFixes>.Logger.Msg($"    Naval Budget Percent | {player.NavalBudgetPercent()}");
-                        Melon<TweaksAndFixes>.Logger.Msg($"                  Budget | {player.Budget()}");
-                        Melon<TweaksAndFixes>.Logger.Msg($"                Expenses | {player.Expenses()}");
-                        Melon<TweaksAndFixes>.Logger.Msg($"              Net Budget | {player.Budget() - player.Expenses()}");
-                        Melon<TweaksAndFixes>.Logger.Msg($"                Shipyard | {player.ExpensesShipyardBudget()}");
-                        Melon<TweaksAndFixes>.Logger.Msg($"                Training | {player.trainingBudget * 100}% = {player.ExpensesTrainingBudget()}");
-                        Melon<TweaksAndFixes>.Logger.Msg($"                    Tech | {player.techBudget + 50}% = {player.ExpensesTechBudget()}");
-                        Melon<TweaksAndFixes>.Logger.Msg($"           Transport Cap | {player.transportCapacity * 100}%");
-                        Melon<TweaksAndFixes>.Logger.Msg($"    Transport Cap Budget | {player.transportCapacityBudget * 100}% = {player.ExpensesTransportCapacity()}");
+                        if (player.isDisabled)
+                        {
+                            // Melon<TweaksAndFixes>.Logger.Msg($"{player.Name(false)}: Disabled!");
+                            continue;
+                        }
+
+                        Melon<TweaksAndFixes>.Logger.Msg($"  {player.Name(false)}:\n{ModUtils.DumpPlayerData(player)}");
                     }
                 }
 
-                if (Input.GetKeyDown(KeyCode.L))
+                else if (Input.GetKeyDown(KeyCode.L))
                 {
-                    string finalCount = "";
+                    // string finalCount = "";
+
+                    StringBuilder finalCount = new StringBuilder(2^24);
 
                     HashSet<string> parsedModels = new HashSet<string>();
 
-                    string MountObjToCSV(GameObject mount)
+                    Queue<GameObject> models = new Queue<GameObject>();
+
+                    // TODO: (Duke) Change this to use TAFData/baseGamePartModelData.csv instead
+
+                    string str = File.ReadAllText(Config._BasePath + "\\partmodels.txt");
+
+                    var split = str.Split("\n");
+
+                    foreach (string name in split)
                     {
-                        Mount data = mount.GetComponent<Mount>();
+                        var modelName = name.TrimEnd();
 
-                        string gunType = data.center ? "center" : (data.side ? "side" : "");
-
-                        string ParamOrNone(float param, float pair = 0)
-                        {
-                            return ((int)(param + 0.01) == 0) && ((int)(pair + 0.01) == 0) ? "" : param.ToString();
-                        }
-
-                        string validMounts = string.Empty;
-
-                        if (data.towerMain) validMounts += ",tower_main";
-                        if (data.towerSec) validMounts += ",tower_sec";
-                        if (data.funnel) validMounts += ",funnel";
-                        if (data.siBarbette) validMounts += ",si_barbette";
-                        if (data.barbette) validMounts += ",barbette";
-                        if (data.casemate) validMounts += ",casemate";
-                        if (data.subTorpedo) validMounts += ",sub_torpedo";
-                        if (data.deckTorpedo) validMounts += ",deck_torpedo";
-                        if (data.special) validMounts += ",special";
-                        validMounts = validMounts.TrimStart(',');
-
-                        if (validMounts.Length > 0) validMounts = $"\"{validMounts}\"";
-
-                        string collisionChecks = string.Empty;
-
-                        if (data.ignoreCollisionCheck) collisionChecks += ",ignore_collision_check";
-                        if (data.ignoreParent) collisionChecks += ",ignore_parent";
-                        if (data.ignoreExpand) collisionChecks += ",ignore_expand";
-                        if (data.ignoreHeight) collisionChecks += ",ignore_height";
-                        if (data.ignoreFireAngleCheck) collisionChecks += ",ignore_fire_angle_check";
-                        if (data.casemateIgnoreCollision) collisionChecks += ",casemate_ignore_collision";
-                        collisionChecks = collisionChecks.TrimStart(',');
-
-                        if (collisionChecks.Length > 0) collisionChecks = $"\"{collisionChecks}\"";
-
-                        string firingAngleOrientation = data.rotateLeftRight ? "starboard/port" : (data.rotateForwardBack ? "fore/aft" : "");
-
-                        string output = $"{gunType},{validMounts},{ParamOrNone(data.caliberMin)},{ParamOrNone(data.caliberMax)},{ParamOrNone(data.barrelsMin)},{ParamOrNone(data.barrelsMax)},{collisionChecks},{ParamOrNone(data.angleLeft, data.angleRight)},{ParamOrNone(data.angleRight, data.angleLeft)},{firingAngleOrientation},{(data.rotateSame ? 1 : "")}";
-
-                        return output;
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Loading: {modelName}");
+                        models.Enqueue(Util.ResourcesLoad<GameObject>(modelName, false));
                     }
 
-                    foreach (var data in G.GameData.parts)
+                    Stack<Tuple<GameObject, int>> stack = new Stack<Tuple<GameObject, int>>();
+
+                    while (models.Count > 0)
                     {
-                        // if (data.value.type != "barbette") continue;
-
-                        if (parsedModels.Contains(data.Value.model))
-                        {
-                            continue;
-                        }
-
-                        // Melon<TweaksAndFixes>.Logger.Msg($"Loading: {data.Key}...");
-                        GameObject obj = Util.ResourcesLoad<GameObject>(data.Value.model, false);
-
-                        parsedModels.Add(data.Value.model);
-
-                        if (obj == null)
-                        {
-                            // Melon<TweaksAndFixes>.Logger.Msg($"  Failed to load: {data.Value.nameUi}");
-                            continue;
-                        }
-
-                        var children = obj.GetChildren();
                         bool hasMounts = false;
-                        string partCount = $"\n# {data.Value.model}:";
+                        // string partCount = $"\n# {data.Value.model}:";
                         int count = 0;
 
-                        if (data.Value.type == "hull")
+                        GameObject model = models.Dequeue();
+
+                        foreach (GameObject child in model.GetChildren())
                         {
-                            // Hierarchy:
-                            //  Visual:
-                            //    Sections:
-                            //      Stern/Middle/Bow
-
-                            // Melon<TweaksAndFixes>.Logger.Msg($"\n{ModUtils.DumpHierarchy(obj)}");
-
-                            children = obj.GetChild("Visual").GetChild("Sections").GetChildren();
+                            stack.Push(new Tuple<GameObject, int>(child, 0));
                         }
 
-                        for (int i = children.Count - 1; i >= 0; i--)
+                        bool isHull     = model.name.Contains("_hull_")     || model.name.StartsWith("hull_")     || model.name.EndsWith("_hull");
+                        bool isTower    = model.name.Contains("_tower_")    || model.name.StartsWith("tower_")    || model.name.EndsWith("_tower");
+                        bool isBarbette = model.name.Contains("_barbette_") || model.name.StartsWith("barbette_") || model.name.EndsWith("_barbette");
+
+                        finalCount.Append($"\n# {model.name},,,,,,,,,,,,,,,,,");
+
+                        List<string> path = new();
+
+                        Melon<TweaksAndFixes>.Logger.Msg($"Parsing: {model.name}...");
+
+                        while (stack.Count > 0)
                         {
-                            GameObject child = children[i];
-
-                            if (child == null) continue;
-
-                            if (data.Value.type == "hull")
-                            {
-                                partCount += $"\n#   {child.name}:";
-
-                                int subCount = 0;
-                                var subChildren = child.GetChildren();
-                                bool hasSubMount = false;
-
-                                for (int j = subChildren.Count - 1; j >= 0; j--)
-                                {
-                                    GameObject subChild = subChildren[j];
-
-                                    if (subChild == null) continue;
-                                    
-                                    if (!subChild.name.StartsWith("Mount")) continue;
-
-                                    subCount++;
-
-                                    if (subChild.name.StartsWith("Mount:tower_main") || subChild.name.StartsWith("Mount:tower_sec") || subChild.name.StartsWith("Mount:funnel") || subChild.name.StartsWith("Mount:si_barbette"))
-                                    {
-                                         // subChild.transform.SetParent(null);
-                                         // subChild.TryDestroy();
-                                         continue;
-                                    }
-
-                                    if ((int)subChild.transform.position.x == 0)
-                                    {
-                                        continue;
-                                    }
-
-                                    hasMounts = true;
-                                    hasSubMount = true;
-
-                                    // Melon<TweaksAndFixes>.Logger.Msg($"HULL MOUNT: {data.Key}/{child.name}");
-
-                                    partCount += $"\n{subCount},,\"{data.Value.model}/{child.name}\",{subChild.transform.eulerAngles.y},\"{subChild.transform.position}\",{MountObjToCSV(subChild)}";
-                                }
-
-                                if (!hasSubMount)
-                                {
-                                    partCount = partCount[0..^($"\n#   {child.name}:").Count()];
-                                }
-
-                                continue;
-                            }
-
-                            if (!child.name.StartsWith("Mount")) continue;
-
-                            count++;
-
-                            if (data.Value.type == "barbette")
-                            {
-                                if (!child.name.StartsWith("Mount:barbette"))
-                                {
-                                    // child.transform.SetParent(null);
-                                    // child.TryDestroy();
-                                    continue;
-                                }
-                            }
-                            else if (data.Value.type == "tower_main")
-                            {
-                                if (child.name.StartsWith("Mount:tower_sec") || child.name.StartsWith("Mount:si_barbette"))
-                                {
-                                    // child.transform.SetParent(null);
-                                    // child.TryDestroy();
-                                    continue;
-                                }
-                            }
-                            else if (data.Value.type == "tower_sec")
-                            {
-                                if (child.name.StartsWith("Mount:tower_main") || child.name.StartsWith("Mount:si_barbette"))
-                                {
-                                    // child.transform.SetParent(null);
-                                    // child.TryDestroy();
-                                    continue;
-                                }
-                            }
-
-                            partCount += $"\n{count},,\"{data.Value.model}\",{child.transform.eulerAngles.y},\"{child.transform.position}\",{MountObjToCSV(child)}";
-                            hasMounts = true;
-                            // if (data.Value.type == "tower_main") { }
-
-                            // if (child.name.StartsWith("Mount:barbette")) continue;
-
-                            // hasMounts = true;
-                            // break;
-                        }
-
-                        if (hasMounts)
-                        {
-                            finalCount += $"{partCount}";
-                        }
-
-
-                        // var children = obj.GetChildren();
-                        // 
-                        // for (int i = children.Count - 1; i >= 0; i--)
-                        // {
-                        //     GameObject child = children[i];
-                        // 
-                        //     if (!child.name.StartsWith("Mount")) continue;
-                        // 
-                        //     if (child.name.StartsWith("Mount:barbette")) continue;
-                        // 
-                        //     child.transform.SetParent(null);
-                        //     child.TryDestroy();
-                        // }
-                        // 
-                        // Melon<TweaksAndFixes>.Logger.Msg($"\n{ModUtils.DumpHierarchy(obj)}");
-                    }
-
-                    foreach (var data in G.GameData.partModels)
-                    {
-                        foreach (var model in data.Value.models)
-                        {
-
-                            // if (data.value.type != "barbette") continue;
-
-                            if (parsedModels.Contains(model.Value))
-                            {
-                                continue;
-                            }
-
-                            // Melon<TweaksAndFixes>.Logger.Msg($"Loading: {data.Key}...");
-                            GameObject obj = Util.ResourcesLoad<GameObject>(model.Value, false);
-
-                            parsedModels.Add(model.Value);
+                            var pair = stack.Pop();
+                            GameObject obj = pair.Item1;
+                            int depth = pair.Item2;
 
                             if (obj == null)
                             {
@@ -913,56 +722,106 @@ namespace TweaksAndFixes
                                 continue;
                             }
 
-                            var children = obj.GetChildren();
-                            bool hasMounts = false;
-                            string partCount = $"\n# {model.Value}:";
-                            int count = 0;
+                            // Melon<TweaksAndFixes>.Logger.Msg($"  Sub-parsing {obj.name} : {obj.Pointer}...");
 
-                            for (int i = children.Count - 1; i >= 0; i--)
+                            Il2CppSystem.Collections.Generic.List<GameObject> children;
+
+                            try
                             {
-                                GameObject child = children[i];
+                                children = obj.GetChildren();
+                            }
+                            catch
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"  Error while parsing {obj.name}...");
+                                continue;
+                            }
 
-                                if (child == null) continue;
+                            foreach (GameObject child in children)
+                            {
+                                stack.Push(new Tuple<GameObject, int>(child, depth + 1));
+                            }
 
-                                if (!child.name.StartsWith("Mount")) continue;
+                            // Update path:
+                            //   Remove path elements based on current depth
+                            //   Add current obj to path
+                            path.Clear();
+                            GameObject head = obj.GetParent();
+                            int stop = 10;
 
-                                count++;
+                            while (head != null)
+                            {
+                                path.Insert(0, head.name + "/");
+                                head = head.GetParent();
+                                if (stop-- == 0) break;
+                            }
 
-                                //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.constructorUi));
-                                partCount += $"\n{count},,\"{model.Value}\",{child.transform.eulerAngles.y},\"{child.transform.position}\",{MountObjToCSV(child)}";
-                                hasMounts = true;
+                            path[^1] = path[^1].Replace("/", "");
 
-                                if (hasMounts)
+                            if (!obj.name.StartsWith("Mount"))
+                            {
+                                if (isHull)
                                 {
-                                    finalCount += $"{partCount}";
+                                    GameObject parent = obj.GetParent();
+
+                                    if (parent == null) continue;
+
+                                    if (parent.name == "Sections" || parent.name == "Variation")
+                                    {
+                                        finalCount.Append($"\n# {string.Concat(path)},,,,,,,,,,,,,,,,,");
+                                    }
+                                }
+
+                                continue;
+                            }
+
+                            count++;
+
+                            if (isBarbette)
+                            {
+                                if (!obj.name.StartsWith("Mount:barbette"))
+                                {
+                                    continue;
                                 }
                             }
+                            else if (isTower)
+                            {
+                                if (obj.name.StartsWith("Mount:tower_main") || obj.name.StartsWith("Mount:si_barbette"))
+                                {
+                                    continue;
+                                }
+                            }
+                            else if (isHull)
+                            {
+                                if (obj.name.StartsWith("Mount:tower_main") || obj.name.StartsWith("Mount:tower_sec") || obj.name.StartsWith("Mount:funnel") || obj.name.StartsWith("Mount:si_barbette"))
+                                {
+                                    continue;
+                                }
+                            }
+
+                            hasMounts = true;
+
+                            // Melon<TweaksAndFixes>.Logger.Msg($"PATH: {string.Concat(path)} + #{count} : {obj.name}");
+
+                            finalCount.Append(MountObjToCSV(count, string.Concat(path), obj.transform.eulerAngles.y, obj.transform.position, obj));
                         }
                     }
 
-                    File.WriteAllText(Config._BasePath + "\\mounts.txt", finalCount);
+                    Melon<TweaksAndFixes>.Logger.Msg($"Done!");
+
+                    File.WriteAllText(Config._BasePath + "\\mounts.txt", finalCount.ToString());
                 }
 
-                if (Input.GetKeyDown(KeyCode.P))
+                else if (Input.GetKeyDown(KeyCode.P))
                 {
                     Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(__instance.gameObject));
                     Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(__instance.commonUi));
                 }
 
-                if (Input.GetKeyDown(KeyCode.M))
+                else if (Input.GetKeyDown(KeyCode.M))
                 {
                     if (SelectedPart != null)
                     {
-                        if (SelectedPart.mount != null)
-                        {
-                            Mount mount = SelectedPart.mount;
-
-                            GameObject parent = mount.gameObject.GetParent();
-
-                            Melon<TweaksAndFixes>.Logger.Msg($"\n{parent.name.Replace("(Clone)", "")}");
-                            Melon<TweaksAndFixes>.Logger.Msg($"\n{ModUtils.DumpHierarchy(parent.GetParent())}");
-
-                        }
+                        Melon<TweaksAndFixes>.Logger.Msg($"\n{DumpSelectedPartData(SelectedPart)}");
                     }
                     else
                     {
@@ -970,37 +829,11 @@ namespace TweaksAndFixes
 
                         if (part != null)
                         {
-                            Melon<TweaksAndFixes>.Logger.Msg($"\n{part.gameObject.GetChildren()[0].name.Replace("(Clone)", "")}");
-                            Melon<TweaksAndFixes>.Logger.Msg($"\n{ModUtils.DumpHierarchy(part.gameObject)}");
-
-                            Part.FireSectorInfo info = new Part.FireSectorInfo();
-
-                            part.CalcFireSectorNonAlloc(info);
-
-                            if (info != null)
-                            {
-                                Melon<TweaksAndFixes>.Logger.Msg($"Total Angle: {info.shootableAngleTotal} | Incrament {info.stepAngle} | Steps Count: {info.stepsTotal}");
-
-                                Melon<TweaksAndFixes>.Logger.Msg($"Steps:");
-                                foreach (var sector in info.steps)
-                                {
-                                    Melon<TweaksAndFixes>.Logger.Msg($"  {sector.Key,4} : {sector.Value.status}");
-                                }
-
-                                Melon<TweaksAndFixes>.Logger.Msg($"Groups:");
-                                foreach (var group in info.groupsAll)
-                                {
-                                    Melon<TweaksAndFixes>.Logger.Msg($"  Group:");
-                                    foreach (var sector in group)
-                                    {
-                                        Melon<TweaksAndFixes>.Logger.Msg($"    {sector.status}");
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                Melon<TweaksAndFixes>.Logger.Msg($"NO FIRE SECTOR");
-                            }
+                            Melon<TweaksAndFixes>.Logger.Msg($"\n{DumpPartData(part)}");
+                        }
+                        else
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"\n{DumpHullData(Patch_Ship.LastCreatedShip)}");
                         }
                     }
                 }
@@ -1203,6 +1036,8 @@ namespace TweaksAndFixes
                 foreach (Part part in Patch_Ship.LastCreatedShip.parts)
                 {
                     if (part == null) continue;
+
+                    // MountOverrideData.ApplyMountOverride(part);
 
                     if (part == SelectedPart) continue;
 
@@ -2001,10 +1836,18 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_CameraController(Cam __instance)
         {
-            __instance.borderScrollSize = 0;
-            __instance.borderScrollSensitivity = 0;
-            __instance.CampaignZoomSpeed = 100;
-            __instance.BattleZoomSpeed = 100;
+            // Only works for battles and shipbuilder, there's a custom script for the map
+            if (Config.Param("taf_camera_disable_edge_scroll", 1) == 1)
+            {
+                __instance.borderScrollSize = 0;
+                __instance.borderScrollSensitivity = 0;
+            }
+
+            // __instance.transform.position = Vector3.zero;
+
+            // Only works for the map, no clue why the other two use a different system
+            __instance.CampaignZoomSpeed = 30;
+            __instance.BattleZoomSpeed = 1;
         }
     }
 }
