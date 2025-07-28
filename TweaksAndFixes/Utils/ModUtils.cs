@@ -367,7 +367,7 @@ namespace TweaksAndFixes
 
                 if (string.Concat(path) == mountPath.ToString())
                 {
-                    Melon<TweaksAndFixes>.Logger.Msg($"  Parsed: {string.Concat(path)} + #{count} : {obj.name}");
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Parsed: {string.Concat(path)} + #{count} : {obj.name}");
                     return MountObjToCSV(count, string.Concat(path), obj.transform.localEulerAngles.y, obj.transform.localPosition, obj);
                 }
 
@@ -379,6 +379,115 @@ namespace TweaksAndFixes
             return "Failed to find mount!";
         }
         
+        public static string DumpSelectedPartData(Part SelectedPart)
+        {
+            string print = "";
+
+            print += $"\nSelected Part";
+            print += $"\n  Type : {SelectedPart.Name()}";
+            print += $"\n  Type : {SelectedPart.data.type}";
+            print += $"\n  Pos  : [Global] {SelectedPart.transform.position}";
+            print += $"\n  Rot  : [Global] {SelectedPart.transform.eulerAngles.y}";
+
+            if (SelectedPart.data.type == "gun" || SelectedPart.data.type == "torpedo")
+            {
+                print += $"\n  Weapon Data";
+                if (SelectedPart.data.type == "gun") print += $"\n    Diameter   : {SelectedPart.data.GetCaliberInch()}";
+                if (SelectedPart.data.type == "torpedo") print += $"\n    Diameter   : {14 + Patch_Ship.LastCreatedShip.TechTorpedoGrade(SelectedPart.data)}";
+
+                Part.FireSectorInfo info = new Part.FireSectorInfo();
+                SelectedPart.CalcFireSectorNonAlloc(info);
+
+                if (info != null)
+                {
+                    print += $"\n    Fire Sector: {info.shootableAngleTotal}";
+                }
+                else
+                {
+                    print += $"\n    Fire Sector: Failed to calculate!";
+                }
+            }
+
+            if (SelectedPart.mount != null)
+            {
+                Mount mount = SelectedPart.mount;
+                print += $"\n  Mount";
+                print += $"\n    Pos   : [Local] {mount.transform.localPosition}";
+                print += $"\n    Rot   : [Local] {mount.transform.localEulerAngles.y}";
+                print += $"\n    Cal   : {mount.caliberMin}/{mount.caliberMax}";
+                print += $"\n    Barrel: {mount.barrelsMin}/{mount.barrelsMax}";
+                print += $"\n    CSV   :{ModUtils.GenerateMountCSV(mount)}";
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Mount csv:\n{mountCsv}");
+            }
+            else
+            {
+                print += $"  Mount: None";
+            }
+
+            return print;
+        }
+
+        public static string DumpPartData(Part SelectedPart)
+        {
+            string print = "";
+
+            print += $"\nSelected Part";
+            print += $"\n  Type : {SelectedPart.Name()}";
+            print += $"\n  Type : {SelectedPart.data.type}";
+            print += $"\n  Pos  : [Global] {SelectedPart.transform.position}";
+            print += $"\n  Rot  : [Global] {SelectedPart.transform.eulerAngles.y}";
+
+            if (SelectedPart.data.type == "gun" || SelectedPart.data.type == "torpedo")
+            {
+                print += $"\n  Weapon Data";
+                if (SelectedPart.data.type == "gun") print += $"\n    Diameter   : {SelectedPart.data.GetCaliberInch()}";
+                if (SelectedPart.data.type == "torpedo") print += $"\n    Diameter   : {14 + Patch_Ship.LastCreatedShip.TechTorpedoGrade(SelectedPart.data)}";
+
+                Part.FireSectorInfo info = new Part.FireSectorInfo();
+                SelectedPart.CalcFireSectorNonAlloc(info);
+
+                if (info != null)
+                {
+                    print += $"\n    Fire Sector: {info.shootableAngleTotal}";
+                }
+                else
+                {
+                    print += $"\n    Fire Sector: Failed to calculate!";
+                }
+            }
+
+            GameObject part = Util.ResourcesLoad<GameObject>(SelectedPart.gameObject.GetChildren()[0].name.Replace("(Clone)", ""));
+
+            print += $"\n  Mounts";
+            print += $"\n    CSV   :{ModUtils.GeneratePartMountListCSV(part)}";
+
+            return print;
+        }
+
+        public static string DumpHullData(Ship ship)
+        {
+            string print = "";
+
+            Part hull = ship.hull;
+
+            string name = hull.gameObject.GetChildren()[0].name.Replace("(Clone)", "");
+
+            print += $"Hull:";
+            print += $"\n  Name    : {hull.Name()}";
+            print += $"\n  Sections: {ship.SectionsForTonnage(ship.Tonnage())}";
+
+            GameObject hullClone = Util.ResourcesLoad<GameObject>(name);
+
+            if (hullClone == null) return print + "\n  Failed to parse hull!";
+
+            string mountCsv = ModUtils.GeneratePartMountListCSV(hullClone);
+
+            print += $"\n  Mount CSVs:\n{mountCsv}";
+
+            return print;
+        }
+
         public static string DumpPlayerData(Player player)
         {
             string dump = "";
