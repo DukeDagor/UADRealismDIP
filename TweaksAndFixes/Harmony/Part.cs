@@ -320,7 +320,6 @@ namespace TweaksAndFixes
             float groupStartAngle = 0;
             float lastSectorAngle = 0;
 
-            Melon<TweaksAndFixes>.Logger.Msg($"\nGrouping angles:");
             foreach (var sector in fireSector.steps)
             {
                 if (group.Count != 0 && lastSector.status != sector.Value.status)
@@ -351,11 +350,51 @@ namespace TweaksAndFixes
             }
         }
 
+        public class Il2CppList<T> : Il2CppSystem.Collections.Generic.List<T> {}
+
+        private static Il2CppList<Part> omitted_parts = new();
+
+        [HarmonyPatch(nameof(Part.CalcFireSectorNonAlloc))]
+        [HarmonyPrefix]
+        internal static void Prefix_CalcFireSectorNonAlloc(Part __instance)
+        {
+            if (Config.Param("taf_large_gun_ignore_small_gun_enable", 1) != 1) return;
+
+            if (__instance.data.type != "gun") return;
+
+            float ratio = Config.Param("taf_large_gun_ignore_small_gun_ratio", 0.25f);
+            float skipableCaliber = __instance.data.GetCaliberInch(__instance.ship) * ratio + 0.05f;
+
+            if (skipableCaliber < 2) return;
+
+            omitted_parts.Clear();
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Gun ({__instance.data.GetCaliberInch(__instance.ship)} > 12) {__instance.name}");
+            
+            foreach (Part part in __instance.ship.parts)
+            {
+                if (part.data.type != "gun") continue;
+
+                if (part.data.GetCaliberInch(__instance.ship) > skipableCaliber) continue;
+                
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Omitting gun ({part.data.GetCaliberInch(__instance.ship)} < 4) {part.name}");
+
+                omitted_parts.Add(part);
+                part.transform.position += new Vector3(1000, 1000, 1000);
+            } 
+        }
 
         [HarmonyPatch(nameof(Part.CalcFireSectorNonAlloc))]
         [HarmonyPostfix]
         internal static void Postfix_CalcFireSectorNonAlloc(Part __instance, ref Part.FireSectorInfo fireSector)
         {
+            foreach (Part part in omitted_parts)
+            {
+                part.transform.position -= new Vector3(1000, 1000, 1000);
+            }
+
+            omitted_parts.Clear();
+
             if (__instance.mount == null) return;
 
             if ((int)__instance.mount.angleRight == 0 && (int)__instance.mount.angleLeft == 0) return;
