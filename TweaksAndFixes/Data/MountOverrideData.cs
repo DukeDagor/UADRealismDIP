@@ -254,15 +254,18 @@ namespace TweaksAndFixes
 
         public static void ApplyMountOverride(Part part, GameObject model, string root, bool relitive = false, bool force = false)
         {
-            if (!force && model.gameObject.GetChild("TAF_HAS_MOUNT_OVERRIDE", true) != null)
+            if (!force)
             {
-                return;
+                if (model.gameObject.GetChild("TAF_HAS_MOUNT_OVERRIDE", true) != null)
+                {
+                    return;
+                }
+            
+                GameObject tag = new();
+                tag.name = "TAF_HAS_MOUNT_OVERRIDE";
+                tag.transform.parent = model.transform;
             }
-            
-            GameObject tag = new();
-            tag.name = "TAF_HAS_MOUNT_OVERRIDE";
-            tag.transform.parent = model.transform;
-            
+
             bool DisableStickyMounts = Config.Param("taf_mounts_sticky_disable", 1) == 1;
             bool DisableHullMounts = Config.Param("taf_mounts_hull_disable", 0) == 1;
 
