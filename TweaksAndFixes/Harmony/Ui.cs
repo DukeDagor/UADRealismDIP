@@ -1132,6 +1132,14 @@ namespace TweaksAndFixes
                     Patch_Part.applyMirrorFromTo.Remove(toRemove);
                 }
 
+                foreach (Part part in Patch_Ship.LastCreatedShip.parts)
+                {
+                    if (part.mount != null)
+                    {
+                        part.transform.position = part.mount.transform.position;
+                    }
+                }
+                
                 // Loop over all current parts
                 foreach (Part part in Patch_Ship.LastCreatedShip.parts)
                 {

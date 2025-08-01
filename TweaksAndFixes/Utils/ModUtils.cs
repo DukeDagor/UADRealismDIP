@@ -137,8 +137,10 @@ namespace TweaksAndFixes
 
             string firingAngleOrientation = data.rotateLeftRight ? "starboard/port" : (data.rotateForwardBack ? "fore/aft" : "");
 
+            string posString = $"({pos.x:0.0000}, {pos.y:0.0000}, {pos.z:0.0000})";
+
             string output = "\n" +
-                $"{count},,\"{path}\",{rotation:0.00},\"{pos:0.00}\"," +
+                $"{count},,\"{path}\",{rotation:0.00},\"{posString}\"," +
                 $"{gunType},{validMounts},{ParamOrNone(data.caliberMin)},{ParamOrNone(data.caliberMax)},{ParamOrNone(data.barrelsMin)},{ParamOrNone(data.barrelsMax)}," +
                 $"{collisionChecks},{ParamOrNone(data.angleLeft, data.angleRight)},{ParamOrNone(data.angleRight, data.angleLeft)},{firingAngleOrientation},{(data.rotateSame ? 1 : "")}" +
                 ",,";
@@ -391,7 +393,11 @@ namespace TweaksAndFixes
             print += $"\nSelected Part";
             print += $"\n  Type : {SelectedPart.Name()}";
             print += $"\n  Type : {SelectedPart.data.type}";
-            print += $"\n  Pos  : [Global] {SelectedPart.transform.position}";
+
+            var pos = SelectedPart.transform.position;
+            string posString = $"({pos.x:0.0000}, {pos.y:0.0000}, {pos.z:0.0000})";
+
+            print += $"\n  Pos  : [Global] {posString}";
             print += $"\n  Rot  : [Global] {SelectedPart.transform.eulerAngles.y}";
 
             if (SelectedPart.data.type == "gun" || SelectedPart.data.type == "torpedo")
@@ -417,7 +423,11 @@ namespace TweaksAndFixes
             {
                 Mount mount = SelectedPart.mount;
                 print += $"\n  Mount";
-                print += $"\n    Pos   : [Local] {mount.transform.localPosition}";
+
+                var pos2 = mount.transform.localPosition;
+                string posString2 = $"({pos.x:0.0000}, {pos.y:0.0000}, {pos.z:0.0000})";
+
+                print += $"\n    Pos   : [Local] {posString2}";
                 print += $"\n    Rot   : [Local] {mount.transform.localEulerAngles.y}";
                 print += $"\n    Cal   : {mount.caliberMin}/{mount.caliberMax}";
                 print += $"\n    Barrel: {mount.barrelsMin}/{mount.barrelsMax}";
@@ -440,7 +450,11 @@ namespace TweaksAndFixes
             print += $"\nSelected Part";
             print += $"\n  Type : {SelectedPart.Name()}";
             print += $"\n  Type : {SelectedPart.data.type}";
-            print += $"\n  Pos  : [Global] {SelectedPart.transform.position}";
+
+            var pos = SelectedPart.transform.position;
+            string posString = $"({pos.x:0.0000}, {pos.y:0.0000}, {pos.z:0.0000})";
+
+            print += $"\n  Pos  : [Global] {posString}";
             print += $"\n  Rot  : [Global] {SelectedPart.transform.eulerAngles.y}";
 
             if (SelectedPart.data.type == "gun" || SelectedPart.data.type == "torpedo")
