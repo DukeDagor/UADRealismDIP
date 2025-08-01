@@ -1011,6 +1011,46 @@ namespace TweaksAndFixes
                 Patch_Part.mirroredParts.Clear();
                 Patch_Part.unmatchedParts.Clear();
                 NeedsConstructionListsClear = false;
+
+                if (UseNewConstructionLogic() && Config.Param("taf_dockyard_remove_mount_restrictions", 1) == 1 && Patch_Ship.LastCreatedShip != null)
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"{Patch_Ship.LastCreatedShip.Name(false, false)}\n{DumpHierarchy(Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChild("Sections"))}");
+                
+                    var sections = Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChild("Sections").GetChildren();
+                
+                    foreach (var section in sections)
+                    {
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  {section.name}");
+                
+                        GameObject mountObj = new();
+                        mountObj.AddComponent<Mount>();
+                        mountObj.transform.SetParent(section);
+                        mountObj.transform.position = new Vector3(-10000, -10000, -10000);
+                        mountObj.name = "TAF_ALLOW_ALL_MOUNTS";
+                        Mount mount = mountObj.GetComponent<Mount>();
+
+                        mount.towerMain = true;
+                        mount.towerSec = true;
+                        mount.funnel = true;
+                        mount.siBarbette = true;
+                        mount.barbette = true;
+                        mount.casemate = false;
+                        mount.subTorpedo = false;
+                        mount.deckTorpedo = true;
+                        mount.special = false;
+
+                        mount.caliberMin = 0;
+                        mount.caliberMax = 20;
+
+                        mount.barrelsMin = 0;
+                        mount.barrelsMax = 4;
+
+                        Patch_Ship.LastCreatedShip.mounts.Add(mount);
+                        Patch_Ship.LastCreatedShip.hull.mountsInside.Add(mount);
+                        Patch_Ship.LastCreatedShip.allowedMountsInternal.Add(mount);
+                    }
+                    Patch_Ship.LastCreatedShip.RefreshMounts();
+                }
             }
 
             // var a = CampaignController.Instance.CampaignData.VesselsByPlayer[ExtraGameData.MainPlayer().data];
