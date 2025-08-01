@@ -636,7 +636,7 @@ namespace TweaksAndFixes
                 Melon<TweaksAndFixes>.Logger.Msg($"Reloading Mount Overrides");
                 // MountOverrideData.OverrideMountData();
                 SpriteDatabase.Instance.OverrideResources();
-                FlagDatabase.Recreate();
+                // FlagDatabase.Recreate();
                 MountOverrideData.canary = new();
                 Melon<TweaksAndFixes>.Logger.Msg($"Done!");
             }
