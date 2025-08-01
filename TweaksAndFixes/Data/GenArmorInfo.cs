@@ -102,8 +102,6 @@ namespace TweaksAndFixes
 
         public class GenArmorInfo
         {
-            private int _lastHash = 0;
-
             private bool _isValid = false;
             public bool isValid => _isValid;
             private Dictionary<Ship.A, float> _min = new Dictionary<Ship.A, float>();
@@ -122,12 +120,6 @@ namespace TweaksAndFixes
                 _lastLerpVal = -1f;
 
                 int year = Mathf.RoundToInt(yearOverride > 0 ? yearOverride : ship.GetYear(ship));
-                int hash = ship.hull.data.name.GetHashCode() ^ year ^ ship.player.data.name.GetHashCode();
-
-                if (hash == _lastHash)
-                    return;
-
-                _lastHash = hash;
 
                 FillFor(ship.shipType.name, year);
             }
@@ -136,6 +128,7 @@ namespace TweaksAndFixes
             {
                 if (!_Data.TryGetValue(shipType, out var list))
                 {
+                    Melon<TweaksAndFixes>.Logger.Error($"Cannot find default armor values for {shipType}!");
                     _isValid = false;
                     return;
                 }
