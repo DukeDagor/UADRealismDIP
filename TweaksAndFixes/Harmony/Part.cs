@@ -391,6 +391,11 @@ namespace TweaksAndFixes
             foreach (Part part in omitted_parts)
             {
                 part.transform.position -= new Vector3(1000, 1000, 1000);
+
+                if (part.mount != null)
+                {
+                    part.transform.position = part.mount.transform.position;
+                }
             }
 
             omitted_parts.Clear();
