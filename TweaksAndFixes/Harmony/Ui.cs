@@ -16,6 +16,8 @@ using System.Xml.Linq;
 using System.Text;
 using static TweaksAndFixes.Serializer;
 using System.Drawing;
+using static TweaksAndFixes.MountOverrideData;
+using Il2CppSystem.Linq.Expressions;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -627,7 +629,7 @@ namespace TweaksAndFixes
             {
                 Melon<TweaksAndFixes>.Logger.Msg($"Reloading overrides after indirect cache clear...");
                 Melon<TweaksAndFixes>.Logger.Msg($"Reloading Mount Overrides");
-                MountOverrideData.OverrideMountData();
+                // MountOverrideData.OverrideMountData();
                 SpriteDatabase.Instance.OverrideResources();
                 FlagDatabase.Recreate();
                 MountOverrideData.canary = new();
@@ -691,7 +693,6 @@ namespace TweaksAndFixes
                     {
                         bool hasMounts = false;
                         // string partCount = $"\n# {data.Value.model}:";
-                        int count = 0;
 
                         GameObject model = models.Dequeue();
 
@@ -709,6 +710,8 @@ namespace TweaksAndFixes
                         List<string> path = new();
 
                         Melon<TweaksAndFixes>.Logger.Msg($"Parsing: {model.name}...");
+
+                        Dictionary<string, int> depthToIndex = new Dictionary<string, int>();
 
                         while (stack.Count > 0)
                         {
@@ -757,6 +760,8 @@ namespace TweaksAndFixes
 
                             path[^1] = path[^1].Replace("/", "");
 
+                            string concatPath = string.Concat(path);
+
                             if (!obj.name.StartsWith("Mount"))
                             {
                                 if (isHull)
@@ -767,14 +772,15 @@ namespace TweaksAndFixes
 
                                     if (parent.name == "Sections" || parent.name == "Variation")
                                     {
-                                        finalCount.Append($"\n# {string.Concat(path)},,,,,,,,,,,,,,,,,");
+                                        finalCount.Append($"\n# {concatPath},,,,,,,,,,,,,,,,,");
                                     }
                                 }
 
                                 continue;
                             }
 
-                            count++;
+                            if (!depthToIndex.ContainsKey(concatPath)) depthToIndex[concatPath] = 0;
+                            depthToIndex[concatPath]++;
 
                             if (isBarbette)
                             {
@@ -802,7 +808,7 @@ namespace TweaksAndFixes
 
                             // Melon<TweaksAndFixes>.Logger.Msg($"PATH: {string.Concat(path)} + #{count} : {obj.name}");
 
-                            finalCount.Append(MountObjToCSV(count, string.Concat(path), obj.transform.eulerAngles.y, obj.transform.position, obj));
+                            finalCount.Append(MountObjToCSV(depthToIndex[concatPath], concatPath, obj.transform.localEulerAngles.y, obj.transform.localPosition, obj));
                         }
                     }
 
@@ -813,14 +819,43 @@ namespace TweaksAndFixes
 
                 else if (Input.GetKeyDown(KeyCode.P))
                 {
-                    Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(__instance.gameObject));
-                    Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(__instance.commonUi));
+                    // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(__instance.gameObject));
+                    // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(__instance.commonUi));
+
+                    GameObject ship = Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren()[0];
+
+                    // GameObject obj = Util.ResourcesLoad<GameObject>("MountVisual");
+
+                    Melon<TweaksAndFixes>.Logger.Msg($"Gizmo: {ModUtils.DumpHierarchy(ship)}");
+
+
+
+                    // Melon<TweaksAndFixes>.Logger.Msg($"Part params");
+                    // 
+                    // foreach (Part part in Patch_Ship.LastCreatedShip.parts)
+                    // {
+                    //     Melon<TweaksAndFixes>.Logger.Msg($"  {part.data.name}: {part.data.param}");
+                    // 
+                    //     if (part.data.paramx.ContainsKey("mount_min"))
+                    //     {
+                    //         if (part.data.paramx["mount_min"].Count > 0) Melon<TweaksAndFixes>.Logger.Msg($"    {part.data.paramx["mount_min"][0]}");
+                    //         else Melon<TweaksAndFixes>.Logger.Msg($"    PARAM X FAILED TO PARSE!");
+                    //     }
+                    //     else if (part.data.param.Contains("mount_min")) 
+                    //     {
+                    //         Melon<TweaksAndFixes>.Logger.Msg($"    PARAM X FAILED TO PARSE!");
+                    //     }
+                    // }
                 }
 
                 else if (Input.GetKeyDown(KeyCode.M))
                 {
                     if (SelectedPart != null)
                     {
+                        GameObject parent = SelectedPart.mount.gameObject.GetParent().GetParent();
+
+                        Melon<TweaksAndFixes>.Logger.Msg(DumpHierarchy(parent));
+
                         Melon<TweaksAndFixes>.Logger.Msg($"\n{DumpSelectedPartData(SelectedPart)}");
                     }
                     else
@@ -833,6 +868,7 @@ namespace TweaksAndFixes
                         }
                         else
                         {
+                            Melon<TweaksAndFixes>.Logger.Msg($"{Patch_Ship.LastCreatedShip.Name(false, false)}\n{DumpHierarchy(Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChild("Sections"))}");
                             Melon<TweaksAndFixes>.Logger.Msg($"\n{DumpHullData(Patch_Ship.LastCreatedShip)}");
                         }
                     }
@@ -977,6 +1013,25 @@ namespace TweaksAndFixes
 
             // ExtraGameData.MainPlayer().designs[^1]
 
+            if (Patch_Ship.LastCreatedShip != null)
+            {
+                foreach (Part part in Patch_Ship.LastCreatedShip.parts)
+                {
+                    if (part == null) continue;
+            
+                    // MountOverrideData.ApplyMountOverride(part);
+            
+                    MountOverrideData.ApplyMountOverride(part, part.gameObject.GetChildren()[0], "", true);
+                }
+
+                GameObject ship = Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren()[0];
+
+                foreach (GameObject section in ship.GetChildren())
+                {
+                    MountOverrideData.ApplyMountOverride(Patch_Ship.LastCreatedShip.hull, section, $"{Patch_Ship.LastCreatedShip.hull.GetChildren()[0].name.Replace("(Clone)", "")}/Visual/Sections/", true);
+                }
+            }
+
             if (UseNewConstructionLogic() && Patch_Ship.LastCreatedShip != null && Patch_Ship.LastCreatedShip.parts.Count > 0)
             {
                 if (PickedUpPart || ClonedPart)
@@ -1036,8 +1091,6 @@ namespace TweaksAndFixes
                 foreach (Part part in Patch_Ship.LastCreatedShip.parts)
                 {
                     if (part == null) continue;
-
-                    // MountOverrideData.ApplyMountOverride(part);
 
                     if (part == SelectedPart) continue;
 
