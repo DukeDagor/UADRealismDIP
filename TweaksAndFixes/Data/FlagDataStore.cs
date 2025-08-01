@@ -112,15 +112,20 @@ namespace TweaksAndFixes
                     if (!string.IsNullOrEmpty(navalFlag))
                         _naval.Add(navalFlag, FlagType.Default);
 
+                    LoadFlags();
+                }
+
+                public Sprite DefaultFlag(bool naval)
+                    => naval ? _naval.Flag(FlagType.Default) : _civil.Flag(FlagType.Default);
+
+                public void LoadFlags()
+                {
                     var dictCivil = Serializer.Human.HumanModToDictionary1D(civilGovFlags);
                     var dictNaval = Serializer.Human.HumanModToDictionary1D(navalGovFlags);
 
                     AddFlags(dictCivil, _civil);
                     AddFlags(dictNaval, _naval);
                 }
-
-                public Sprite DefaultFlag(bool naval)
-                    => naval ? _naval.Flag(FlagType.Default) : _civil.Flag(FlagType.Default);
 
                 public Sprite StringToFlag(string gameFlagType)
                 {
@@ -139,7 +144,17 @@ namespace TweaksAndFixes
                     if (!Enum.TryParse<FlagType>(type.Substring(5), out var eType))
                         eType = FlagType.Default;
 
-                    return isNaval ? _naval.Flag(eType) : _civil.Flag(eType);
+                    var flag = isNaval ? _naval.Flag(eType) : _civil.Flag(eType);
+
+                    if (flag == null)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"Tried to find flag for major country {name}. Attempting to reload.");
+                        FlagDatabase.Instance.ReloadStore();
+                    }
+
+                    flag = isNaval ? _naval.Flag(eType) : _civil.Flag(eType);
+
+                    return flag;
                 }
 
                 private void AddFlags(Dictionary<string, List<string>> dict, FlagData data)
@@ -255,6 +270,14 @@ namespace TweaksAndFixes
                     return Player.GetFolderFlagFromName(data.governmentTypeOnYearList[idx], naval);
                 }
             }
+
+            public void ReloadStore()
+            {
+                foreach (var data in _flagsByCountry)
+                {
+                    data.Value.LoadFlags();
+                }
+            }
         }
 
         public FlagDatabase(IntPtr ptr) : base(ptr) { }
@@ -320,6 +343,11 @@ namespace TweaksAndFixes
             // FIXME this may not be needed, but in case our
             // materials are collected:
             Patch_PlayerData.PatchPlayerMaterials();
+        }
+
+        public void ReloadStore()
+        {
+            _flagStore.ReloadStore();
         }
 
         public Sprite GetFlag(PlayerData data, bool naval = false, Player player = null, int newYear = 0)
