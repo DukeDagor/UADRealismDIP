@@ -105,7 +105,7 @@ namespace TweaksAndFixes
 
             string ParamOrNone(float param, float pair = 0)
             {
-                return ((int)(param + 0.01) == 0) && ((int)(pair + 0.01) == 0) ? "" : param.ToString();
+                return ((int)(param + 0.01) == 0) && ((int)(pair + 0.01) == 0) ? "" : param.ToString("0");
             }
 
             string validMounts = string.Empty;
@@ -138,7 +138,7 @@ namespace TweaksAndFixes
             string firingAngleOrientation = data.rotateLeftRight ? "starboard/port" : (data.rotateForwardBack ? "fore/aft" : "");
 
             string output = "\n" +
-                $"{count},,\"{path}\",{rotation},\"{pos}\"," +
+                $"{count},,\"{path}\",{rotation:0.00},\"{pos:0.00}\"," +
                 $"{gunType},{validMounts},{ParamOrNone(data.caliberMin)},{ParamOrNone(data.caliberMax)},{ParamOrNone(data.barrelsMin)},{ParamOrNone(data.barrelsMax)}," +
                 $"{collisionChecks},{ParamOrNone(data.angleLeft, data.angleRight)},{ParamOrNone(data.angleRight, data.angleLeft)},{firingAngleOrientation},{(data.rotateSame ? 1 : "")}" +
                 ",,";
@@ -152,8 +152,9 @@ namespace TweaksAndFixes
 
             StringBuilder finalCount = new StringBuilder(2 ^ 24);
 
-            int count = 0;
             Stack<Tuple<GameObject, int>> stack = new Stack<Tuple<GameObject, int>>();
+
+            Dictionary<string, int> depthToIndex = new Dictionary<string, int>();
 
             foreach (var child in model.GetChildren())
             {
@@ -215,6 +216,8 @@ namespace TweaksAndFixes
 
                 if (path.Count > 0) path[^1] = path[^1].Replace("/", "");
 
+                string concatPath = string.Concat(path);
+
                 if (!obj.name.StartsWith("Mount"))
                 {
                     if (isHull)
@@ -232,7 +235,8 @@ namespace TweaksAndFixes
                     continue;
                 }
 
-                count++;
+                if (!depthToIndex.ContainsKey(concatPath)) depthToIndex[concatPath] = 0;
+                depthToIndex[concatPath]++;
 
                 if (isBarbette)
                 {
@@ -258,7 +262,7 @@ namespace TweaksAndFixes
 
                 // else Melon<TweaksAndFixes>.Logger.Msg($"  Ignored: {string.Concat(path)} + #{count} : {obj.name}");
 
-                finalCount.Append(MountObjToCSV(count, string.Concat(path), obj.transform.eulerAngles.y, obj.transform.position, obj));
+                finalCount.Append(MountObjToCSV(depthToIndex[concatPath], string.Concat(path), obj.transform.localEulerAngles.y, obj.transform.localPosition, obj));
             }
 
             return finalCount.ToString();
@@ -273,7 +277,7 @@ namespace TweaksAndFixes
 
             // Melon<TweaksAndFixes>.Logger.Msg($"Selected Mount: {mount.name} | {mount.transform.position} | {mount.transform.eulerAngles.y}");
 
-            while (model != null && !model.name.EndsWith("(Clone)"))
+            while (model != null && !model.name.EndsWith("(Clone)") || model.name.StartsWith("Middle"))
             {
                 model = model.GetParent();
                 mountPath.Insert(0, model.name.Replace("(Clone)", "") + (isFirst ? "" : "/"));
@@ -285,6 +289,7 @@ namespace TweaksAndFixes
 
             int count = 0;
             Stack<Tuple<GameObject, int>> stack = new Stack<Tuple<GameObject, int>>();
+            Dictionary<string, int> depthToIndex = new Dictionary<string, int>();
 
             foreach (var child in model.GetChildren())
             {
