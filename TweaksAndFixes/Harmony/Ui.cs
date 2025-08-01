@@ -407,10 +407,15 @@ namespace TweaksAndFixes
             else UpdateArmorQualityButton.GetComponent<Button>().SetActive(true);
         }
 
+        private static float conUpperRightBasePostion = -1;
+
         public static void UpdateShipTypeButtons(Ui ui)
         {
             // __instance.conUpperRight
-            ui.conUpperRight.transform.position = new Vector3(2591.9f, 960.0f, 0.0f);
+
+            if (conUpperRightBasePostion == -1) conUpperRightBasePostion = ui.conUpperRight.transform.position.y;
+
+            ui.conUpperRight.transform.position = new Vector3(ui.conUpperRight.transform.position.x, conUpperRightBasePostion * 0.875f, 0.0f);
             ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip").SetActive(true);
             ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip").UiVisible(true);
         }
