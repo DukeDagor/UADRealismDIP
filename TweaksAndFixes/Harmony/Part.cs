@@ -474,6 +474,209 @@ namespace TweaksAndFixes
         }
     }
 
+    [HarmonyPatch(typeof(Mount))]
+    internal class Patch_Mount_FitsPart
+    {
+        internal static MethodBase TargetMethod()
+        {
+            //return AccessTools.Method(typeof(Part), nameof(Part.CanPlace), new Type[] { typeof(string).MakeByRefType(), typeof(List<Part>).MakeByRefType(), typeof(List<Collider>).MakeByRefType() });
+        
+            // Do this manually
+            var methods = AccessTools.GetDeclaredMethods(typeof(Mount));
+            foreach (var m in methods)
+            {
+                if (m.Name != nameof(Mount.Fits))
+                    continue;
+    
+                if (m.GetParameters()[0].ParameterType != typeof(Part))
+                    continue;
+    
+                return m;
+            }
+        
+            return null;
+        }
+    
+        private static float minOld = -1;
+        private static float maxOld = -1;
+        private static bool skip = false;
+    
+        internal static void Prefix(Mount __instance, Part part)
+        {
+            if (skip) return;
+    
+            minOld = __instance.caliberMin;
+            maxOld = __instance.caliberMax;
+    
+            float min = -1;
+            float max = -1;
+            float mult = -1;
+    
+            Part parent = __instance.parentPart;
+    
+            if (parent.data.paramx.ContainsKey("mount_min"))
+            {
+                if (parent.data.paramx["mount_min"].Count == 0)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
+                }
+    
+                else if (!float.TryParse(parent.data.paramx["mount_min"][0], out min))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
+                }
+            }
+    
+            if (parent.data.paramx.ContainsKey("mount_max"))
+            {
+                if (parent.data.paramx["mount_max"].Count == 0)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
+                }
+    
+                else if (!float.TryParse(parent.data.paramx["mount_max"][0], out max))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
+                }
+            }
+    
+            if (parent.data.paramx.ContainsKey("mount_mult"))
+            {
+                if (parent.data.paramx["mount_mult"].Count == 0)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
+                }
+    
+                else if (!float.TryParse(parent.data.paramx["mount_mult"][0], out mult))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
+                }
+            }
+    
+            if (mult == -1 && min == -1 && max == -1) return;
+    
+            if (min != -1) __instance.caliberMin = min;
+            else if (mult != -1) __instance.caliberMin *= mult;
+            if (max != -1) __instance.caliberMax = max;
+            else if (mult != -1) __instance.caliberMax *= mult;
+    
+            // Melon<TweaksAndFixes>.Logger.Msg($"Can mount {parent.Name()} : {mult} - {min} - {max} : {__instance.caliberMin} - {__instance.caliberMax}");
+        }
+    
+    
+        internal static void Postfix(Mount __instance, Part part, Il2CppSystem.Collections.Generic.List<string> demandMounts, Il2CppSystem.Collections.Generic.List<string> excludeMounts, ref bool __result)
+        {
+            if (skip) return;
+    
+            __instance.caliberMin = minOld;
+            __instance.caliberMax = maxOld;
+            
+            skip = true;
+    
+            bool fits = __instance.Fits(part, demandMounts, excludeMounts);
+    
+            // if (fits != __result)
+            // {
+            //     Part parent = __instance.parentPart;
+            // 
+            //     Melon<TweaksAndFixes>.Logger.Msg($"Can mount {parent.Name()}");
+            // }
+    
+            skip = false;
+        }
+    }
+    
+    [HarmonyPatch(typeof(Mount))]
+    internal class Patch_Mount_FitsPartData
+    {
+        internal static MethodBase TargetMethod()
+        {
+            //return AccessTools.Method(typeof(Part), nameof(Part.CanPlace), new Type[] { typeof(string).MakeByRefType(), typeof(List<Part>).MakeByRefType(), typeof(List<Collider>).MakeByRefType() });
+    
+            // Do this manually
+            var methods = AccessTools.GetDeclaredMethods(typeof(Mount));
+            foreach (var m in methods)
+            {
+                if (m.Name != nameof(Mount.Fits))
+                    continue;
+    
+                if (m.GetParameters()[0].ParameterType != typeof(PartData))
+                    continue;
+    
+                return m;
+            }
+    
+            return null;
+        }
+    
+        private static float minOld = -1;
+        private static float maxOld = -1;
+    
+        internal static void Prefix(Mount __instance, PartData data)
+        {
+            minOld = __instance.caliberMin;
+            maxOld = __instance.caliberMax;
+    
+            float min = -1;
+            float max = -1;
+            float mult = -1;
+    
+            if (data.paramx.ContainsKey("mount_min"))
+            {
+                if (data.paramx["mount_min"].Count == 0)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {data.name}.");
+                }
+    
+                else if (!float.TryParse(data.paramx["mount_min"][0], out min))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {data.name}.");
+                }
+            }
+    
+            if (data.paramx.ContainsKey("mount_max"))
+            {
+                if (data.paramx["mount_max"].Count == 0)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {data.name}.");
+                }
+    
+                else if (!float.TryParse(data.paramx["mount_max"][0], out max))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {data.name}.");
+                }
+            }
+    
+            if (data.paramx.ContainsKey("mount_mult"))
+            {
+                if (data.paramx["mount_mult"].Count == 0)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {data.name}.");
+                }
+    
+                else if (!float.TryParse(data.paramx["mount_mult"][0], out mult))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {data.name}.");
+                }
+            }
+    
+            if (mult == -1 && min == -1 && max == -1) return;
+    
+            if (min != -1) __instance.caliberMin = min;
+            else if (mult != -1) __instance.caliberMin *= mult;
+            if (max != -1) __instance.caliberMax = max;
+            else if (mult != -1) __instance.caliberMax *= mult;
+    
+            // Melon<TweaksAndFixes>.Logger.Msg($"Can mount {data.name} : {mult} - {min} - {max} : {__instance.caliberMin} - {__instance.caliberMax}");
+        }
+    
+        internal static void Postfix(Mount __instance, PartData data, ref bool __result)
+        {
+            __instance.caliberMin = minOld;
+            __instance.caliberMax = maxOld;
+        }
+    }
+
     // We can't target ref arguments in an attribute, so
     // we have to make this separate class to patch with a
     // TargetMethod call.
