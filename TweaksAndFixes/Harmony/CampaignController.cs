@@ -30,6 +30,18 @@ namespace TweaksAndFixes
             return true;
         }
 
+        [HarmonyPatch(nameof(CampaignController.CheckMinorNationThreat))]
+        [HarmonyPrefix]
+        internal static bool Prefix_CheckMinorNationThreat()
+        {
+            // Check params
+            if (Config.Param("taf_disable_minor_and_medium_nation_land_invasions", 1) == 1)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg("Skipped attempt to generate minor nation revolt.");
+                return false;
+            }
+            return true;
+        }
 
         [HarmonyPatch(nameof(CampaignController.FinishCampaign))]
         [HarmonyPrefix]
