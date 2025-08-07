@@ -354,34 +354,91 @@ namespace TweaksAndFixes
 
         private static Il2CppList<Part> omitted_parts = new();
 
+        private static void CollectBigGunIgnoreSmallGun(Part bigGun)
+        {
+            if (bigGun.data.type != "gun") return;
+
+            float ratio = Config.Param("taf_large_gun_ignore_small_gun_ratio", 0.25f);
+            float skipableCaliber = bigGun.data.GetCaliberInch(bigGun.ship) * ratio + 0.05f;
+
+            if (skipableCaliber < 2) return;
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Gun ({__instance.data.GetCaliberInch(__instance.ship)} > 12) {__instance.name}");
+
+            foreach (Part part in bigGun.ship.parts)
+            {
+                if (omitted_parts.Contains(part)) continue;
+
+                if (part.data.type != "gun") continue;
+
+                if (part.data.GetCaliberInch(bigGun.ship) > skipableCaliber) continue;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Omitting gun ({part.data.GetCaliberInch(__instance.ship)} < 4) {part.name}");
+
+                omitted_parts.Add(part);
+            }
+        }
+
+        private static void CollectBigGunIgnoreTorpedoTubes(Part bigGun)
+        {
+            if (bigGun.data.type != "gun") return;
+
+            float ratio = Config.Param("taf_large_gun_ignore_torpedo_tubes", 4);
+
+            if (ratio < 2) return;
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Gun ({__instance.data.GetCaliberInch(__instance.ship)} > 12) {__instance.name}");
+
+            foreach (Part part in bigGun.ship.parts)
+            {
+                if (omitted_parts.Contains(part)) continue;
+
+                if (part.data.type != "torpedo") continue;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Omitting gun ({part.data.GetCaliberInch(__instance.ship)} < 4) {part.name}");
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Omitting gun ({part.data.GetCaliberInch(bigGun.ship)} < {ratio}) {part.name}");
+
+                omitted_parts.Add(part);
+            }
+        }
+
+        private static void CollectTorpedoTubesIgnoreBigGun(Part torpedoTube)
+        {
+            if (torpedoTube.data.type != "torpedo") return;
+
+            float ratio = Config.Param("taf_torpedo_tubes_ignore_large_gun", 5);
+
+            if (ratio < 2) return;
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Gun ({__instance.data.GetCaliberInch(__instance.ship)} > 12) {__instance.name}");
+
+            foreach (Part part in torpedoTube.ship.parts)
+            {
+                if (omitted_parts.Contains(part)) continue;
+
+                if (part.data.type != "gun") continue;
+
+                if (part.data.GetCaliberInch(torpedoTube.ship) + 0.01f < ratio) continue;
+
+                omitted_parts.Add(part);
+            }
+        }
+
         [HarmonyPatch(nameof(Part.CalcFireSectorNonAlloc))]
         [HarmonyPrefix]
         internal static void Prefix_CalcFireSectorNonAlloc(Part __instance)
         {
             if (Config.Param("taf_large_gun_ignore_small_gun_enable", 1) != 1) return;
 
-            if (__instance.data.type != "gun") return;
+            CollectBigGunIgnoreSmallGun(__instance);
+            CollectBigGunIgnoreTorpedoTubes(__instance);
+            CollectTorpedoTubesIgnoreBigGun(__instance);
 
-            float ratio = Config.Param("taf_large_gun_ignore_small_gun_ratio", 0.25f);
-            float skipableCaliber = __instance.data.GetCaliberInch(__instance.ship) * ratio + 0.05f;
-
-            if (skipableCaliber < 2) return;
-
-            omitted_parts.Clear();
-
-            // Melon<TweaksAndFixes>.Logger.Msg($"Gun ({__instance.data.GetCaliberInch(__instance.ship)} > 12) {__instance.name}");
-            
-            foreach (Part part in __instance.ship.parts)
+            foreach (Part part in omitted_parts)
             {
-                if (part.data.type != "gun") continue;
-
-                if (part.data.GetCaliberInch(__instance.ship) > skipableCaliber) continue;
-                
-                // Melon<TweaksAndFixes>.Logger.Msg($"  Omitting gun ({part.data.GetCaliberInch(__instance.ship)} < 4) {part.name}");
-
-                omitted_parts.Add(part);
                 part.transform.position += new Vector3(1000, 1000, 1000);
-            } 
+            }
         }
 
         [HarmonyPatch(nameof(Part.CalcFireSectorNonAlloc))]
@@ -417,8 +474,65 @@ namespace TweaksAndFixes
             // Melon<TweaksAndFixes>.Logger.Msg($"Start: {startAngle} : End {endAngle} : {(hasBreak ? "BROKEN" : "CONTINUOUS")} : Total Angle: {fireSector.shootableAngleTotal}");
         }
 
+        public static float GetMountMinParam(Part parent)
+        {
+            float min = -1;
 
+            if (parent.data.paramx.ContainsKey("mount_min"))
+            {
+                if (parent.data.paramx["mount_min"].Count == 0)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
+                }
 
+                else if (!float.TryParse(parent.data.paramx["mount_min"][0], out min))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
+                }
+            }
+
+            return min;
+        }
+
+        public static float GetMountMaxParam(Part parent)
+        {
+            float max = -1;
+
+            if (parent.data.paramx.ContainsKey("mount_max"))
+            {
+                if (parent.data.paramx["mount_max"].Count == 0)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
+                }
+
+                else if (!float.TryParse(parent.data.paramx["mount_max"][0], out max))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
+                }
+            }
+
+            return max;
+        }
+
+        public static float GetMountMultParam(Part parent)
+        {
+            float mult = -1;
+
+            if (parent.data.paramx.ContainsKey("mount_mult"))
+            {
+                if (parent.data.paramx["mount_mult"].Count == 0)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
+                }
+
+                else if (!float.TryParse(parent.data.paramx["mount_mult"][0], out mult))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
+                }
+            }
+
+            return mult;
+        }
 
         // ########## MODIFIED MOUNT LOGIC ########## //
 
@@ -476,209 +590,6 @@ namespace TweaksAndFixes
         internal static void Postfix_Mount(Part __instance, Mount mount)
         {
             Melon<TweaksAndFixes>.Logger.Msg($"Mounting part {__instance.name} to {(mount == null ? "<<nothing>>" : (mount.parentPart == null ? (mount.name + " (no parent)") : (mount.name + " on " + mount.parentPart.name)))}");
-        }
-    }
-
-    [HarmonyPatch(typeof(Mount))]
-    internal class Patch_Mount_FitsPart
-    {
-        internal static MethodBase TargetMethod()
-        {
-            //return AccessTools.Method(typeof(Part), nameof(Part.CanPlace), new Type[] { typeof(string).MakeByRefType(), typeof(List<Part>).MakeByRefType(), typeof(List<Collider>).MakeByRefType() });
-        
-            // Do this manually
-            var methods = AccessTools.GetDeclaredMethods(typeof(Mount));
-            foreach (var m in methods)
-            {
-                if (m.Name != nameof(Mount.Fits))
-                    continue;
-    
-                if (m.GetParameters()[0].ParameterType != typeof(Part))
-                    continue;
-    
-                return m;
-            }
-        
-            return null;
-        }
-    
-        private static float minOld = -1;
-        private static float maxOld = -1;
-        private static bool skip = false;
-    
-        internal static void Prefix(Mount __instance, Part part)
-        {
-            if (skip) return;
-    
-            minOld = __instance.caliberMin;
-            maxOld = __instance.caliberMax;
-    
-            float min = -1;
-            float max = -1;
-            float mult = -1;
-    
-            Part parent = __instance.parentPart;
-    
-            if (parent.data.paramx.ContainsKey("mount_min"))
-            {
-                if (parent.data.paramx["mount_min"].Count == 0)
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
-                }
-    
-                else if (!float.TryParse(parent.data.paramx["mount_min"][0], out min))
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
-                }
-            }
-    
-            if (parent.data.paramx.ContainsKey("mount_max"))
-            {
-                if (parent.data.paramx["mount_max"].Count == 0)
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
-                }
-    
-                else if (!float.TryParse(parent.data.paramx["mount_max"][0], out max))
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
-                }
-            }
-    
-            if (parent.data.paramx.ContainsKey("mount_mult"))
-            {
-                if (parent.data.paramx["mount_mult"].Count == 0)
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
-                }
-    
-                else if (!float.TryParse(parent.data.paramx["mount_mult"][0], out mult))
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
-                }
-            }
-    
-            if (mult == -1 && min == -1 && max == -1) return;
-    
-            if (min != -1) __instance.caliberMin = min;
-            else if (mult != -1) __instance.caliberMin *= mult;
-            if (max != -1) __instance.caliberMax = max;
-            else if (mult != -1) __instance.caliberMax *= mult;
-    
-            // Melon<TweaksAndFixes>.Logger.Msg($"Can mount {parent.Name()} : {mult} - {min} - {max} : {__instance.caliberMin} - {__instance.caliberMax}");
-        }
-    
-    
-        internal static void Postfix(Mount __instance, Part part, Il2CppSystem.Collections.Generic.List<string> demandMounts, Il2CppSystem.Collections.Generic.List<string> excludeMounts, ref bool __result)
-        {
-            if (skip) return;
-    
-            __instance.caliberMin = minOld;
-            __instance.caliberMax = maxOld;
-            
-            skip = true;
-    
-            bool fits = __instance.Fits(part, demandMounts, excludeMounts);
-    
-            // if (fits != __result)
-            // {
-            //     Part parent = __instance.parentPart;
-            // 
-            //     Melon<TweaksAndFixes>.Logger.Msg($"Can mount {parent.Name()}");
-            // }
-    
-            skip = false;
-        }
-    }
-    
-    [HarmonyPatch(typeof(Mount))]
-    internal class Patch_Mount_FitsPartData
-    {
-        internal static MethodBase TargetMethod()
-        {
-            //return AccessTools.Method(typeof(Part), nameof(Part.CanPlace), new Type[] { typeof(string).MakeByRefType(), typeof(List<Part>).MakeByRefType(), typeof(List<Collider>).MakeByRefType() });
-    
-            // Do this manually
-            var methods = AccessTools.GetDeclaredMethods(typeof(Mount));
-            foreach (var m in methods)
-            {
-                if (m.Name != nameof(Mount.Fits))
-                    continue;
-    
-                if (m.GetParameters()[0].ParameterType != typeof(PartData))
-                    continue;
-    
-                return m;
-            }
-    
-            return null;
-        }
-    
-        private static float minOld = -1;
-        private static float maxOld = -1;
-    
-        internal static void Prefix(Mount __instance, PartData data)
-        {
-            minOld = __instance.caliberMin;
-            maxOld = __instance.caliberMax;
-    
-            float min = -1;
-            float max = -1;
-            float mult = -1;
-    
-            if (data.paramx.ContainsKey("mount_min"))
-            {
-                if (data.paramx["mount_min"].Count == 0)
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {data.name}.");
-                }
-    
-                else if (!float.TryParse(data.paramx["mount_min"][0], out min))
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {data.name}.");
-                }
-            }
-    
-            if (data.paramx.ContainsKey("mount_max"))
-            {
-                if (data.paramx["mount_max"].Count == 0)
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {data.name}.");
-                }
-    
-                else if (!float.TryParse(data.paramx["mount_max"][0], out max))
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {data.name}.");
-                }
-            }
-    
-            if (data.paramx.ContainsKey("mount_mult"))
-            {
-                if (data.paramx["mount_mult"].Count == 0)
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {data.name}.");
-                }
-    
-                else if (!float.TryParse(data.paramx["mount_mult"][0], out mult))
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {data.name}.");
-                }
-            }
-    
-            if (mult == -1 && min == -1 && max == -1) return;
-    
-            if (min != -1) __instance.caliberMin = min;
-            else if (mult != -1) __instance.caliberMin *= mult;
-            if (max != -1) __instance.caliberMax = max;
-            else if (mult != -1) __instance.caliberMax *= mult;
-    
-            // Melon<TweaksAndFixes>.Logger.Msg($"Can mount {data.name} : {mult} - {min} - {max} : {__instance.caliberMin} - {__instance.caliberMax}");
-        }
-    
-        internal static void Postfix(Mount __instance, PartData data, ref bool __result)
-        {
-            __instance.caliberMin = minOld;
-            __instance.caliberMax = maxOld;
         }
     }
 
