@@ -289,7 +289,6 @@ namespace TweaksAndFixes
 
             // Melon<TweaksAndFixes>.Logger.Msg($"  Parent: {model.name} | {mountPath.ToString()}");
 
-            int count = 0;
             Stack<Tuple<GameObject, int>> stack = new Stack<Tuple<GameObject, int>>();
             Dictionary<string, int> depthToIndex = new Dictionary<string, int>();
 
@@ -368,14 +367,17 @@ namespace TweaksAndFixes
                     continue;
                 }
 
-                count++;
+                string concatPath = string.Concat(path);
+
+                if (!depthToIndex.ContainsKey(concatPath)) depthToIndex[concatPath] = 0;
+                depthToIndex[concatPath]++;
 
                 if (obj != mount.gameObject) continue;
 
                 if (string.Concat(path) == mountPath.ToString())
                 {
                     // Melon<TweaksAndFixes>.Logger.Msg($"  Parsed: {string.Concat(path)} + #{count} : {obj.name}");
-                    return MountObjToCSV(count, string.Concat(path), obj.transform.localEulerAngles.y, obj.transform.localPosition, obj);
+                    return MountObjToCSV(depthToIndex[concatPath], string.Concat(path), obj.transform.localEulerAngles.y, obj.transform.localPosition, obj);
                 }
 
                 // else Melon<TweaksAndFixes>.Logger.Msg($"  Ignored: {string.Concat(path)} + #{count} : {obj.name}");
