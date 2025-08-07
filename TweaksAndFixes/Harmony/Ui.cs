@@ -112,6 +112,7 @@ namespace TweaksAndFixes
         internal static bool _InUpdateConstructor = false;
         internal static bool _InConstructor = false;
         public static bool NeedsConstructionListsClear = false;
+        public static bool NeedsForcedUpdate = false;
 
         // Selected part & related data
         public static Part SelectedPart = null;
@@ -633,12 +634,27 @@ namespace TweaksAndFixes
             if (MountOverrideData.canary == null)
             {
                 Melon<TweaksAndFixes>.Logger.Msg($"Reloading overrides after indirect cache clear...");
-                Melon<TweaksAndFixes>.Logger.Msg($"Reloading Mount Overrides");
                 // MountOverrideData.OverrideMountData();
                 SpriteDatabase.Instance.OverrideResources();
                 // FlagDatabase.Recreate();
                 MountOverrideData.canary = new();
                 Melon<TweaksAndFixes>.Logger.Msg($"Done!");
+            }
+
+            if (Patch_Ship.LastCreatedShip == null || Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren().Count == 0)
+            {
+                NeedsForcedUpdate = true;
+                // G.ui.OnConShipChanged();
+                G.ui.placedPartsWarn.Clear();
+                G.ui.placedPartsBad.Clear();
+                G.ui.constructorCentralText1.text = "";
+                G.ui.constructorCentralText1Little.text = "";
+                G.ui.constructorCentralText2.text = "";
+            
+                // foreach (Part part in Patch_Ship.LastCreatedShip.parts)
+                // {
+                //     part.visualMode = Part.VisualMode.Normal;
+                // }
             }
 
             // Debug stuff
@@ -827,7 +843,7 @@ namespace TweaksAndFixes
                     // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(__instance.gameObject));
                     // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(__instance.commonUi));
 
-                    GameObject ship = Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren()[0];
+                    GameObject ship = Patch_Ship.LastCreatedShip.hull.gameObject;
 
                     // GameObject obj = Util.ResourcesLoad<GameObject>("MountVisual");
 
@@ -1011,17 +1027,34 @@ namespace TweaksAndFixes
                 Patch_Part.mirroredParts.Clear();
                 Patch_Part.unmatchedParts.Clear();
                 NeedsConstructionListsClear = false;
+            }
 
-                if (UseNewConstructionLogic() && Config.Param("taf_dockyard_remove_mount_restrictions", 1) == 1 && Patch_Ship.LastCreatedShip != null)
+            if (Patch_Ship.LastCreatedShip == null)
+            {
+                NeedsForcedUpdate = true;
+                _InUpdateConstructor = false;
+                return;
+            }
+
+            if (UseNewConstructionLogic() && Config.Param("taf_dockyard_remove_mount_restrictions", 1) == 1)
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg($"{Patch_Ship.LastCreatedShip.Name(false, false)}\n{DumpHierarchy(Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChild("Sections"))}");
+
+                Part hull = Patch_Ship.LastCreatedShip.hull;
+
+                if (hull != null &&
+                    hull.gameObject.GetChildren().Count > 0 &&
+                    hull.gameObject.GetChildren()[0].GetChildren().Count > 0 &&
+                    hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren().Count > 0)
                 {
-                    // Melon<TweaksAndFixes>.Logger.Msg($"{Patch_Ship.LastCreatedShip.Name(false, false)}\n{DumpHierarchy(Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChild("Sections"))}");
-                
                     var sections = Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChild("Sections").GetChildren();
-                
+
                     foreach (var section in sections)
                     {
+                        if (section.GetChild("TAF_ALLOW_ALL_MOUNTS", true) != null) continue;
+                     
                         // Melon<TweaksAndFixes>.Logger.Msg($"  {section.name}");
-                
+
                         GameObject mountObj = new();
                         mountObj.AddComponent<Mount>();
                         mountObj.transform.SetParent(section);
@@ -1049,6 +1082,7 @@ namespace TweaksAndFixes
                         Patch_Ship.LastCreatedShip.hull.mountsInside.Add(mount);
                         Patch_Ship.LastCreatedShip.allowedMountsInternal.Add(mount);
                     }
+
                     Patch_Ship.LastCreatedShip.RefreshMounts();
                 }
             }
@@ -1058,27 +1092,45 @@ namespace TweaksAndFixes
 
             // ExtraGameData.MainPlayer().designs[^1]
 
-            if (Patch_Ship.LastCreatedShip != null)
+            bool inViewMode = Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren().Count == 0;
+
+            if (!inViewMode)
             {
                 foreach (Part part in Patch_Ship.LastCreatedShip.parts)
                 {
                     if (part == null) continue;
-            
+
                     // MountOverrideData.ApplyMountOverride(part);
-            
+
+                    if (part.gameObject.GetChildren().Count == 0) continue;
+
                     MountOverrideData.ApplyMountOverride(part, part.gameObject.GetChildren()[0], "", true);
                 }
 
-                GameObject ship = Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren()[0];
+                Part hull = Patch_Ship.LastCreatedShip.hull;
 
-                foreach (GameObject section in ship.GetChildren())
+                if (hull != null &&
+                    hull.gameObject.GetChildren().Count > 0 &&
+                    hull.gameObject.GetChildren()[0].GetChildren().Count > 0 &&
+                    hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren().Count > 0)
                 {
-                    MountOverrideData.ApplyMountOverride(Patch_Ship.LastCreatedShip.hull, section, $"{Patch_Ship.LastCreatedShip.hull.GetChildren()[0].name.Replace("(Clone)", "")}/Visual/Sections/", true);
+                    GameObject ship = Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren()[0];
+
+                    foreach (GameObject section in ship.GetChildren())
+                    {
+                        MountOverrideData.ApplyMountOverride(Patch_Ship.LastCreatedShip.hull, section, $"{Patch_Ship.LastCreatedShip.hull.GetChildren()[0].name.Replace("(Clone)", "")}/Visual/Sections/", true);
+                    }
                 }
             }
 
-            if (UseNewConstructionLogic() && Patch_Ship.LastCreatedShip != null && Patch_Ship.LastCreatedShip.parts.Count > 0)
+            if (!inViewMode && UseNewConstructionLogic() && Patch_Ship.LastCreatedShip.parts.Count > 0)
             {
+                if (NeedsForcedUpdate)
+                {
+                    G.ui.OnConShipChanged();
+                    NeedsForcedUpdate = false;
+                }
+
                 if (PickedUpPart || ClonedPart)
                 {
                     PartRotation = PickedUpPart ? PickupPartRotation : ClonePartRotation;
@@ -1134,12 +1186,16 @@ namespace TweaksAndFixes
 
                 foreach (Part part in Patch_Ship.LastCreatedShip.parts)
                 {
-                    if (part.mount != null)
+                    if (part.mount != null && part.mount.transform.position.x < -99000)
+                    {
+                        part.mount = null;
+                    }
+                    else if (part.mount != null)
                     {
                         part.transform.position = part.mount.transform.position;
                     }
                 }
-                
+
                 // Loop over all current parts
                 foreach (Part part in Patch_Ship.LastCreatedShip.parts)
                 {
@@ -1183,7 +1239,7 @@ namespace TweaksAndFixes
                             Patch_Part.unmatchedParts.Add(part);
                             Patch_Part.unmatchedParts.Add(pair);
                         }
-                    
+
                         continue;
                     }
 
@@ -1232,7 +1288,7 @@ namespace TweaksAndFixes
                 if (SelectedPart != null)
                 {
                     if (Input.GetKeyDown(KeyCode.G)) UpdateRotationIncrament();
-                
+
                     if (!FixedRotation && Input.GetKeyDown(G.settings.Bindings.RotatePartLeft.Code))
                     {
                         if (Mounted) MountedPartRotation -= RotationValue;
@@ -1267,24 +1323,24 @@ namespace TweaksAndFixes
                         // {
                         //     if (LastPartZ != SelectedPart.transform.position.z) Melon<TweaksAndFixes>.Logger.Msg("Inside margin: " + Il2CppSystem.Math.Abs(LastAutoRotateZ - SelectedPart.transform.position.z));
                         // }
-                    
+
                         // Soft Auto-Rotate
                         if (!IsInAutoRotateMargin && (Il2CppSystem.Math.Abs(SelectedPart.transform.position.z) <= 5 || Il2CppSystem.Math.Sign(SelectedPart.transform.position.z) != Il2CppSystem.Math.Sign(LastPartZ)) && ((SelectedPart.transform.position.z > 0 || Mounted) ? 0 : 180) != PartRotation)
                         {
                             IsInAutoRotateMargin = true;
                             LastAutoRotateZ = SelectedPart.transform.position.z;
-                    
+
                             if (!Input.GetKeyDown(KeyCode.LeftShift) && !Input.GetKeyDown(KeyCode.LeftControl))
                             {
                                 PartRotation = (SelectedPart.transform.position.z > 0 || Mounted) ? 0 : 180;
                                 // Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + PartRotation);
                             }
                         }
-                    
+
                         // if (LastPartZ != SelectedPart.transform.position.z) Melon<TweaksAndFixes>.Logger.Msg("Update Pos: " + SelectedPart.transform.position.z);
                         LastPartZ = SelectedPart.transform.position.z;
                     }
-                    
+
                     if (IgnoreSoftAutoRotate)
                     {
                         LastPartZ = SelectedPart.transform.position.z;
@@ -1337,7 +1393,7 @@ namespace TweaksAndFixes
                     {
                         if (G.ui.fireSectorObj != null) G.ui.fireSectorObj.transform.SetX(0);
                         SelectedPart.Place(new Vector3(0, SelectedPart.transform.position.y, SelectedPart.transform.position.z), false);
-                        
+
                         // int group = -1;
 
                         if (Patch_Ship.LastCreatedShip.mountsUsed != null)
@@ -1356,7 +1412,7 @@ namespace TweaksAndFixes
                             //     // pair.value.transform.position = pair.key.transform.position;
                             //     // pair.value.transform.rotation = pair.key.transform.rotation;
                             // }
-                        
+
                             foreach (Mount mount in Patch_Ship.LastCreatedShip.mounts)
                             {
                                 if (mount.parentPart == SelectedPart && mount.employedPart != null)
