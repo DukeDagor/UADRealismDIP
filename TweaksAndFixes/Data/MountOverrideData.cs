@@ -4,6 +4,8 @@ using UnityEngine;
 using Il2Cpp;
 using Il2CppSystem.Linq;
 using System.Text;
+using static Il2Cpp.Ship;
+using static MelonLoader.MelonLogger;
 
 namespace TweaksAndFixes
 {
@@ -277,6 +279,11 @@ namespace TweaksAndFixes
                 return;
             }
 
+            float mountParamMin = Patch_Part.GetMountMinParam(part);
+            float mountParamMax = Patch_Part.GetMountMaxParam(part);
+            float mountParamMult = Patch_Part.GetMountMultParam(part);
+
+
             Stack<GameObject> stack = new();
 
             foreach (GameObject child in model.GetChildren())
@@ -410,10 +417,17 @@ namespace TweaksAndFixes
 
                     // Melon<TweaksAndFixes>.Logger.Msg($"      Found mount at index {depthToIndex[concatPath]}");
 
-                    if (relitive) UpdateMountParamitersRelitive(obj.GetComponent<Mount>(), _ParentToData[concatPath][depthToIndex[concatPath]], part.gameObject);
-                    else UpdateMountParamiters(obj.GetComponent<Mount>(), _ParentToData[concatPath][depthToIndex[concatPath]]);
+                    Mount objMount = obj.GetComponent<Mount>();
+
+                    if (relitive) UpdateMountParamitersRelitive(objMount, _ParentToData[concatPath][depthToIndex[concatPath]], part.gameObject);
+                    else UpdateMountParamiters(objMount, _ParentToData[concatPath][depthToIndex[concatPath]]);
+
+                    if (mountParamMin != -1) objMount.caliberMin = mountParamMin;
+                    else if (mountParamMult != -1) objMount.caliberMin *= mountParamMult;
+                    if (mountParamMax != -1) objMount.caliberMax = mountParamMax;
+                    else if (mountParamMult != -1) objMount.caliberMax *= mountParamMult;
                 }
-                
+
                 if (_ParentToNewData.ContainsKey(concatPath))
                 {
                     // Melon<TweaksAndFixes>.Logger.Msg($"    Found new overrides...");
@@ -432,18 +446,25 @@ namespace TweaksAndFixes
                         newMount.name = $"Mount:TAF_{parent.GetChildren().Count}";
 
                         // Melon<TweaksAndFixes>.Logger.Msg($"      Mount:TAF_{obj.GetChildren().Count}");
-                
-                        if (relitive) UpdateMountParamitersRelitive(newMount.GetComponent<Mount>(), newData, part.gameObject);
-                        else UpdateMountParamiters(newMount.GetComponent<Mount>(), newData);
+
+                        Mount newMountMount = newMount.GetComponent<Mount>();
+
+                        if (relitive) UpdateMountParamitersRelitive(newMountMount, newData, part.gameObject);
+                        else UpdateMountParamiters(newMountMount, newData);
 
                         if (relitive && Patch_Ship.LastCreatedShip != null)
                         {
                             // Patch_Ship.LastCreatedShip.allowedMountsInternal.Add(newMount.GetComponent<Mount>());
-                            Patch_Ship.LastCreatedShip.mounts.Add(newMount.GetComponent<Mount>());
+                            Patch_Ship.LastCreatedShip.mounts.Add(newMountMount);
 
                             // Melon<TweaksAndFixes>.Logger.Msg($"    {(objPart != null ? objPart.Name() : "NULL")}");
-                            part.mountsInside.Add(newMount.GetComponent<Mount>());
+                            part.mountsInside.Add(newMountMount);
                         }
+
+                        if (mountParamMin != -1) newMountMount.caliberMin = mountParamMin;
+                        else if (mountParamMult != -1) newMountMount.caliberMin *= mountParamMult;
+                        if (mountParamMax != -1) newMountMount.caliberMax = mountParamMax;
+                        else if (mountParamMult != -1) newMountMount.caliberMax *= mountParamMult;
 
                         // part.mountsInside.Add(newMount.GetComponent<Mount>());
 
