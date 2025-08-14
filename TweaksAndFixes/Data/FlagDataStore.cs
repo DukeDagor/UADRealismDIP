@@ -148,7 +148,7 @@ namespace TweaksAndFixes
 
                     if (flag == null)
                     {
-                        Melon<TweaksAndFixes>.Logger.Error($"Tried to find flag for major country {name}. Attempting to reload.");
+                        Melon<TweaksAndFixes>.Logger.Msg($"Flag for country {name} was null or missing. Reloading flag store...");
                         FlagDatabase.Instance.ReloadStore();
                     }
 
