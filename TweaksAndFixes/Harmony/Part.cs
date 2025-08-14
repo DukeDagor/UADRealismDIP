@@ -312,7 +312,6 @@ namespace TweaksAndFixes
                         sector.Value.status = Part.SectorStep.Status.Bad;
                     }
                 }
-
             }
 
             Il2CppSystem.Collections.Generic.HashSet<Part.SectorStep> group = new();
@@ -429,6 +428,81 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static void Prefix_CalcFireSectorNonAlloc(Part __instance)
         {
+            if (__instance.mount == null)
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name()}.Mount = NULL, attempting to remount...");
+
+                Ship partShip = __instance.ship;
+
+                if (partShip == null)
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Failed to find ship!");
+                    return;
+                }
+
+                foreach (Part part in partShip.parts)
+                {
+                    if (part == null) continue;
+
+                    // MountOverrideData.ApplyMountOverride(part);
+
+                    if (part.gameObject.GetChildren().Count == 0) continue;
+
+                    MountOverrideData.ApplyMountOverride(part, part.gameObject.GetChildren()[0], "", true);
+                }
+
+                Part hull = partShip.hull;
+
+                if (hull != null &&
+                    hull.gameObject.GetChildren().Count > 0 &&
+                    hull.gameObject.GetChildren()[0].GetChildren().Count > 0 &&
+                    hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren().Count > 0)
+                {
+                    GameObject ship = partShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren()[0];
+
+                    foreach (GameObject section in ship.GetChildren())
+                    {
+                        MountOverrideData.ApplyMountOverride(partShip.hull, section, $"{partShip.hull.GetChildren()[0].name.Replace("(Clone)", "")}/Visual/Sections/", true);
+                    }
+                }
+
+                foreach (Part part in partShip.parts)
+                {
+                    if (part.mount != null)
+                    {
+                        if (part.mount.transform.position.x < -99000)
+                        {
+                            part.mount = null;
+                        }
+                        else
+                        {
+                            part.transform.position = part.mount.transform.position;
+                        }
+                    }
+                    else
+                    {
+                        foreach (Mount mount in partShip.mounts)
+                        {
+                            if (mount.employedPart != null) continue;
+
+                            if (ModUtils.NearlyEqual(mount.transform.position, part.transform.position))
+                            {
+                                part.Mount(mount);
+                                part.transform.position = mount.transform.position;
+                                if (part == __instance) Melon<TweaksAndFixes>.Logger.Msg($"  Successfully remounted part!");
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (__instance.mount == null)
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Failed to remount!");
+                    return;
+                }
+            }
+
             if (Config.Param("taf_large_gun_ignore_small_gun_enable", 1) != 1) return;
 
             CollectBigGunIgnoreSmallGun(__instance);
@@ -457,21 +531,21 @@ namespace TweaksAndFixes
 
             omitted_parts.Clear();
 
-            if (__instance.mount == null) return;
-
             if ((int)__instance.mount.angleRight == 0 && (int)__instance.mount.angleLeft == 0) return;
             
             if (__instance.mount.ignoreExpand && __instance.mount.ignoreParent)
             {
+                // Melon<TweaksAndFixes>.Logger.Msg($"Overriding fire angle... Start: {fireSector.shootableAngleTotal}");
                 OverrideFiringAngle(__instance, ref fireSector);
             }
             else
             {
+                // Melon<TweaksAndFixes>.Logger.Msg($"Merging fire angle... Start: {fireSector.shootableAngleTotal}");
                 MergeFiringAngle(__instance, ref fireSector);
             }
 
 
-            // Melon<TweaksAndFixes>.Logger.Msg($"Start: {startAngle} : End {endAngle} : {(hasBreak ? "BROKEN" : "CONTINUOUS")} : Total Angle: {fireSector.shootableAngleTotal}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  {__instance.Name()}.Mount.Total Angle: {fireSector.shootableAngleTotal}");
         }
 
         public static float GetMountMinParam(Part parent)
