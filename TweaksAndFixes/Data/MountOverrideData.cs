@@ -392,7 +392,7 @@ namespace TweaksAndFixes
                 }
                 else if (isTower && DisableStickyMounts)
                 {
-                    if (obj.name.StartsWith("Mount:tower_main") || obj.name.StartsWith("Mount:si_barbette"))
+                    if (obj.name.StartsWith("Mount:tower_main") || obj.name.StartsWith("Mount:tower_sec") || obj.name.StartsWith("Mount:si_barbette"))
                     {
                         obj.transform.position = new Vector3(-100000, -100000, -100000);
                         continue;
