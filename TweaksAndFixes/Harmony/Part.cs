@@ -531,6 +531,8 @@ namespace TweaksAndFixes
 
             omitted_parts.Clear();
 
+            if (__instance.mount == null) return;
+
             if ((int)__instance.mount.angleRight == 0 && (int)__instance.mount.angleLeft == 0) return;
             
             if (__instance.mount.ignoreExpand && __instance.mount.ignoreParent)
