@@ -19,6 +19,7 @@ namespace TweaksAndFixes
         {
             ModsDir,
             DataDir,
+            AppDataDir,
             Other,
         }
 
@@ -33,8 +34,14 @@ namespace TweaksAndFixes
         {
             required = isRequired;
             name = file;
-            directory = dir == DirType.ModsDir ? Config._BasePath : Config._DataPath;
             dirType = dir;
+            directory = dirType switch
+            {
+                DirType.ModsDir => Config._BasePath,
+                DirType.DataDir => Config._DataPath,
+                DirType.AppDataDir => Storage.prefix,
+                _ => "<other path>"
+            };
             path = Path.Combine(directory, file);
             subDir = dirType switch
             {
@@ -54,6 +61,8 @@ namespace TweaksAndFixes
                 dirType = DirType.ModsDir;
             else if (directory == Config._DataPath)
                 dirType = DirType.DataDir;
+            else if (directory == Storage.prefix)
+                dirType = DirType.AppDataDir;
             else
                 dirType = DirType.Other;
             subDir = dirType switch
