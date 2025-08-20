@@ -5,19 +5,11 @@ using Il2Cpp;
 using UnityEngine.UI;
 using static TweaksAndFixes.ModUtils;
 using Il2CppUiExt;
-using static Il2CppMono.Math.BigInteger;
-using static Il2CppSystem.Net.WebCompletionSource;
-using static Il2Cpp.Ui.SkirmishSetup;
-using System.Data;
-using static MelonLoader.MelonLogger;
-using Il2CppTMPro;
-using System.Reflection.Metadata.Ecma335;
-using System.Xml.Linq;
+using Il2CppSystem.Linq;
 using System.Text;
-using static TweaksAndFixes.Serializer;
-using System.Drawing;
-using static TweaksAndFixes.MountOverrideData;
 using Il2CppSystem.Linq.Expressions;
+using Il2CppTMPro;
+using System.ComponentModel.Design;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -29,14 +21,17 @@ namespace TweaksAndFixes
     internal class Patch_Ui
     {
 
-        // ########## UPDATE CUSTOM VERSION STRING ########## //
-
         [HarmonyPatch(nameof(Ui.Start))]
         [HarmonyPostfix]
         internal static void Postfix_Start(Ui __instance)
         {
             UpdateVersionString(__instance);
+
+            UiM.ApplyUiModifications();
         }
+
+
+        // ########## UPDATE CUSTOM VERSION STRING ########## //
 
         [HarmonyPatch(nameof(Ui.RefreshVersion))]
         [HarmonyPostfix]
@@ -113,6 +108,8 @@ namespace TweaksAndFixes
         internal static bool _InConstructor = false;
         public static bool NeedsConstructionListsClear = false;
         public static bool NeedsForcedUpdate = false;
+        public static bool TryPairPartsAndMountsOnce = false;
+        public static bool UpdateActiveShip = false;
 
         // Selected part & related data
         public static Part SelectedPart = null;
@@ -181,7 +178,7 @@ namespace TweaksAndFixes
             DeleteShipNextTurn = true;
         }
 
-        public static void AddConfirmPopupToButton(Button button, string text = default)
+        public static void AddConfirmPopupToButton(Button button, string text = default, System.Action before = null, System.Action after = null)
         {
             if (button.onClick.PrepareInvoke().Count == 1)
             {
@@ -201,7 +198,9 @@ namespace TweaksAndFixes
                     G.ui.ShowConfirmation(text,
                         new System.Action(() =>
                         {
+                            if (before != null) before.Invoke();
                             baseCall.Invoke(new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(System.Array.Empty<Il2CppSystem.Object>()));
+                            if (after != null) after.Invoke();
                         }),
                         new System.Action(() => { })
                     );
@@ -384,28 +383,41 @@ namespace TweaksAndFixes
                 // UiExt.SetTooltip(RotationButton.GetComponent<Button>(), "TAF_Rotation_Button_TT", new System.Func<string>(() => { return "Test"; }));
                 Button button = UpdateArmorQualityButton.GetComponent<Button>();
                 button.onClick.RemoveAllListeners();
-                button.onClick.AddListener(new System.Action(() =>
-                {
-                    G.settings.armorQualityInPen = ArmourQuality;
-                }));
                 LayoutElement layout = UpdateArmorQualityButton.GetComponent<LayoutElement>();
                 layout.preferredWidth = 100;
                 layout.preferredHeight = 15;
+                
+                UpdateArmorQualityButton.GetChild("Text").TryDestroyComponent<LocalizeText>();
+                UpdateArmorQualityButton.GetChild("Text").GetComponent<Text>().text = LocalizeManager.Localize("$TAF_Ui_Dockyard_ArmorTab_UpdateArmorQualitySetting");
 
                 // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(ui.constructorUi));
             }
 
-            Button button2 = UpdateArmorQualityButton.GetComponent<Button>();
-            button2.onClick.RemoveAllListeners();
-            button2.onClick.AddListener(new System.Action(() =>
+
+            if (Patch_Ship.LastCreatedShip == null || (int)(G.settings.armorQualityInPen + 0.05f) == ArmourQuality)
             {
-                G.settings.armorQualityInPen = ArmourQuality;
-            }));
+                UpdateArmorQualityButton.GetComponent<Button>().SetActive(false);
+            }
+            else
+            {
+                Button button = UpdateArmorQualityButton.GetComponent<Button>();
+                button.onClick.RemoveAllListeners();
+                button.onClick.AddListener(new System.Action(() =>
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Updating armor preview value to {ArmourQuality}.");
+                    // G.settings.armorQualityInPen = ArmourQuality;
+                    GameObject OptionsMenu = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/Options Window");
+                    // G.ui.SettingsMenu.Show();
+                    // G.ui.SettingsMenu.SelectTab(G.ui.SettingsMenu.Settings[0]);
+                    GameObject ArmorQualitySlider = ModUtils.GetChildAtPath("Root/RightSide/General/Viewport/Content/ArmorQualityInPenetrationData/ArmorQualityInPenetrationDataSlider", OptionsMenu);
+                    Slider ArmorQualitySliderContent = ArmorQualitySlider.GetComponent<Slider>();
+                    ArmorQualitySliderContent.value = ArmourQuality;
+                    // ArmorQualitySliderContent.onValueChanged.Invoke(ArmourQuality);
+                    G.settings.Save();
+                }));
+                button.SetActive(true);
+            }
 
-            UpdateArmorQualityButton.GetChild("Text").GetComponent<Text>().text = LocalizeManager.Localize("$TAF_Ui_Dockyard_ArmorTab_UpdateArmorQualitySetting");
-
-            if (Patch_Ship.LastCreatedShip == null || (int)(G.settings.armorQualityInPen + 0.05f) == ArmourQuality) UpdateArmorQualityButton.GetComponent<Button>().SetActive(false);
-            else UpdateArmorQualityButton.GetComponent<Button>().SetActive(true);
         }
 
         private static float conUpperRightBasePostion = -1;
@@ -419,6 +431,10 @@ namespace TweaksAndFixes
             ui.conUpperRight.transform.position = new Vector3(ui.conUpperRight.transform.position.x, conUpperRightBasePostion * 0.875f, 0.0f);
             ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip").SetActive(true);
             ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip").UiVisible(true);
+
+            ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").SetActive(true);
+            ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").UiVisible(true);
+            ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").GetComponent<Button>().interactable = true;
         }
 
         private static void AddConfirmationPopups(Ui ui)
@@ -440,9 +456,29 @@ namespace TweaksAndFixes
                 if (button != null)
                 {
                     string key = "$TAF_Ui_Dockyard_Confirm_Action_" + child.name;
-                    AddConfirmPopupToButton(button, key);
+
+                    System.Action before = null;
+                    System.Action after = null;
+
+                    if (child.name == "Save")
+                    {
+                        after = new System.Action(() =>
+                        {
+                            if (Patch_Ship.LastCreatedShip.IsValid())
+                            {
+                                CampaignControllerM.RequestForcedGameSave = true;
+                            }
+                        });
+                    }
+
+                    AddConfirmPopupToButton(button, key, before, after);
                 }
             }
+
+            // ui.conUpperButtons.GetChild("Layout").GetChild("Save").GetComponent<Button>().onClick.AddListener(new System.Action(() =>
+            // {
+            //     CampaignControllerM.RequestForcedGameSave = true;
+            // }));
 
             var ShipOptions = ui.conShipTabs.GetChild("Cont").GetChildren();
             foreach (GameObject child in ShipOptions)
@@ -612,6 +648,8 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_Update(Ui __instance)
         {
+            if (Input.GetKey(KeyCode.L)) Melon<TweaksAndFixes>.Logger.Msg($"UI Postfix start");
+
             GameObject bugReporter = __instance.commonUi.GetChild("Options").GetChild("BugReport");
 
             bugReporter.SetActive(false);
@@ -621,6 +659,9 @@ namespace TweaksAndFixes
             {
                 AddConfirmationPopups(__instance);
             }
+
+            UiM.UpdateModifications();
+            Patch_GameManager.Update();
 
             // New UI elements
             if (Config.Param("taf_dockyard_new_logic", 1) == 1)
@@ -641,7 +682,7 @@ namespace TweaksAndFixes
                 Melon<TweaksAndFixes>.Logger.Msg($"Done!");
             }
 
-            if (Patch_Ship.LastCreatedShip == null || Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren().Count == 0)
+            if (Patch_GameManager.CurrentSubGameState == Patch_GameManager.SubGameState.InConstructorViewMode && GameManager.Instance.isCampaign)
             {
                 NeedsForcedUpdate = true;
                 // G.ui.OnConShipChanged();
@@ -688,7 +729,7 @@ namespace TweaksAndFixes
                 {
                     // string finalCount = "";
 
-                    StringBuilder finalCount = new StringBuilder(2^24);
+                    StringBuilder finalCount = new StringBuilder(2 ^ 24);
 
                     HashSet<string> parsedModels = new HashSet<string>();
 
@@ -722,8 +763,8 @@ namespace TweaksAndFixes
                             stack.Push(new Tuple<GameObject, int>(child, 0));
                         }
 
-                        bool isHull     = model.name.Contains("_hull_")     || model.name.StartsWith("hull_")     || model.name.EndsWith("_hull");
-                        bool isTower    = model.name.Contains("_tower_")    || model.name.StartsWith("tower_")    || model.name.EndsWith("_tower");
+                        bool isHull = model.name.Contains("_hull_") || model.name.StartsWith("hull_") || model.name.EndsWith("_hull");
+                        bool isTower = model.name.Contains("_tower_") || model.name.StartsWith("tower_") || model.name.EndsWith("_tower");
                         bool isBarbette = model.name.Contains("_barbette_") || model.name.StartsWith("barbette_") || model.name.EndsWith("_barbette");
 
                         finalCount.Append($"\n# {model.name},,,,,,,,,,,,,,,,,");
@@ -840,33 +881,23 @@ namespace TweaksAndFixes
 
                 else if (Input.GetKeyDown(KeyCode.P))
                 {
-                    // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(__instance.gameObject));
-                    // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(__instance.commonUi));
+                    foreach (Ship ship in Ship.AllShips)
+                    {
+                        if (!ship.isRefitDesign) continue;
 
-                    GameObject ship = Patch_Ship.LastCreatedShip.hull.gameObject;
+                        // Melon<TweaksAndFixes>.Logger.Msg($"RENAME STATS:"); // BB Charlemagne (1900) - 2 [france]
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.name}"); // BB Charlemagne (1900) - 2 [france]
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.Name(false, false, false, false, false)}"); // BB Charlemagne (1900) - 2
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.Name(false, false, false, false, true)}"); // Charlemagne (1900) - 2
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.Name(true, false, false, false, false)}"); // BB
 
-                    // GameObject obj = Util.ResourcesLoad<GameObject>("MountVisual");
+                        ship.SetShipName($"{ship.Name(false, false, false, false, true).Split(" (")[0]} ({ModUtils.NumToMonth(ship.dateCreatedRefit.AsDate().Month)}. {ship.dateCreatedRefit.AsDate().Year})");
 
-                    Melon<TweaksAndFixes>.Logger.Msg($"Gizmo: {ModUtils.DumpHierarchy(ship)}");
-
-
-
-                    // Melon<TweaksAndFixes>.Logger.Msg($"Part params");
-                    // 
-                    // foreach (Part part in Patch_Ship.LastCreatedShip.parts)
-                    // {
-                    //     Melon<TweaksAndFixes>.Logger.Msg($"  {part.data.name}: {part.data.param}");
-                    // 
-                    //     if (part.data.paramx.ContainsKey("mount_min"))
-                    //     {
-                    //         if (part.data.paramx["mount_min"].Count > 0) Melon<TweaksAndFixes>.Logger.Msg($"    {part.data.paramx["mount_min"][0]}");
-                    //         else Melon<TweaksAndFixes>.Logger.Msg($"    PARAM X FAILED TO PARSE!");
-                    //     }
-                    //     else if (part.data.param.Contains("mount_min")) 
-                    //     {
-                    //         Melon<TweaksAndFixes>.Logger.Msg($"    PARAM X FAILED TO PARSE!");
-                    //     }
-                    // }
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.name}"); // BB Charlemagne (1900) - 2 [france]
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.Name(false, false, false, false, false)}"); // BB Charlemagne (1900) - 2
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.Name(false, false, false, false, true)}"); // Charlemagne (1900) - 2
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.Name(true, false, false, false, false)}"); // BB
+                    }
                 }
 
                 else if (Input.GetKeyDown(KeyCode.M))
@@ -900,6 +931,26 @@ namespace TweaksAndFixes
                 //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.conComponentsChoice));
                 //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.conDetails));
             }
+
+            if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.S))
+            {
+                GameObject saveButton = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/PopupMenu/Window/SaveCampaign");
+
+                Melon<TweaksAndFixes>.Logger.Msg($"{GameManager.Instance.CurrentState}");
+
+                if (GameManager.Instance.CurrentState == GameManager.GameState.World)
+                {
+                    CampaignControllerM.RequestForcedGameSave = true;
+                }
+            }
+
+            CampaignControllerM.Update();
+
+            if (Patch_Ship.LastCreatedShip != null && Input.GetKeyDown(KeyCode.K))//(G.ui.isConstructorRefitMode)
+            {
+            }
+
+            if (Input.GetKey(KeyCode.L)) Melon<TweaksAndFixes>.Logger.Msg($"UI Postfix end");
         }
 
         [HarmonyPatch(nameof(Ui.ChoosePartCategory))]
@@ -944,6 +995,8 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static void Prefix_UpdateConstructor(Ui __instance)
         {
+            if (Input.GetKey(KeyCode.L)) Melon<TweaksAndFixes>.Logger.Msg($"Constructor Prefix start");
+
             _InConstructor = true;
             _InUpdateConstructor = true;
 
@@ -1014,12 +1067,16 @@ namespace TweaksAndFixes
             }
 
             Patch_Ui_c.Postfix_16(); // just in case we somehow died after running b15 and before b16
+
+            if (Input.GetKey(KeyCode.L)) Melon<TweaksAndFixes>.Logger.Msg($"Constructor Prefix end");
         }
 
         [HarmonyPatch(nameof(Ui.UpdateConstructor))]
         [HarmonyPostfix]
         internal static void Postfix_UpdateConstructor(Ui __instance)
         {
+            if (Input.GetKey(KeyCode.L)) Melon<TweaksAndFixes>.Logger.Msg($"Constructor Postfix start");
+
             if (NeedsConstructionListsClear)
             {
                 //  Melon<TweaksAndFixes>.Logger.Msg("Clearing paired component lists...");
@@ -1027,6 +1084,19 @@ namespace TweaksAndFixes
                 Patch_Part.mirroredParts.Clear();
                 Patch_Part.unmatchedParts.Clear();
                 NeedsConstructionListsClear = false;
+                TryPairPartsAndMountsOnce = true;
+            }
+
+
+            if (UpdateActiveShip)
+            {
+                Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
+
+                if (Patch_Ship.LastCreatedShip != null)
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"Active ship: {Patch_Ship.LastCreatedShip.Name(false, false)}");
+                    UpdateActiveShip = false;
+                }
             }
 
             if (Patch_Ship.LastCreatedShip == null)
@@ -1092,7 +1162,7 @@ namespace TweaksAndFixes
 
             // ExtraGameData.MainPlayer().designs[^1]
 
-            bool inViewMode = Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren().Count == 0;
+            bool inViewMode = Patch_GameManager.CurrentSubGameState == Patch_GameManager.SubGameState.InConstructorViewMode;
 
             if (!inViewMode)
             {
@@ -1127,6 +1197,8 @@ namespace TweaksAndFixes
             {
                 if (NeedsForcedUpdate)
                 {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"Forced ship changed update");
+
                     G.ui.OnConShipChanged();
                     NeedsForcedUpdate = false;
                 }
@@ -1186,13 +1258,43 @@ namespace TweaksAndFixes
 
                 foreach (Part part in Patch_Ship.LastCreatedShip.parts)
                 {
-                    if (part.mount != null && part.mount.transform.position.x < -99000)
+                    if (part == SelectedPart) continue;
+
+                    if (part.mount != null)
                     {
-                        part.mount = null;
+                        if (part.mount.transform.position.x < -99000)
+                        {
+                            part.mount = null;
+                        }
+                        else if (part.transform.position != part.mount.transform.position)
+                        {
+                            Vector3 partPos = part.transform.position;
+                            Vector3 mountPos = part.mount.transform.position;
+
+                            if (Math.Abs(partPos.x - mountPos.x) > 0.5f || Math.Abs(partPos.y - mountPos.y) > 0.5f || Math.Abs(partPos.z - mountPos.z) > 0.5f)
+                            {
+                                // Melon<TweaksAndFixes>.Logger.Msg($"Incorrect part snap, unparenting part {part.Name()} at {part.transform.position} from mount at {part.mount.transform.position}");
+                                part.mount = null;
+                                continue;
+                            }
+
+                            // Melon<TweaksAndFixes>.Logger.Msg($"Snapping {part.Name()} at {part.transform.position} to mount at {part.mount.transform.position}");
+                            part.transform.position = part.mount.transform.position;
+                        }
                     }
-                    else if (part.mount != null)
+                    else
                     {
-                        part.transform.position = part.mount.transform.position;
+                        foreach (Mount mount in Patch_Ship.LastCreatedShip.mounts)
+                        {
+                            if (mount.employedPart != null) continue;
+
+                            if (ModUtils.NearlyEqual(mount.transform.position, part.transform.position))
+                            {
+                                // Melon<TweaksAndFixes>.Logger.Msg($"Snapping {part.Name()} at {part.transform.position} to mount at {mount.transform.position}");
+                                part.Mount(mount);
+                                break;
+                            }
+                        }
                     }
                 }
 
@@ -1434,6 +1536,8 @@ namespace TweaksAndFixes
                     }
                 }
             }
+
+            if (Input.GetKey(KeyCode.L)) Melon<TweaksAndFixes>.Logger.Msg($"Constructor Postfix end");
 
             _InUpdateConstructor = false;
         }
