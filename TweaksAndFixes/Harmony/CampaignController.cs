@@ -47,9 +47,12 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_FinishCampaign(CampaignController __instance, Player loser, FinishCampaignType finishType)
         {
+            Melon<TweaksAndFixes>.Logger.Msg($"Attempting to end campagin: {finishType} for {loser.Name(false)}");
+
             // Ignore all other campaign ending types
             if (finishType != FinishCampaignType.Retirement)
             {
+                Melon<TweaksAndFixes>.Logger.Msg("  Not retirement, skipping end!");
                 return true;
             }
 
@@ -69,6 +72,98 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_CheckForCampaignEnd(CampaignController __instance)
         {
+            Melon<TweaksAndFixes>.Logger.Msg("Checking for campaign end...");
+
+            int activeCount = 0;
+            List<Player> activePlayers = new();
+            
+            Player MainPlayer = ExtraGameData.MainPlayer();
+
+            // sanity check
+            if (MainPlayer == null)
+            {
+                Melon<TweaksAndFixes>.Logger.Error("Could not find MainPlayer in [CheckForCampaignEnd]. Default behavior will be used.");
+                return;
+            }
+
+            foreach (Player player in __instance.CampaignData.Players)
+            {
+                if (player.isDisabled) continue;
+                if (!player.isMajor) continue;
+
+                activeCount++;
+                activePlayers.Add(player);
+
+                if (player.isMain) continue;
+
+                if (player.cash < -player.NationYearIncome() * 0.05f)
+                {
+                    // TotalBankrupt
+                    Melon<TweaksAndFixes>.Logger.Msg($"  {player.Name(false)} falls due to Total Bankruptcy.");
+                    // __instance.FinishCampaign(player, FinishCampaignType.TotalBankrupt);
+                }
+                // else if (player.unrest >= 100)
+                // {
+                //     // HighUnrest
+                //     Melon<TweaksAndFixes>.Logger.Msg($"  {player.Name(false)} falls due to High Unrest.");
+                //     // __instance.FinishCampaign(player, FinishCampaignType.HighUnrest);
+                // }
+                // else if (player.provinces.Count == 0)
+                // {
+                //     // TotalDefeat
+                //     Melon<TweaksAndFixes>.Logger.Msg($"  {player.Name(false)} falls due to Total Defeat.");
+                //     // __instance.FinishCampaign(player, FinishCampaignType.TotalDefeat);
+                // }
+            }
+
+            if (activePlayers.Count <= 1)
+            {
+                // PeaceSigned
+                Melon<TweaksAndFixes>.Logger.Msg($"  {activePlayers[0].Name(false)} wins due to Total Victory.");
+                __instance.FinishCampaign(activePlayers[0], FinishCampaignType.PeaceSigned); // This is properly parsed by the base game. Only here for postarity.
+                return;
+            }
+
+            bool hasPeaceBeenSigned = true;
+
+            foreach (var relation in __instance.CampaignData.Relations)
+            {
+                if (!relation.Value.isAlliance)
+                {
+                    hasPeaceBeenSigned = false;
+                    break;
+                }
+            }
+
+            if (hasPeaceBeenSigned)
+            {
+                // PeaceSigned
+                __instance.FinishCampaign(MainPlayer, FinishCampaignType.PeaceSigned);
+                return;
+            }
+
+            if (MainPlayer.unrest >= 99.495)
+            {
+                // HighUnrest
+                Melon<TweaksAndFixes>.Logger.Msg($"  {MainPlayer.Name(false)} falls due to High Unrest.");
+                __instance.FinishCampaign(MainPlayer, FinishCampaignType.HighUnrest);
+                return;
+            }
+            else if (MainPlayer.cash < 0)
+            {
+                // TotalBankrupt
+                Melon<TweaksAndFixes>.Logger.Msg($"  {MainPlayer.Name(false)} falls due to Total Bankruptcy.");
+                __instance.FinishCampaign(MainPlayer, FinishCampaignType.TotalBankrupt);
+                return;
+            }
+            else if (MainPlayer.provinces.Count == 0)
+            {
+                // TotalDefeat
+                Melon<TweaksAndFixes>.Logger.Msg($"  {MainPlayer.Name(false)} falls due to Total Defeat.");
+                __instance.FinishCampaign(MainPlayer, FinishCampaignType.TotalDefeat); // This is properly parsed by the base game. Only here for postarity.
+                return;
+            }
+
             float campaignEndDate = Config.Param("taf_campaign_end_retirement_date", 1950);
             float retirementPromptFrequency = Config.Param("taf_campaign_end_retirement_promt_every_x_months", 12);
 
@@ -80,16 +175,7 @@ namespace TweaksAndFixes
 
                 if (retirementPromptFrequency != 0 && monthsSinceFirstRequest % retirementPromptFrequency != 0)
                 {
-                    // Melon<TweaksAndFixes>.Logger.Msg("Skipping retirement request.");
-                    return;
-                }
-
-                Player MainPlayer = ExtraGameData.MainPlayer();
-
-                // sanity check
-                if (MainPlayer == null)
-                {
-                    Melon<TweaksAndFixes>.Logger.Error("Could not find MainPlayer in [CheckForCampaignEnd]. Default behavior will be used.");
+                    Melon<TweaksAndFixes>.Logger.Msg("  Skipping retirement request.");
                     return;
                 }
 
@@ -293,6 +379,39 @@ namespace TweaksAndFixes
 
             _PassThroughAdjustAttitude = false;
         }
+
+        // [HarmonyPatch(nameof(CampaignController.BuildNewShips))]
+        // [HarmonyPrefix]
+        // internal static bool Prefix_BuildNewShips(CampaignController __instance, Player player, float tempPlayerCash)
+        // {
+        //     var shiplist = new Il2CppSystem.Collections.Generic.List<Ship>(player.fleet);
+        //     
+        //     Melon<TweaksAndFixes>.Logger.Msg($"Pre-Build {player.Name(false)}: {shiplist.Count}");
+        // 
+        //     foreach (var ship in shiplist)
+        //     {
+        //         Melon<TweaksAndFixes>.Logger.Msg($"  {ship.Name(false, false)}");
+        //     }
+        // 
+        //     return true;
+        // }
+        // 
+        // [HarmonyPatch(nameof(CampaignController.BuildNewShips))]
+        // [HarmonyPostfix]
+        // internal static void Postfix_BuildNewShips(CampaignController __instance, Player player, float tempPlayerCash)
+        // {
+        //     CampaignControllerM.HandleScrapping(__instance, player, _AiManageFleet != null && _AiManageFleet.prewarming//);
+        //
+        //     var shiplist = new Il2CppSystem.Collections.Generic.List<Ship>(player.fleet);
+        //     
+        //     Melon<TweaksAndFixes>.Logger.Msg($"Post-Build: {player.Name(false)}: {shiplist.Count}");
+        //     
+        //     foreach (var ship in shiplist)
+        //     {
+        //         Melon<TweaksAndFixes>.Logger.Msg($"  {ship.Name(false, false)}");
+        //     }
+        // }
+
 
         [HarmonyPatch(nameof(CampaignController.ScrapOldAiShips))]
         [HarmonyPrefix]
