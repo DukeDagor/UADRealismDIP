@@ -12,6 +12,28 @@ namespace TweaksAndFixes
 {
     public class CampaignControllerM
     {
+        public static bool RequestForcedGameSave = false;
+
+        public static void Update()
+        {
+            if (!GameManager.Instance.isCampaign)
+            {
+                RequestForcedGameSave = false;
+                return;
+            }
+
+            if (RequestForcedGameSave)
+            {
+                RequestForcedGameSave = false;
+
+                Melon<TweaksAndFixes>.Logger.Msg($"Making auto save...");
+                // GameManager.Instance.SaveCampaignProgress();
+                GameManager.Instance.SaveInternal(true);
+                Melon<TweaksAndFixes>.Logger.Msg($"Save complete!");
+            }
+        }
+
+
         private struct ShipScrapInfo
         {
             public float score;
