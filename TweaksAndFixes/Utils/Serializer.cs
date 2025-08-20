@@ -427,7 +427,7 @@ namespace TweaksAndFixes
                 }
                 if (keyIdx < 0)
                 {
-                    Melon<TweaksAndFixes>.Logger.Error("CSV: Could not find key in header");
+                    Melon<TweaksAndFixes>.Logger.Error($"CSV: Could not find key `{keyName}` in header for:\n`{text}`");
                     return false;
                 }
 
@@ -1777,15 +1777,14 @@ namespace TweaksAndFixes
 
         public static class JSON
         {
-            public static T LoadJsonFile<T>(string relitiveFilePath)
+            public static T LoadJsonFile<T>(string filePath)
             {
-                if (!Directory.Exists(Config._BasePath))
+                if (!Directory.Exists(Path.GetDirectoryName(filePath)))
                 {
-                    Melon<TweaksAndFixes>.Logger.Error("Base path [" + Config._BasePath + "] does not exist.");
+                    Melon<TweaksAndFixes>.Logger.Error("Base path [" + Path.GetDirectoryName(filePath) + "] does not exist.");
                     return default(T);
                 }
 
-                string filePath = Path.Combine(Config._BasePath, relitiveFilePath);
                 if (!File.Exists(filePath))
                 {
                     Melon<TweaksAndFixes>.Logger.Error("Could not find file at path [" + filePath + "].");
@@ -1804,19 +1803,17 @@ namespace TweaksAndFixes
                 }
             }
 
-            public static bool SaveJsonFile<T>(string relitiveFilePath, T jsonObject)
+            public static bool SaveJsonFile<T>(string filePath, T jsonObject)
             {
-                if (!Directory.Exists(Config._BasePath))
+                if (!Directory.Exists(Path.GetDirectoryName(filePath)))
                 {
-                    Melon<TweaksAndFixes>.Logger.Error("Base path [" + Config._BasePath + "] does not exist.");
+                    Melon<TweaksAndFixes>.Logger.Error("Base path [" + Path.GetDirectoryName(filePath) + "] does not exist.");
                     return false;
                 }
 
-                string filePath = Path.Combine(Config._BasePath, relitiveFilePath);
                 if (!File.Exists(filePath))
                 {
-                    Melon<TweaksAndFixes>.Logger.Error("Could not find file at path [" + filePath + "].");
-                    return false;
+                    File.Create(filePath).Close();
                 }
 
                 try
