@@ -13,6 +13,7 @@ using static Il2Cpp.Ship;
 using static MelonLoader.MelonLogger;
 using Il2CppSystem.Linq;
 using static MelonLoader.Modules.MelonModule;
+using System.Drawing;
 
 #pragma warning disable CS8603
 
@@ -107,42 +108,41 @@ namespace TweaksAndFixes
                 Part placedPart = __instance;
                 Part mirroredPart = null;
 
-                // Il2CppSystem.Collections.Generic.List<Ship> temp = new Il2CppSystem.Collections.Generic.List<Ship>(ExtraGameData.MainPlayer().designs);
-
-                // Melon<TweaksAndFixes>.Logger.Msg("A\n" + ModUtils.DumpHierarchy(__instance.data.constructorShip.gameObject));
-                // Melon<TweaksAndFixes>.Logger.Msg("A\n" + ModUtils.DumpHierarchy(temp[^2].gameObject));
-                // Melon<TweaksAndFixes>.Logger.Msg("B\n" + temp.IndexOf(__instance.data.constructorShip) + " : " + temp.Count);
-
-                // Melon<TweaksAndFixes>.Logger.Msg("Search in ship: " + __instance.data.constructorShip.NameAsClass(false) + " : Contains: " + ExtraGameData.MainPlayer().designs.First().NameAsClass(false));
-                // 
-                // Melon<TweaksAndFixes>.Logger.Msg("DESIGN LIST:");
-                // for(int i = 0; i < temp.Count; i++)
-                // {
-                //     Ship ship = temp[i];
-                // 
-                //     if (ship == null)
-                //     {
-                //         Melon<TweaksAndFixes>.Logger.Msg("  NULL");
-                //         continue;
-                //     }
-                // 
-                //     Melon<TweaksAndFixes>.Logger.Msg("  SHIP: " + ModUtils.DumpHierarchy(ship.gameObject));
-                // }
-
-                foreach (Part part in __instance.data.constructorShip.parts)
+                foreach (Part part in ShipM.GetActiveShip().parts)
                 {
                     if (part == null) continue;
                     if (part.transform == null) continue;
                     if (part == __instance) continue;
+                    if (part == Patch_Ui.SelectedPart) continue;
 
                     Vector3 partPos = part.transform.position;
                     if (partPos.y != pos.y) continue;
                     if (partPos.z != pos.z) continue;
 
-                    if (part != __instance)
+                    if (partPos == pos)
                     {
-                        mirroredPart = part;
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Found duplicated part: {part.name}");
+
+                        if (mirroredParts.ContainsKey(part))
+                        {
+                            if (mirroredParts.ContainsKey(mirroredParts[part]))
+                            {
+                                if (mirroredParts.ContainsKey(mirroredParts[part])) mirroredParts.Remove(mirroredParts[part]);
+                                if (applyMirrorFromTo.ContainsKey(mirroredParts[part])) applyMirrorFromTo.Remove(mirroredParts[part]);
+                            }
+
+                            if (applyMirrorFromTo.ContainsKey(part)) applyMirrorFromTo.Remove(part);
+                            if (mirroredParts.ContainsKey(part)) mirroredParts.Remove(part);
+                        }
+
+                        // ShipM.GetActiveShip().RemovePart(part);
+                        return;
                     }
+
+                    // Melon<TweaksAndFixes>.Logger.Msg("Found part mirror");
+
+                    mirroredPart = part;
+                    break;
                 }
 
                 // If the mirrored part is found, add it to mirroring and register a skip
@@ -428,9 +428,9 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static void Prefix_CalcFireSectorNonAlloc(Part __instance)
         {
-            if (__instance.mount == null)
+            if (__instance.mount == null && GameManager.Instance.CurrentState != GameManager.GameState.Constructor)
             {
-                // Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name()}.Mount = NULL, attempting to remount...");
+                Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name()}.Mount = NULL, attempting to remount...");
 
                 Ship partShip = __instance.ship;
 
@@ -476,6 +476,17 @@ namespace TweaksAndFixes
                         }
                         else
                         {
+                            Vector3 partPos = part.transform.position;
+                            Vector3 mountPos = part.mount.transform.position;
+
+                            if (Math.Abs(partPos.x - mountPos.x) > 0.5f || Math.Abs(partPos.y - mountPos.y) > 0.5f || Math.Abs(partPos.z - mountPos.z) > 0.5f)
+                            {
+                                // Melon<TweaksAndFixes>.Logger.Msg($"Incorrect part snap, unparenting part {part.Name()} at {part.transform.position} from mount at {part.mount.transform.position}");
+                                part.mount = null;
+                                continue;
+                            }
+
+                            // Melon<TweaksAndFixes>.Logger.Msg($"Snapping {part.Name()} at {part.transform.position} to mount at {part.mount.transform.position}");
                             part.transform.position = part.mount.transform.position;
                         }
                     }
@@ -487,9 +498,10 @@ namespace TweaksAndFixes
 
                             if (ModUtils.NearlyEqual(mount.transform.position, part.transform.position))
                             {
+                                // Melon<TweaksAndFixes>.Logger.Msg($"Snapping {part.Name()} at {part.transform.position} to mount at {mount.transform.position}");
                                 part.Mount(mount);
                                 part.transform.position = mount.transform.position;
-                                if (part == __instance) Melon<TweaksAndFixes>.Logger.Msg($"  Successfully remounted part!");
+                                // if (part == __instance) Melon<TweaksAndFixes>.Logger.Msg($"  Successfully remounted part!");
                                 break;
                             }
                         }
