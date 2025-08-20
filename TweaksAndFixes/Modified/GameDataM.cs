@@ -139,6 +139,8 @@ namespace TweaksAndFixes
 
                 MountOverrideData.LoadData();
 
+                Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
+
                 if (Patch_Ship.LastCreatedShip != null)
                 {
                     foreach (Part part in Patch_Ship.LastCreatedShip.parts)
