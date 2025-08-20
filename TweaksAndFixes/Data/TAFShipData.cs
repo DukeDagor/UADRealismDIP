@@ -455,6 +455,12 @@ namespace TweaksAndFixes
                 // this cleans the part data name
                 GunGradeData.GradeFromTCS(tcs, true);
 
+                if (!G.GameData.parts.ContainsKey(tcs.turretPartDataName))
+                {
+                    Melon<TweaksAndFixes>.Logger.Error($"Failed to find part {tcs.turretPartDataName} in Game Data!");
+                    continue;
+                }
+
                 var data = G.GameData.parts[tcs.turretPartDataName];
                 var ggd = FindGGD(data.caliber, tcs.isCasemateGun);
                 if (ggd == null)
