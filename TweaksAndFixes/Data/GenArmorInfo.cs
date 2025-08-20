@@ -126,9 +126,17 @@ namespace TweaksAndFixes
 
             public void FillFor(string shipType, int year)
             {
+                // TODO: Generalize to all unarmored types
+                // Melon<TweaksAndFixes>.Logger.Error($"Cannot find default armor values for {shipType}! {G.GameData.shipTypes[shipType].armor} {G.GameData.shipTypes[shipType].armorMin} {G.GameData.shipTypes[shipType].armorMax}");
+                if (shipType == "tr")//G.GameData.shipTypes[shipType].armorMax <= 50)
+                {
+                    _isValid = false;
+                    return;
+                }
+
                 if (!_Data.TryGetValue(shipType, out var list))
                 {
-                    Melon<TweaksAndFixes>.Logger.Error($"Cannot find default armor values for {shipType}!");
+                    Melon<TweaksAndFixes>.Logger.Error($"Cannot find default armor values for {shipType}! {G.GameData.shipTypes[shipType].armor} {G.GameData.shipTypes[shipType].armorMin} {G.GameData.shipTypes[shipType].armorMax}");
                     _isValid = false;
                     return;
                 }
