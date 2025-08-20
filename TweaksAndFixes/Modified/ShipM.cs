@@ -19,6 +19,36 @@ namespace TweaksAndFixes
 {
     public static class ShipM
     {
+        public static List<Ship> ActiveShips = new();
+
+        private static void UpdateActiveShipsList()
+        {
+            // if (ActiveShips.Count == 1 && ActiveShips[0]?.gameObject.GetParent()?.name == "ShipsActive") return;
+
+            ActiveShips.Clear();
+
+            if (Ship.shipsActiveCont == null) return;
+
+            var children = Ship.shipsActiveCont.GetChildren();
+
+            foreach (var child in children)
+            {
+                ActiveShips.Add(child.GetComponent<Ship>());
+            }
+        }
+
+        public static Ship GetActiveShip()
+        {
+            UpdateActiveShipsList();
+
+            if (ActiveShips.Count != 1)
+            {
+                return null;
+            }
+
+            return ActiveShips[0];
+        }
+
         public static Dictionary<TKey, TValue> GetParamDict<TKey, TValue>(Ship _this, string pName) where TKey : notnull
         {
             _this.shipType.paramx.TryGetValue(pName, out var paramST);
