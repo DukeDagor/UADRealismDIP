@@ -90,6 +90,18 @@ namespace TweaksAndFixes
 
             SetTimeSpeedLimit();
         }
+
+        // LeaveBattle
+
+        [HarmonyPatch(nameof(BattleManager.LeaveBattle))]
+        [HarmonyPostfix]
+        internal static void Postfix_LeaveBattle()
+        {
+            if (GameManager.Instance.isCampaign)
+            {
+                CampaignControllerM.RequestForcedGameSave = true;
+            }
+        }
     }
 
 
