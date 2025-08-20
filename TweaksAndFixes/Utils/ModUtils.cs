@@ -48,6 +48,13 @@ namespace TweaksAndFixes
 
         private static string[] months = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
+        public static string NumToMonth(int num)
+        {
+            if (num < 1 || num > 12) return $"ERR: {num} out of bounds";
+
+            return months[num - 1];
+        }
+
         // Reimplementation of stock function
         public static void FindChildrenStartsWith(GameObject obj, string str, List<GameObject> list)
         {
@@ -94,7 +101,20 @@ namespace TweaksAndFixes
 
         public static bool NearlyEqual(float a, float b)
         {
-            return (int)(Il2CppSystem.Math.Round(a * 1.0f) + 0.01) == (int)(Il2CppSystem.Math.Round(b * 1.0f) + 0.01);
+            return (int)(Il2CppSystem.Math.Round(a * 1.0f) + 0.01f) == (int)(Il2CppSystem.Math.Round(b * 1.0f) + 0.01f);
+        }
+
+        public static bool NearlyEqual(Vector2 a, Vector2 b)
+        {
+            return (int)(Il2CppSystem.Math.Round(a.x * 10.0f) + 0.01f) == (int)(Il2CppSystem.Math.Round(b.x * 10.0f) + 0.01f) &&
+                   (int)(Il2CppSystem.Math.Round(a.y * 10.0f) + 0.01f) == (int)(Il2CppSystem.Math.Round(b.y * 10.0f) + 0.01f);
+        }
+
+        public static bool NearlyEqual(Vector3 a, Vector3 b)
+        {
+            return (int)(Il2CppSystem.Math.Round(a.x * 10.0f) + 0.01f) == (int)(Il2CppSystem.Math.Round(b.x * 10.0f) + 0.01f) &&
+                   (int)(Il2CppSystem.Math.Round(a.y * 10.0f) + 0.01f) == (int)(Il2CppSystem.Math.Round(b.y * 10.0f) + 0.01f) &&
+                   (int)(Il2CppSystem.Math.Round(a.z * 10.0f) + 0.01f) == (int)(Il2CppSystem.Math.Round(b.z * 10.0f) + 0.01f);
         }
 
         public static string MountObjToCSV(int count, string path, float rotation, Vector3 pos, GameObject mount)
@@ -450,14 +470,16 @@ namespace TweaksAndFixes
             string print = "";
 
             print += $"\nSelected Part";
-            print += $"\n  Type : {SelectedPart.Name()}";
-            print += $"\n  Type : {SelectedPart.data.type}";
+            print += $"\n  Name  : {SelectedPart.Name()}";
+            print += $"\n  Type  : {SelectedPart.data.type}";
 
             var pos = SelectedPart.transform.position;
             string posString = $"({pos.x:0.0000}, {pos.y:0.0000}, {pos.z:0.0000})";
 
-            print += $"\n  Pos  : [Global] {posString}";
-            print += $"\n  Rot  : [Global] {SelectedPart.transform.eulerAngles.y}";
+            print += $"\n  Pos   : [Global] {posString}";
+            print += $"\n  Rot   : [Global] {SelectedPart.transform.eulerAngles.y}";
+
+            print += $"\n  Parent: {(SelectedPart.mount != null ? SelectedPart.mount.parentPart.Name() : "None")}";
 
             if (SelectedPart.data.type == "gun" || SelectedPart.data.type == "torpedo")
             {
@@ -732,6 +754,49 @@ namespace TweaksAndFixes
             }
 
             return hierarchy;
+        }
+
+        public static GameObject GetChildAtPath(string path, GameObject root = null)
+        {
+            // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/ShipName
+        
+            if (root == null) root = G.ui.gameObject;
+
+            if (root == G.ui.gameObject)
+            {
+                if (path.StartsWith("Global/Ui/UiMain/"))
+                {
+                    path = path.Replace("Global/Ui/UiMain/", "");
+                }
+                else
+                {
+                    Melon<TweaksAndFixes>.Logger.Error($"Invalid path {path}. Default root is `Global/Ui/UiMain/`, specify a different root if this is not used.");
+                }
+            }
+
+            string[] entries = path.Split('/');
+            GameObject lastValid = root;
+        
+            foreach (string entry in entries)
+            {
+                lastValid = root;
+                root = root.GetChild(entry, true);
+
+                if (root == null)
+                {
+                    root = new GameObject();
+                    Melon<TweaksAndFixes>.Logger.Error($"GetChildAtPath: Failed to find `{entry}` in path `{path}`, valid children at `{lastValid.name}`:");
+
+                    foreach (var child in lastValid.GetChildren())
+                    {
+                        
+                    }
+
+                    break;
+                }
+            }
+
+            return root;
         }
 
         public static GameObject FindDeepChild(this GameObject obj, string name, bool allowInactive = true)
