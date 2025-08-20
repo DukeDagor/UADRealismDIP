@@ -262,7 +262,7 @@ namespace TweaksAndFixes
                 {
                     return;
                 }
-            
+
                 GameObject tag = new();
                 tag.name = "TAF_HAS_MOUNT_OVERRIDE";
                 tag.transform.parent = model.transform;
@@ -279,6 +279,8 @@ namespace TweaksAndFixes
                 return;
             }
 
+            Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
+
             float mountParamMin = Patch_Part.GetMountMinParam(part);
             float mountParamMax = Patch_Part.GetMountMaxParam(part);
             float mountParamMult = Patch_Part.GetMountMultParam(part);
@@ -286,19 +288,31 @@ namespace TweaksAndFixes
 
             Stack<GameObject> stack = new();
 
-            foreach (GameObject child in model.GetChildren())
-            {
-                stack.Push(child);
-            }
-            
+            stack.Push(model);
+
+            //foreach (GameObject child in model.GetChildren())
+            //{
+            //    stack.Push(child);
+            //}
+
             string partName = part.gameObject.GetChildren()[0].name;
+
+            if (partName == "Effects") partName = part.gameObject.GetChildren()[1].name;
+
             if (relitive) partName = partName.Replace("(Clone)", "");
+
+            if (!BaseGamePartModelData._Data.ContainsKey(partName))
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Error! Key for {partName} not found! Failed to override {part.Name()}!");
+                Melon<TweaksAndFixes>.Logger.Msg($"{ModUtils.DumpHierarchy(part.gameObject)}");
+                return;
+            }
 
             bool isHull     = BaseGamePartModelData._Data[partName].isHull;
             bool isTower    = BaseGamePartModelData._Data[partName].isTowerMain || BaseGamePartModelData._Data[partName].isTowerSec;
             bool isBarbette = BaseGamePartModelData._Data[partName].isBarbette;
 
-            StringBuilder path = new();
+            StringBuilder path = new(4096);
 
             // Melon<TweaksAndFixes>.Logger.Msg($"Parsing: {partName}...");
             // Melon<TweaksAndFixes>.Logger.Msg($"  {model.name} : {model.transform.position}");
@@ -320,6 +334,71 @@ namespace TweaksAndFixes
                     stack.Push(child);
                 }
 
+                // Update path
+                path.Clear();
+                GameObject head = obj.GetParent();
+                int stop = 10;
+                bool isFirst = true;
+
+                while (true)
+                {
+                    if (!relitive && head == null) break;
+                    if (relitive && head == model.GetParent()) break;
+
+                    path.Insert(0, head.name.Replace("(Clone)", "") + (isFirst ? "" : "/"));
+                    isFirst = false;
+                    head = head.GetParent();
+                    if (stop-- == 0) break;
+                }
+
+                string concatPath = root + path.ToString();
+
+                string trueConcatPath = concatPath + (concatPath.Length == 0 ? obj.name.Replace("(Clone)", "") : $"/{obj.name.Replace("(Clone)", "")}");
+
+                if (_ParentToNewData.ContainsKey(trueConcatPath))
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"    Found new overrides at {trueConcatPath}");
+
+                    foreach (MountOverrideData newData in _ParentToNewData[trueConcatPath])
+                    {
+                        GameObject newMount = new GameObject();
+                        newMount.AddComponent<Mount>();
+                        newMount.transform.SetParent(obj);
+                        newMount.transform.position = obj.transform.position;
+                        newMount.transform.localPosition = new Vector3();
+                        newMount.transform.rotation = obj.transform.rotation;
+                        newMount.transform.localRotation = new Quaternion();
+                        newMount.name = $"Mount:TAF_{obj.GetChildren().Count}";
+
+                        // Melon<TweaksAndFixes>.Logger.Msg($"      Mount:TAF_{obj.GetChildren().Count}");
+
+                        Mount newMountMount = newMount.GetComponent<Mount>();
+
+                        if (relitive) UpdateMountParamitersRelitive(newMountMount, newData, part.gameObject);
+                        else UpdateMountParamiters(newMountMount, newData);
+
+                        if (relitive && Patch_Ship.LastCreatedShip != null)
+                        {
+                            // Patch_Ship.LastCreatedShip.allowedMountsInternal.Add(newMount.GetComponent<Mount>());
+                            Patch_Ship.LastCreatedShip.mounts.Add(newMountMount);
+
+                            // Melon<TweaksAndFixes>.Logger.Msg($"    {(objPart != null ? objPart.Name() : "NULL")}");
+                            part.mountsInside.Add(newMountMount);
+                        }
+
+                        if (mountParamMin != -1) newMountMount.caliberMin = mountParamMin;
+                        else if (mountParamMult != -1) newMountMount.caliberMin *= mountParamMult;
+                        if (mountParamMax != -1) newMountMount.caliberMax = mountParamMax;
+                        else if (mountParamMult != -1) newMountMount.caliberMax *= mountParamMult;
+
+                        // part.mountsInside.Add(newMount.GetComponent<Mount>());
+
+                        // part.ship.mounts.Add(newMount.GetComponent<Mount>());
+
+                        // canary = newMount;
+                    }
+                }
+                    
                 // if (obj.name.Contains("Lifeboat") && !obj.name.StartsWith("Decor:"))
                 // {
                 //     if (!obj.GetParent().name.StartsWith("Decor:"))
@@ -336,6 +415,8 @@ namespace TweaksAndFixes
                 if (obj.name.StartsWith("Mount:TAF"))
                 {
                     Mount tafMount = obj.GetComponent<Mount>();
+
+                    // Melon<TweaksAndFixes>.Logger.Msg($"Found TaF Mount!");
 
                     if (relitive && Patch_Ship.LastCreatedShip != null)
                     {
@@ -357,25 +438,6 @@ namespace TweaksAndFixes
 
                     continue;
                 }
-
-                // Update path
-                path.Clear();
-                GameObject head = obj.GetParent();
-                int stop = 10;
-                bool isFirst = true;
-
-                while (true)
-                {
-                    if (!relitive && head == null) break;
-                    if (relitive && head == model.GetParent()) break;
-
-                    path.Insert(0, head.name.Replace("(Clone)", "") + (isFirst ? "" : "/"));
-                    isFirst = false;
-                    head = head.GetParent();
-                    if (stop-- == 0) break;
-                }
-
-                string concatPath = root + path.ToString();
 
                 if (!depthToIndex.ContainsKey(concatPath)) depthToIndex[concatPath] = 0;
                 depthToIndex[concatPath]++;
@@ -426,52 +488,6 @@ namespace TweaksAndFixes
                     else if (mountParamMult != -1) objMount.caliberMin *= mountParamMult;
                     if (mountParamMax != -1) objMount.caliberMax = mountParamMax;
                     else if (mountParamMult != -1) objMount.caliberMax *= mountParamMult;
-                }
-
-                if (_ParentToNewData.ContainsKey(concatPath))
-                {
-                    // Melon<TweaksAndFixes>.Logger.Msg($"    Found new overrides...");
-
-                    foreach (MountOverrideData newData in _ParentToNewData[concatPath])
-                    {
-                        GameObject parent = obj.GetParent();
-
-                        GameObject newMount = new GameObject();
-                        newMount.AddComponent<Mount>();
-                        newMount.transform.SetParent(parent);
-                        newMount.transform.position = parent.transform.position;
-                        newMount.transform.localPosition = new Vector3();
-                        newMount.transform.rotation = parent.transform.rotation;
-                        newMount.transform.localRotation = new Quaternion();
-                        newMount.name = $"Mount:TAF_{parent.GetChildren().Count}";
-
-                        // Melon<TweaksAndFixes>.Logger.Msg($"      Mount:TAF_{obj.GetChildren().Count}");
-
-                        Mount newMountMount = newMount.GetComponent<Mount>();
-
-                        if (relitive) UpdateMountParamitersRelitive(newMountMount, newData, part.gameObject);
-                        else UpdateMountParamiters(newMountMount, newData);
-
-                        if (relitive && Patch_Ship.LastCreatedShip != null)
-                        {
-                            // Patch_Ship.LastCreatedShip.allowedMountsInternal.Add(newMount.GetComponent<Mount>());
-                            Patch_Ship.LastCreatedShip.mounts.Add(newMountMount);
-
-                            // Melon<TweaksAndFixes>.Logger.Msg($"    {(objPart != null ? objPart.Name() : "NULL")}");
-                            part.mountsInside.Add(newMountMount);
-                        }
-
-                        if (mountParamMin != -1) newMountMount.caliberMin = mountParamMin;
-                        else if (mountParamMult != -1) newMountMount.caliberMin *= mountParamMult;
-                        if (mountParamMax != -1) newMountMount.caliberMax = mountParamMax;
-                        else if (mountParamMult != -1) newMountMount.caliberMax *= mountParamMult;
-
-                        // part.mountsInside.Add(newMount.GetComponent<Mount>());
-
-                        // part.ship.mounts.Add(newMount.GetComponent<Mount>());
-
-                        // canary = newMount;
-                    }
                 }
             }
         }
