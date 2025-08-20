@@ -5,11 +5,7 @@ using Il2Cpp;
 using UnityEngine.UI;
 using static TweaksAndFixes.ModUtils;
 using Il2CppUiExt;
-using Il2CppSystem.Linq;
 using System.Text;
-using Il2CppSystem.Linq.Expressions;
-using Il2CppTMPro;
-using System.ComponentModel.Design;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -648,8 +644,6 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_Update(Ui __instance)
         {
-            if (Input.GetKey(KeyCode.L)) Melon<TweaksAndFixes>.Logger.Msg($"UI Postfix start");
-
             GameObject bugReporter = __instance.commonUi.GetChild("Options").GetChild("BugReport");
 
             bugReporter.SetActive(false);
@@ -662,6 +656,7 @@ namespace TweaksAndFixes
 
             UiM.UpdateModifications();
             Patch_GameManager.Update();
+            CampaignControllerM.Update();
 
             // New UI elements
             if (Config.Param("taf_dockyard_new_logic", 1) == 1)
@@ -881,23 +876,6 @@ namespace TweaksAndFixes
 
                 else if (Input.GetKeyDown(KeyCode.P))
                 {
-                    foreach (Ship ship in Ship.AllShips)
-                    {
-                        if (!ship.isRefitDesign) continue;
-
-                        // Melon<TweaksAndFixes>.Logger.Msg($"RENAME STATS:"); // BB Charlemagne (1900) - 2 [france]
-                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.name}"); // BB Charlemagne (1900) - 2 [france]
-                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.Name(false, false, false, false, false)}"); // BB Charlemagne (1900) - 2
-                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.Name(false, false, false, false, true)}"); // Charlemagne (1900) - 2
-                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.Name(true, false, false, false, false)}"); // BB
-
-                        ship.SetShipName($"{ship.Name(false, false, false, false, true).Split(" (")[0]} ({ModUtils.NumToMonth(ship.dateCreatedRefit.AsDate().Month)}. {ship.dateCreatedRefit.AsDate().Year})");
-
-                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.name}"); // BB Charlemagne (1900) - 2 [france]
-                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.Name(false, false, false, false, false)}"); // BB Charlemagne (1900) - 2
-                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.Name(false, false, false, false, true)}"); // Charlemagne (1900) - 2
-                        // Melon<TweaksAndFixes>.Logger.Msg($"  {ship.Name(true, false, false, false, false)}"); // BB
-                    }
                 }
 
                 else if (Input.GetKeyDown(KeyCode.M))
@@ -943,14 +921,6 @@ namespace TweaksAndFixes
                     CampaignControllerM.RequestForcedGameSave = true;
                 }
             }
-
-            CampaignControllerM.Update();
-
-            if (Patch_Ship.LastCreatedShip != null && Input.GetKeyDown(KeyCode.K))//(G.ui.isConstructorRefitMode)
-            {
-            }
-
-            if (Input.GetKey(KeyCode.L)) Melon<TweaksAndFixes>.Logger.Msg($"UI Postfix end");
         }
 
         [HarmonyPatch(nameof(Ui.ChoosePartCategory))]
@@ -995,8 +965,6 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static void Prefix_UpdateConstructor(Ui __instance)
         {
-            if (Input.GetKey(KeyCode.L)) Melon<TweaksAndFixes>.Logger.Msg($"Constructor Prefix start");
-
             _InConstructor = true;
             _InUpdateConstructor = true;
 
@@ -1067,16 +1035,12 @@ namespace TweaksAndFixes
             }
 
             Patch_Ui_c.Postfix_16(); // just in case we somehow died after running b15 and before b16
-
-            if (Input.GetKey(KeyCode.L)) Melon<TweaksAndFixes>.Logger.Msg($"Constructor Prefix end");
         }
 
         [HarmonyPatch(nameof(Ui.UpdateConstructor))]
         [HarmonyPostfix]
         internal static void Postfix_UpdateConstructor(Ui __instance)
         {
-            if (Input.GetKey(KeyCode.L)) Melon<TweaksAndFixes>.Logger.Msg($"Constructor Postfix start");
-
             if (NeedsConstructionListsClear)
             {
                 //  Melon<TweaksAndFixes>.Logger.Msg("Clearing paired component lists...");
@@ -1536,8 +1500,6 @@ namespace TweaksAndFixes
                     }
                 }
             }
-
-            if (Input.GetKey(KeyCode.L)) Melon<TweaksAndFixes>.Logger.Msg($"Constructor Postfix end");
 
             _InUpdateConstructor = false;
         }
