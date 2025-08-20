@@ -8,6 +8,8 @@ using MelonLoader.CoreClrUtils;
 using TweaksAndFixes.Data;
 using Il2CppSystem.Linq;
 using static Il2Cpp.Ship;
+using System.Drawing;
+using MelonLoader.TinyJSON;
 
 #pragma warning disable CS8625
 
@@ -129,10 +131,20 @@ namespace TweaksAndFixes
             // }
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Ship.GetRefitYearNameEnd))]
+        internal static void Prefix_GetRefitYearNameEnd(Ship __instance, ref string __result)
+        {
+            __result = $" ({ ModUtils.NumToMonth(__instance.dateCreatedRefit.AsDate().Month)}. { __instance.dateCreatedRefit.AsDate().Year})";
+            // Melon<TweaksAndFixes>.Logger.Msg($"GetRefitYearNameEnd: {__instance.Name(false, false, false, false, true)}{__result}");
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Ship.RemovePart))]
         internal static bool Prefix_RemovePart(Ship __instance, Part part)
         {
+            if (__instance == null) return false;
+
             if (part != Patch_Ui.SelectedPart && part.mount != null && part == Patch_Part.TrySkipDestroy || !__instance.parts.Contains(part))
             {
                 Patch_Part.TrySkipDestroy = null;
@@ -183,8 +195,38 @@ namespace TweaksAndFixes
                     __instance.RemovePart(A);
                 }
             }
+
+            foreach (var mount in part.mountsInside)
+            {
+                if (mount.employedPart != null)
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  {mount.employedPart.Name()}");
+                    __instance.RemovePart(mount.employedPart);
+                }
+            }
         }
 
+        // RemoveChildForPart
+
+        // [HarmonyPrefix]
+        // [HarmonyPatch(nameof(Ship.RemoveChildForPart))]
+        // internal static bool Prefix_RemoveChildForPart(Ship __instance, Part part)
+        // {
+        //     Melon<TweaksAndFixes>.Logger.Msg($"Removing children for part {part.Name()}");
+        // 
+        //     Stack<Part> stack = new Stack<Part>();
+        // 
+        //     foreach (var mount in part.mountsInside)
+        //     {
+        //         if (mount.employedPart != null)
+        //         {
+        //             Melon<TweaksAndFixes>.Logger.Msg($"  {mount.employedPart.Name()}");
+        //             stack.Push(mount.employedPart);
+        //         }
+        //     }
+        // 
+        //     return true;
+        // }
 
 
 
@@ -314,13 +356,15 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_ChangeHull(Ship __instance)
         {
-            Patch_Ui.NeedsConstructionListsClear = true;
+            // Patch_Ui.NeedsConstructionListsClear = true;
             // Melon<TweaksAndFixes>.Logger.Msg($"Changed: {LastCreatedShip?.Name(false, false)} to {__instance.Name(false, false)}");
             // Melon<TweaksAndFixes>.Logger.Msg($"Changed: {LastCreatedShip?.id} to {__instance.id}");
-            LastCreatedShip = __instance;
+            // LastCreatedShip = __instance;
             _IsInChangeHullWithHuman = false;
 
             // LastClonedShipWeight
+
+            Patch_Ui.UpdateActiveShip = true;
 
             if (Patch_GameManager._IsRefreshSharedDesign)
             {
@@ -348,24 +392,24 @@ namespace TweaksAndFixes
                 LastClonedShipWeight = 0;
             }
 
-            if (G.ui.isConstructorRefitMode)
-            {
-                Player player = ExtraGameData.MainPlayer();
-
-                if (player == null)
-                {
-                    Melon<TweaksAndFixes>.Logger.Error("Failed to get main player in Refit Mode. Build mode will be broken.");
-                    return;
-                }
-
-                if (player.designs.Count() < 2)
-                {
-                    Melon<TweaksAndFixes>.Logger.Error("Design count less than 2. Failed to find refit ship reference. Build mode will be broken.");
-                    return;
-                }
-
-                LastCreatedShip = new Il2CppSystem.Collections.Generic.List<Ship>(player.designs)[^2];
-            }
+            // if (G.ui.isConstructorRefitMode)
+            // {
+            //     Player player = ExtraGameData.MainPlayer();
+            // 
+            //     if (player == null)
+            //     {
+            //         Melon<TweaksAndFixes>.Logger.Error("Failed to get main player in Refit Mode. Build mode will be broken.");
+            //         return;
+            //     }
+            // 
+            //     if (player.designs.Count() < 2)
+            //     {
+            //         Melon<TweaksAndFixes>.Logger.Error("Design count less than 2. Failed to find refit ship reference. Build mode will be broken.");
+            //         return;
+            //     }
+            // 
+            //     LastCreatedShip = new Il2CppSystem.Collections.Generic.List<Ship>(player.designs)[^2];
+            // }
         }
         [HarmonyPatch(nameof(Ship.SetDraught))]
         [HarmonyPostfix]
