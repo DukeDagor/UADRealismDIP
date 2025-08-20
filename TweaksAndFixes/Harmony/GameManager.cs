@@ -7,6 +7,7 @@ using Il2Cpp;
 using UnityEngine.UI;
 using static Il2Cpp.GameManager;
 using Il2CppSystem.Globalization;
+using Il2CppTMPro;
 
 namespace TweaksAndFixes
 {
@@ -50,10 +51,23 @@ namespace TweaksAndFixes
             Patch_Ui.NeedsForcedUpdate = true;
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(GameManager.ToSharedDesignsConstructor))]
+        internal static void Postfix_ToSharedDesignsConstructor(int year, PlayerData nation, bool forceCreateNew)
+        {
+            Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Active Ship: {(Patch_Ship.LastCreatedShip == null ? "NULL" : Patch_Ship.LastCreatedShip.Name(false, false))}");
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch(nameof(GameManager.ToConstructor))]
-        internal static void Prefix_ToConstructor(bool newShip, Ship viewShip, bool allowEdit, IEnumerable<Ship> allowEditMany, ShipType shipTypeNew, bool needCleanup, Player newPlayer)
+        internal static void Prefix_ToConstructor(bool newShip, Ship viewShip, ref bool allowEdit, IEnumerable<Ship> allowEditMany, ShipType shipTypeNew, bool needCleanup, Player newPlayer)
         {
+            if (!GameManager.Instance.isCampaign)
+            {
+                allowEdit = true;
+            }
+
             Melon<TweaksAndFixes>.Logger.Msg(
                 $"ToConstructor: " +
                 $"bool newShip {newShip}, " +
@@ -89,6 +103,15 @@ namespace TweaksAndFixes
             Patch_Ui.NeedsConstructionListsClear = true;
         }
 
+
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(GameManager.ToConstructor))]
+        internal static void Postfix_ToConstructor(bool newShip, Ship viewShip, bool allowEdit, IEnumerable<Ship> allowEditMany, ShipType shipTypeNew, bool needCleanup, Player newPlayer)
+        {
+            Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
+            Melon<TweaksAndFixes>.Logger.Msg($"  Active Ship: {(Patch_Ship.LastCreatedShip == null ? "NULL" : Patch_Ship.LastCreatedShip.Name(false, false))}");
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch(nameof(GameManager.UpdateLoadingConstructor))]
         internal static void Prefix_UpdateLoadingConstructor(bool needCleanup, Il2CppSystem.Action onDone)
@@ -102,6 +125,59 @@ namespace TweaksAndFixes
         {
             Melon<TweaksAndFixes>.Logger.Msg($"ChangeState: GameState newState {newState}, bool raiseEnterStateEvents {raiseEnterStateEvents}");
         }
+
+        public static GameObject GameSavedInfoText = new();
+        public static Text GameSavedInfoTextElement = new();
+        public static float FadeTime = 5.0f;
+        public static float TimeLeft = 0f;
+        public static bool GameSavedInfoTextInitalized = false;
+        public static bool HasFadeEnded = true;
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(GameManager.SaveInternal))]
+        internal static void Prefix_SaveInternal(bool force, bool ignoreStateCheck)
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"Save Game: forced = {force}, ignoreStateCheck = {ignoreStateCheck}");
+
+            if (!GameSavedInfoTextInitalized)
+            {
+                GameSavedInfoText = GameObject.Instantiate(G.ui.overlayUi.GetChild("Version"));
+                GameSavedInfoText.name = "TAF_GameSavedInfoText";
+                GameSavedInfoText.SetParent(G.ui.overlayUi);
+                GameSavedInfoText.transform.position = new Vector3(500, 2050, 0);
+                GameSavedInfoText.transform.SetScale(1, 1, 1);
+                GameSavedInfoText.GetChild("VersionText").name = "TAF_GameSavedInfoTextElement";
+                GameSavedInfoTextElement = GameSavedInfoText.GetChild("TAF_GameSavedInfoTextElement").GetComponent<Text>();
+                GameSavedInfoTextElement.text = "Game Saved!";
+                GameSavedInfoTextElement.fontSize = 20;
+
+                GameSavedInfoTextInitalized = true;
+            }
+
+            TimeLeft = FadeTime;
+            GameSavedInfoTextElement.color = new Color(1, 1, 1, 1);
+            HasFadeEnded = false;
+        }
+
+        public static void Update()
+        {
+            if (TimeLeft > 0)
+            {
+                TimeLeft -= Time.deltaTime;
+
+                if (TimeLeft <= FadeTime / 2.0f)
+                {
+                    GameSavedInfoTextElement.color = new Color(1, 1, 1, (TimeLeft / FadeTime) * 2);
+                }
+            }
+            else if (!HasFadeEnded)
+            {
+                HasFadeEnded = true;
+                GameSavedInfoTextElement.color = new Color(1, 1, 1, 0);
+                TimeLeft = 0;
+            }
+        }
+
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(GameManager.GetTechYear))]
