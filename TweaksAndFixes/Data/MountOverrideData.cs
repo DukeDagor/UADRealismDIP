@@ -62,15 +62,35 @@ namespace TweaksAndFixes
                 Melon<TweaksAndFixes>.Logger.Error($"MountOverrideData: [{parent + " | " + index}] Invalid angle_left/angle_right. Sum of absolute value of angles is greter than 360: `{angle_left} + {-angle_right}`");
             }
 
-            var posData = position[1..^1].Replace(" ", "").Split(",");
-            if (posData.Length == 3)
+            if (position.Length >= 7 && position.StartsWith('(') && position.EndsWith(')'))
             {
-                positionParsed = new Vector3(float.Parse(posData[0]), float.Parse(posData[1]), float.Parse(posData[2]));
+                var posData = position[1..^1].Replace(" ", "").Split(",");
+
+                if (posData.Length == 3)
+                {
+                    float x = 0;
+                    float y = 0;
+                    float z = 0;
+
+                    if (float.TryParse(posData[0], out x) && float.TryParse(posData[1], out y) && float.TryParse(posData[2], out z))
+                    {
+                        positionParsed = new Vector3(x, y, z);
+                    }
+                    else
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"MountOverrideData: [{parent + " | " + index}] Invalid position `{position}`");
+                    }
+                }
+                else
+                {
+                    Melon<TweaksAndFixes>.Logger.Error($"MountOverrideData: [{parent + " | " + index}] Invalid position `{position}`");
+                }
             }
             else
             {
                 Melon<TweaksAndFixes>.Logger.Error($"MountOverrideData: [{parent + " | " + index}] Invalid position `{position}`");
             }
+
 
             if (mount_pos_type == "center") mountPositionTypeParsed = MountPositionType.CENTER;
             else if (mount_pos_type == "side") mountPositionTypeParsed = MountPositionType.SIDE;
