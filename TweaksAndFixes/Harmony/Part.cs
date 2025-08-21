@@ -573,7 +573,7 @@ namespace TweaksAndFixes
                     Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
                 }
 
-                else if (!float.TryParse(parent.data.paramx["mount_min"][0], out min))
+                else if (!float.TryParse(parent.data.paramx["mount_min"][0], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out min))
                 {
                     Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
                 }
@@ -593,7 +593,7 @@ namespace TweaksAndFixes
                     Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
                 }
 
-                else if (!float.TryParse(parent.data.paramx["mount_max"][0], out max))
+                else if (!float.TryParse(parent.data.paramx["mount_max"][0], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out max))
                 {
                     Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
                 }
@@ -613,7 +613,7 @@ namespace TweaksAndFixes
                     Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
                 }
 
-                else if (!float.TryParse(parent.data.paramx["mount_mult"][0], out mult))
+                else if (!float.TryParse(parent.data.paramx["mount_mult"][0], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out mult))
                 {
                     Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {parent.data.name}.");
                 }

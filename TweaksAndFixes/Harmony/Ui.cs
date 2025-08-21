@@ -355,7 +355,7 @@ namespace TweaksAndFixes
 
                         float parsed = 0;
 
-                        if (!float.TryParse(newStrength, out parsed))
+                        if (!float.TryParse(newStrength, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out parsed))
                         {
                             Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse {tech.name}: armor_str({tech.effects["armor_str"][0][0]}).");
                             continue;
@@ -726,6 +726,11 @@ namespace TweaksAndFixes
 
                     StringBuilder finalCount = new StringBuilder(2 ^ 24);
 
+                    finalCount.Append("# Index,Enabled,Part ID,Mount Rotation,Position,Mount Position Type,Valid Part Types,Min Caliber,Max Caliber,Min Barrel #,Max Barrel #,Collision Checks,Left Fire Angle Override,Right Fire Angle Override,Orient Fire Arc?,Rotate Same?,# Comment 1,# Comment 2\n");
+                    finalCount.Append("#,,,(0-360),\"(x: +Starboard/-Port, y: +Up/-Down, z: Fore/Aft)\",\"(any, center, side)\",See Comment,\"in, 0 = all\",\"in, 0 = all\",0 = all,0 = all,See Comment,See Comment,See Comment,fore/aft or starboard/port. No clue what it does.,1=true/0=false. No clue what it does.,Editing/Creating,\n");
+                    finalCount.Append("@index,enabled,parent,rotation,position,mount_pos_type,accepts,caliber_min,caliber_max,barrels_min,barrels_max,collision,angle_left,angle_right,orientation,rotate_same,Editing,Do not change @index.\n");
+                    finalCount.Append("default,1,,0,,any,barbette,0,0,0,0,check_all,0,0,,,Creating,\"For creating new mounts, set the index to -1.\"");
+
                     HashSet<string> parsedModels = new HashSet<string>();
 
                     Queue<GameObject> models = new Queue<GameObject>();
@@ -884,7 +889,7 @@ namespace TweaksAndFixes
                     {
                         GameObject parent = SelectedPart.mount.gameObject.GetParent().GetParent();
 
-                        Melon<TweaksAndFixes>.Logger.Msg(DumpHierarchy(parent));
+                        // Melon<TweaksAndFixes>.Logger.Msg(DumpHierarchy(parent));
 
                         Melon<TweaksAndFixes>.Logger.Msg($"\n{DumpSelectedPartData(SelectedPart)}");
                     }
@@ -898,7 +903,7 @@ namespace TweaksAndFixes
                         }
                         else
                         {
-                            Melon<TweaksAndFixes>.Logger.Msg($"{Patch_Ship.LastCreatedShip.Name(false, false)}\n{DumpHierarchy(Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChild("Sections"))}");
+                            // Melon<TweaksAndFixes>.Logger.Msg($"{Patch_Ship.LastCreatedShip.Name(false, false)}\n{DumpHierarchy(Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChild("Sections"))}");
                             Melon<TweaksAndFixes>.Logger.Msg($"\n{DumpHullData(Patch_Ship.LastCreatedShip)}");
                         }
                     }

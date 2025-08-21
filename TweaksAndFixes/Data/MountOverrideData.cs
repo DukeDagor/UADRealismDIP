@@ -72,7 +72,7 @@ namespace TweaksAndFixes
                     float y = 0;
                     float z = 0;
 
-                    if (float.TryParse(posData[0], out x) && float.TryParse(posData[1], out y) && float.TryParse(posData[2], out z))
+                    if (float.TryParse(posData[0], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out x) && float.TryParse(posData[1], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out y) && float.TryParse(posData[2], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out z))
                     {
                         positionParsed = new Vector3(x, y, z);
                     }
