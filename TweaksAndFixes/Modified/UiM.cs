@@ -7,6 +7,7 @@ using UnityEngine.UI;
 using Il2CppTMPro;
 using UnityEngine.Events;
 using static TweaksAndFixes.Config;
+using static Il2CppSystem.Linq.Expressions.Interpreter.CastInstruction.CastInstructionNoT;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8603
@@ -812,19 +813,28 @@ namespace TweaksAndFixes
             uiScaleSliderText.TryDestroyComponent<LocalizeText>();
             Slider uiScaleSliderControl = uiScaleSlider.GetChild("Campaign Slider").GetComponent<Slider>();
             uiScaleSliderControl.onValueChanged.RemoveAllListeners();
+
+            Canvas canvas = G.ui.gameObject.GetComponent<Canvas>();
+
+            if (TAF_Settings.settings.uiScaleDefault < 0)
+            {
+                TAF_Settings.settings.uiScaleDefault = canvas.scaleFactor;
+                TAF_Settings.settings.uiScale = canvas.scaleFactor;
+                SaveSettings();
+            }
+
             uiScaleSliderControl.value = TAF_Settings.settings.uiScale;
             uiScaleSliderControl.minValue = 1;
             uiScaleSliderControl.maxValue = 4;
 
-            Canvas canvas = G.ui.gameObject.GetComponent<Canvas>();
             canvas.scaleFactor = uiScaleSliderControl.value;
 
             uiScaleSliderControl.onValueChanged.AddListener(new System.Action<float>((float value) =>
             {
-                // Melon<TweaksAndFixes>.Logger.Msg($"Slider value changed: {value}");
-                if (value > 2.7f && value < 2.9f)
+                // Melon<TweaksAndFixes>.Logger.Msg($"Slider value changed: {value} / {TAF_Settings.settings.uiScaleDefault}");
+                if (value > TAF_Settings.settings.uiScaleDefault - 0.1f && value < TAF_Settings.settings.uiScaleDefault + 0.1f)
                 {
-                    uiScaleSliderControl.value = 2.8125f;
+                    uiScaleSliderControl.value = TAF_Settings.settings.uiScaleDefault;
                 }
             }));
 
@@ -846,13 +856,16 @@ namespace TweaksAndFixes
         public class TAF_Settings
         {
             public static TAF_Settings settings;
+            public static int CurrentSettingsVersion = 1;
             public int version { get; set; }
             public float uiScale { get; set; }
+            public float uiScaleDefault { get; set; }
 
             public TAF_Settings()
             {
-                version = 0;
-                uiScale = 2.8125f;
+                version = CurrentSettingsVersion;
+                uiScale = 2f;
+                uiScaleDefault = -1;
             }
         }
 
@@ -864,8 +877,19 @@ namespace TweaksAndFixes
             {
                 Melon<TweaksAndFixes>.Logger.Msg($"Loading settings from {SavePath.path}...");
                 TAF_Settings.settings = Serializer.JSON.LoadJsonFile<TAF_Settings>(SavePath.path);
-                Melon<TweaksAndFixes>.Logger.Msg($"  {TAF_Settings.settings.version}");
-                Melon<TweaksAndFixes>.Logger.Msg($"  {TAF_Settings.settings.uiScale}");
+
+                if (TAF_Settings.settings.version != TAF_Settings.CurrentSettingsVersion)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Settings file out of date, resetting file. File: {TAF_Settings.settings.version} != Latest: {TAF_Settings.CurrentSettingsVersion}");
+                    TAF_Settings.settings = new TAF_Settings();
+                }
+                else
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"         version : {TAF_Settings.settings.version}");
+                    Melon<TweaksAndFixes>.Logger.Msg($"         uiScale : {TAF_Settings.settings.uiScale}");
+                    Melon<TweaksAndFixes>.Logger.Msg($"  uiScaleDefault : {TAF_Settings.settings.uiScaleDefault}");
+                }
+
             }
             else
             {
