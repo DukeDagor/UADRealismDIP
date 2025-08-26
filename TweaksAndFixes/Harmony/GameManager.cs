@@ -73,7 +73,8 @@ namespace TweaksAndFixes
                 $"bool newShip {newShip}, " +
                 $"Ship viewShip {(viewShip != null ? viewShip.Name(false, false) : "NULL")}, " +
                 $"bool allowEdit {allowEdit}, " +
-                $"IEnumerable<Ship> allowEditMany {(allowEditMany != null ? new List<Ship>(allowEditMany).Count : "NULL")}, " +
+                // $"IEnumerable<Ship> allowEditMany {(allowEditMany != null ? new List<Ship>(allowEditMany).Count : "NULL")}, " +
+                $"IEnumerable<Ship> allowEditMany {allowEditMany}, " +
                 $"ShipType shipTypeNew, {(shipTypeNew != null ? shipTypeNew.nameUi : "NULL")} " +
                 $"bool needCleanup, {needCleanup} " +
                 $"Player newPlayer {(newPlayer != null ? newPlayer.Name(false) : "NULL")} "
