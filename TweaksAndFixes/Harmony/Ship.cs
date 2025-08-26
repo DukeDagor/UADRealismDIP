@@ -135,8 +135,14 @@ namespace TweaksAndFixes
         [HarmonyPatch(nameof(Ship.GetRefitYearNameEnd))]
         internal static void Prefix_GetRefitYearNameEnd(Ship __instance, ref string __result)
         {
-            __result = $" ({ ModUtils.NumToMonth(__instance.dateCreatedRefit.AsDate().Month)}. { __instance.dateCreatedRefit.AsDate().Year})";
-            // Melon<TweaksAndFixes>.Logger.Msg($"GetRefitYearNameEnd: {__instance.Name(false, false, false, false, true)}{__result}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"GetRefitYearNameEnd: {(__instance.designShipForRefit == null ? "NULL" : __instance.designShipForRefit.Name(false, false))}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"                     `{__instance.Name(true, false, false, false, false)}` `{__instance.Name(false, false, false, false, true)}` `{__instance.Name(true, false, false, false, true)}`");
+            // Melon<TweaksAndFixes>.Logger.Msg($"                     Original `{__result}`");
+
+            string prefix = __result[^1] != '2' ? $"{__instance.Name(false, false, false, false, true)}" : "";
+
+            __result = $"{prefix} ({ModUtils.NumToMonth(CampaignController.Instance.CurrentDate.AsDate().Month)}. {CampaignController.Instance.CurrentDate.AsDate().Year})";
+            // Melon<TweaksAndFixes>.Logger.Msg($"                     New      `{__result}`");
         }
 
         [HarmonyPrefix]
@@ -205,28 +211,6 @@ namespace TweaksAndFixes
                 }
             }
         }
-
-        // RemoveChildForPart
-
-        // [HarmonyPrefix]
-        // [HarmonyPatch(nameof(Ship.RemoveChildForPart))]
-        // internal static bool Prefix_RemoveChildForPart(Ship __instance, Part part)
-        // {
-        //     Melon<TweaksAndFixes>.Logger.Msg($"Removing children for part {part.Name()}");
-        // 
-        //     Stack<Part> stack = new Stack<Part>();
-        // 
-        //     foreach (var mount in part.mountsInside)
-        //     {
-        //         if (mount.employedPart != null)
-        //         {
-        //             Melon<TweaksAndFixes>.Logger.Msg($"  {mount.employedPart.Name()}");
-        //             stack.Push(mount.employedPart);
-        //         }
-        //     }
-        // 
-        //     return true;
-        // }
 
 
 
