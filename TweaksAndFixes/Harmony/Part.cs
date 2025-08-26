@@ -430,7 +430,7 @@ namespace TweaksAndFixes
         {
             if (__instance.mount == null && GameManager.Instance.CurrentState != GameManager.GameState.Constructor)
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name()}.Mount = NULL, attempting to remount...");
+                // Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name()}.Mount = NULL, attempting to remount...");
 
                 Ship partShip = __instance.ship;
 
