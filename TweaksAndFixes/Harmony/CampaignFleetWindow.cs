@@ -152,7 +152,7 @@ namespace TweaksAndFixes.Harmony
 
                         var lastSelection = G.ui.FleetWindow.selectedElements[^1];
 
-                        bool isActive = lastSelection.Status.text.Contains("Normal") || lastSelection.Status.text.Contains("At Sea");
+                        bool isActive = lastSelection.Status.text.Contains("Normal") || lastSelection.Status.text.Contains("Mothballed") || lastSelection.Status.text.Contains("Low Crew") || lastSelection.Status.text.Contains("At Sea");
                         bool isBeingBuilt = lastSelection.Status.text.Contains("Building");
                         bool isOurs = element.Value.Sold.text.Length == 0;
 
