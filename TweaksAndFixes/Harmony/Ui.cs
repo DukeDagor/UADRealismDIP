@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using static TweaksAndFixes.ModUtils;
 using Il2CppUiExt;
 using System.Text;
+using System.Xml.Linq;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -16,6 +17,7 @@ namespace TweaksAndFixes
     [HarmonyPatch(typeof(Ui))]
     internal class Patch_Ui
     {
+        private static bool hasPrintedVersion = false;
 
         [HarmonyPatch(nameof(Ui.Start))]
         [HarmonyPostfix]
@@ -55,6 +57,15 @@ namespace TweaksAndFixes
                 case 4: text = string.Empty; break;
             }
             vt.text = text;
+            if (!hasPrintedVersion && text != null && text.Length > 0)
+            {
+                hasPrintedVersion = true;
+
+                Melon<TweaksAndFixes>.Logger.Msg($"************************************************** Overriding Version");
+                Melon<TweaksAndFixes>.Logger.Msg($"#{new String('-', text.Length + 2)}#");
+                Melon<TweaksAndFixes>.Logger.Msg($"| {text} |");
+                Melon<TweaksAndFixes>.Logger.Msg($"#{new String('-', text.Length + 2)}#");
+            }
         }
 
 
