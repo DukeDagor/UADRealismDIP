@@ -36,6 +36,7 @@ namespace TweaksAndFixes
             InConstructorNew, // New ship
             InConstructorExisting, // Refitting or modifying custom battle ship
             InConstructorViewMode, // Can't edit, only view
+            LoadingPredefinedDesigns,
             Other,
         }
 

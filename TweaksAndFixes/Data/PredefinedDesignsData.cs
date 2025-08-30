@@ -80,7 +80,9 @@ namespace TweaksAndFixes
 
         private void LoadData()
         {
+            _loaded = false;
             _predefFileData.Clear();
+            Patch_GameManager.CurrentSubGameState = Patch_GameManager.SubGameState.LoadingPredefinedDesigns;
 
             string text;
             if (Config._PredefinedDesignsDataFile.Exists)
@@ -106,6 +108,7 @@ namespace TweaksAndFixes
 
             Melon<TweaksAndFixes>.Logger.Msg("Loading predefined design database");
             Serializer.CSV.Read<List<PredefData>, PredefData>(text, _predefFileData);
+            Patch_GameManager.CurrentSubGameState = Patch_GameManager.SubGameState.Other;
             _loaded = true;
         }
 
