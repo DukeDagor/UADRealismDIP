@@ -6,6 +6,8 @@ using Il2CppSystem.Linq;
 using System.Text;
 using static Il2Cpp.Ship;
 using static MelonLoader.MelonLogger;
+using System.Drawing;
+using System.Reflection;
 
 namespace TweaksAndFixes
 {
@@ -373,7 +375,9 @@ namespace TweaksAndFixes
 
                 string concatPath = root + path.ToString();
 
-                string trueConcatPath = concatPath + (concatPath.Length == 0 ? obj.name.Replace("(Clone)", "") : $"/{obj.name.Replace("(Clone)", "")}");
+                string trueConcatPath = concatPath + (concatPath.Length != 0 && concatPath.EndsWith('/') ? "" : "/") + obj.name.Replace("(Clone)", "");
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Checking `{concatPath}` and `{trueConcatPath}`");
 
                 if (_ParentToNewData.ContainsKey(trueConcatPath))
                 {
@@ -512,6 +516,105 @@ namespace TweaksAndFixes
             }
         }
 
+        public static void ApplyMountOverridesToShip(Ship ship, bool forced = false)
+        {
+            // Melon<TweaksAndFixes>.Logger.Error($"{ship == null} : {GameManager.Instance == null}");
+
+            if (ship == null) return;
+
+            if (GameManager.Instance.CurrentState == GameManager.GameState.Battle || Patch_GameManager.CurrentSubGameState == Patch_GameManager.SubGameState.LoadingPredefinedDesigns) return;
+
+            if (ship.hull == null ||
+                ship.hull.gameObject.GetChildren().Count == 0 ||
+                ship.hull.gameObject.GetChildren()[0].GetChildren().Count == 0 ||
+                ship.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren().Count == 0) return;
+
+            // Melon<TweaksAndFixes>.Logger.Error($"Overriding mounts for ship {ship.Name(false, false)}");
+
+            foreach (Part part in ship.parts)
+            {
+                if (part == null) continue;
+
+                if (part.gameObject.GetChildren().Count == 0) continue;
+
+                // Melon<TweaksAndFixes>.Logger.Error($"Checking part {part.Name()}");
+
+                MountOverrideData.ApplyMountOverride(part, part.gameObject.GetChildren()[0], "", true, forced);
+            }
+
+            Part hull = ship.hull;
+
+            // Melon<TweaksAndFixes>.Logger.Error($"Hull: {null != null}");
+
+            if (hull != null &&
+                hull.gameObject.GetChildren().Count > 0 &&
+                hull.gameObject.GetChildren()[0].GetChildren().Count > 0 &&
+                hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren().Count > 0)
+            {
+                GameObject shipObj = ship.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren()[0];
+
+                // Melon<TweaksAndFixes>.Logger.Error($"Checking ship hull {hull.name}");
+
+                foreach (GameObject section in shipObj.GetChildren())
+                {
+                    MountOverrideData.ApplyMountOverride(ship.hull, section, $"{ship.hull.GetChildren()[0].name.Replace("(Clone)", "")}/Visual/Sections/", true, forced);
+                }
+            }
+
+            // Remount parts after updating
+
+            Part placingPart = null;
+
+            if (ship.gameObject.GetChild("PlacingPart", true) != null)
+            {
+                placingPart = ship.gameObject.GetChild("PlacingPart").GetComponent<Part>();
+            }
+
+            foreach (Part part in ship.parts)
+            {
+                if (part == placingPart) continue;
+            
+                if (part.mount != null)
+                {
+                    if (part.mount.transform.position.x < -99000)
+                    {
+                        part.mount = null;
+                    }
+                    else if (part.transform.position != part.mount.transform.position)
+                    {
+                        Vector3 partPos = part.transform.position;
+                        Vector3 mountPos = part.mount.transform.position;
+                        
+                        if (!ModUtils.NearlyEqual(partPos, mountPos))
+                        {
+                            // Melon<TweaksAndFixes>.Logger.Msg($"Incorrect part snap, unparenting part {part.Name()} at {part.transform.position} from mount at {part.mount.transform.position}");
+                            part.mount = null;
+                            continue;
+                        }
+                
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Snapping {part.Name()} at {part.transform.position} to mount at {part.mount.transform.position}");
+                        part.transform.position = part.mount.transform.position;
+                    }
+                }
+                else if (ship.mounts != null)
+                {
+                    foreach (Mount mount in ship.mounts)
+                    {
+                        if (mount == null) continue;
+                        
+                        if (mount.employedPart != null) continue;
+                        
+                        if (ModUtils.NearlyEqual(mount.transform.position, part.transform.position))
+                        {
+                            // Melon<TweaksAndFixes>.Logger.Msg($"Snapping {part.Name()} at {part.transform.position} to mount at {mount.transform.position}");
+                            part.Mount(mount);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         public static void OverrideMountData()
         {
             foreach (var data in BaseGamePartModelData._Data)
@@ -637,16 +740,44 @@ namespace TweaksAndFixes
         }
     }
 
-    // [HarmonyPatch(typeof(Util))]
+    // [HarmonyPatch(typeof(Resources))]
     // internal class Util_Clear_Resource_Cache
     // {
-    //     [HarmonyPatch(nameof(Util.ClearResourcesCache))]
-    //     [HarmonyPostfix]
-    //     internal static void Postfix_ClearResourcesCache()
+    //     // [HarmonyPatch(nameof(Resources.Load))]
+    //     // [HarmonyPostfix]
+    //     // internal static void Postfix_ClearResourcesCache(string path, Il2CppSystem.Type systemTypeInstance)
+    //     // {
+    //     //     Melon<TweaksAndFixes>.Logger.Msg($"Loading resoruce at {path}");
+    //     // }
+    // 
+    //     internal static MethodBase TargetMethod()
     //     {
-    //         Melon<TweaksAndFixes>.Logger.Msg($"Reloading Mount Overrides after cache clear...");
-    //         MountOverrideData.OverrideMountData();
-    //         Melon<TweaksAndFixes>.Logger.Msg($"Done!");
+    //         //return AccessTools.Method(typeof(Part), nameof(Part.CanPlace), new Type[] { typeof(string).MakeByRefType(), typeof(List<Part>).MakeByRefType(), typeof(List<Collider>).MakeByRefType() });
+    // 
+    //         // Do this manually
+    //         var methods = AccessTools.GetDeclaredMethods(typeof(Resources));
+    // 
+    //         int index = 0;
+    // 
+    //         foreach (var m in methods)
+    //         {
+    //             if (m.Name != nameof(Resources.LoadAsync))
+    //                 continue;
+    // 
+    //             index++;
+    // 
+    //             Melon<TweaksAndFixes>.Logger.Msg($"Checking {m.Name} with {m.GetParameters().Length} params.");
+    //         
+    //             if (index == 1)
+    //                 return m;
+    //         }
+    // 
+    //         return null;
+    //     }
+    // 
+    //     static void PostFix(string path)
+    //     {
+    //         Melon<TweaksAndFixes>.Logger.Msg($"Loading resoruce at {path}");
     //     }
     // }
 }
