@@ -139,7 +139,9 @@ namespace TweaksAndFixes
             // Melon<TweaksAndFixes>.Logger.Msg($"                     `{__instance.Name(true, false, false, false, false)}` `{__instance.Name(false, false, false, false, true)}` `{__instance.Name(true, false, false, false, true)}`");
             // Melon<TweaksAndFixes>.Logger.Msg($"                     Original `{__result}`");
 
-            string prefix = __result[^1] != '2' ? $"{__instance.Name(false, false, false, false, true)}" : "";
+            string prefix = __result.Contains(__instance.Name(false, false, false, false, true)) ? $"{__instance.Name(false, false, false, false, true)}" : "";
+            
+            // string prefix = __result[^1] != '2' ? $"{__result.Substring(0, __result.LastIndexOf('(') - 1)}" : "";
 
             __result = $"{prefix} ({ModUtils.NumToMonth(CampaignController.Instance.CurrentDate.AsDate().Month)}. {CampaignController.Instance.CurrentDate.AsDate().Year})";
             // Melon<TweaksAndFixes>.Logger.Msg($"                     New      `{__result}`");
@@ -211,9 +213,20 @@ namespace TweaksAndFixes
                 }
             }
         }
+        
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Ship.AddPart))]
+        internal static void Postfix_AddPart(Ship __instance, Part part)
+        {
+            MountOverrideData.ApplyMountOverridesToShip(__instance);
+        }
 
-
-
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Ship.RefreshHull))]
+        internal static void Postfix_RefreshHull(Ship __instance)
+        {
+            MountOverrideData.ApplyMountOverridesToShip(__instance);
+        }
 
 
         // ########## MODIFIED SHIP GENERATION ########## //

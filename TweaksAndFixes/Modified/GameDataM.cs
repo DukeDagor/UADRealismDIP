@@ -143,21 +143,7 @@ namespace TweaksAndFixes
 
                 if (Patch_Ship.LastCreatedShip != null)
                 {
-                    foreach (Part part in Patch_Ship.LastCreatedShip.parts)
-                    {
-                        if (part == null) continue;
-
-                        // MountOverrideData.ApplyMountOverride(part);
-
-                        MountOverrideData.ApplyMountOverride(part, part.gameObject.GetChildren()[0], "", true, true);
-                    }
-
-                    GameObject ship = Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren()[0];
-
-                    foreach (GameObject section in ship.GetChildren())
-                    {
-                        MountOverrideData.ApplyMountOverride(Patch_Ship.LastCreatedShip.hull, section, $"{Patch_Ship.LastCreatedShip.hull.GetChildren()[0].name.Replace("(Clone)", "")}/Visual/Sections/", true, true);
-                    }
+                    MountOverrideData.ApplyMountOverridesToShip(Patch_Ship.LastCreatedShip, true);
                 }
 
                 text = GameDataM.GetText("randParts");

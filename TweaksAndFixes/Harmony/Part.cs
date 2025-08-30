@@ -162,6 +162,13 @@ namespace TweaksAndFixes
             }
         }
 
+        // [HarmonyPatch(nameof(Part.LoadModel))]
+        // [HarmonyPostfix]
+        // internal static void Postfix_LoadModel(Part __instance)
+        // {
+        //     Melon<TweaksAndFixes>.Logger.Msg($"Load part model for {__instance.Name()}");
+        // }
+
 
         private static void OverrideFiringAngle(Part __instance, ref Part.FireSectorInfo fireSector)
         {
@@ -428,93 +435,6 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static void Prefix_CalcFireSectorNonAlloc(Part __instance)
         {
-            if (__instance.mount == null && GameManager.Instance.CurrentState != GameManager.GameState.Constructor)
-            {
-                // Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name()}.Mount = NULL, attempting to remount...");
-
-                Ship partShip = __instance.ship;
-
-                if (partShip == null)
-                {
-                    // Melon<TweaksAndFixes>.Logger.Msg($"  Failed to find ship!");
-                    return;
-                }
-
-                foreach (Part part in partShip.parts)
-                {
-                    if (part == null) continue;
-
-                    // MountOverrideData.ApplyMountOverride(part);
-
-                    if (part.gameObject.GetChildren().Count == 0) continue;
-
-                    MountOverrideData.ApplyMountOverride(part, part.gameObject.GetChildren()[0], "", true);
-                }
-
-                Part hull = partShip.hull;
-
-                if (hull != null &&
-                    hull.gameObject.GetChildren().Count > 0 &&
-                    hull.gameObject.GetChildren()[0].GetChildren().Count > 0 &&
-                    hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren().Count > 0)
-                {
-                    GameObject ship = partShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren()[0];
-
-                    foreach (GameObject section in ship.GetChildren())
-                    {
-                        MountOverrideData.ApplyMountOverride(partShip.hull, section, $"{partShip.hull.GetChildren()[0].name.Replace("(Clone)", "")}/Visual/Sections/", true);
-                    }
-                }
-
-                foreach (Part part in partShip.parts)
-                {
-                    if (part.mount != null)
-                    {
-                        if (part.mount.transform.position.x < -99000)
-                        {
-                            part.mount = null;
-                        }
-                        else
-                        {
-                            Vector3 partPos = part.transform.position;
-                            Vector3 mountPos = part.mount.transform.position;
-
-                            if (Math.Abs(partPos.x - mountPos.x) > 0.5f || Math.Abs(partPos.y - mountPos.y) > 0.5f || Math.Abs(partPos.z - mountPos.z) > 0.5f)
-                            {
-                                // Melon<TweaksAndFixes>.Logger.Msg($"Incorrect part snap, unparenting part {part.Name()} at {part.transform.position} from mount at {part.mount.transform.position}");
-                                part.mount = null;
-                                continue;
-                            }
-
-                            // Melon<TweaksAndFixes>.Logger.Msg($"Snapping {part.Name()} at {part.transform.position} to mount at {part.mount.transform.position}");
-                            part.transform.position = part.mount.transform.position;
-                        }
-                    }
-                    else
-                    {
-                        foreach (Mount mount in partShip.mounts)
-                        {
-                            if (mount.employedPart != null) continue;
-
-                            if (ModUtils.NearlyEqual(mount.transform.position, part.transform.position))
-                            {
-                                // Melon<TweaksAndFixes>.Logger.Msg($"Snapping {part.Name()} at {part.transform.position} to mount at {mount.transform.position}");
-                                part.Mount(mount);
-                                part.transform.position = mount.transform.position;
-                                // if (part == __instance) Melon<TweaksAndFixes>.Logger.Msg($"  Successfully remounted part!");
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (__instance.mount == null)
-                {
-                    // Melon<TweaksAndFixes>.Logger.Msg($"  Failed to remount!");
-                    return;
-                }
-            }
-
             if (Config.Param("taf_large_gun_ignore_small_gun_enable", 1) != 1) return;
 
             CollectBigGunIgnoreSmallGun(__instance);

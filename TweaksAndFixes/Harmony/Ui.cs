@@ -669,6 +669,13 @@ namespace TweaksAndFixes
             Patch_GameManager.Update();
             CampaignControllerM.Update();
 
+            var activeShips = ShipM.GetActiveShips();
+
+            for (int i = 0; i < activeShips.Count; i++)
+            {
+                MountOverrideData.ApplyMountOverridesToShip(activeShips[i]);
+            }
+
             // New UI elements
             if (Config.Param("taf_dockyard_new_logic", 1) == 1)
             {
@@ -869,13 +876,13 @@ namespace TweaksAndFixes
                                     continue;
                                 }
                             }
-                            else if (isHull)
-                            {
-                                if (obj.name.StartsWith("Mount:tower_main") || obj.name.StartsWith("Mount:tower_sec") || obj.name.StartsWith("Mount:funnel") || obj.name.StartsWith("Mount:si_barbette"))
-                                {
-                                    continue;
-                                }
-                            }
+                            // else if (isHull)
+                            // {
+                            //     if (obj.name.StartsWith("Mount:tower_main") || obj.name.StartsWith("Mount:tower_sec") || obj.name.StartsWith("Mount:funnel") || obj.name.StartsWith("Mount:si_barbette"))
+                            //     {
+                            //         continue;
+                            //     }
+                            // }
 
                             hasMounts = true;
 
@@ -1067,17 +1074,7 @@ namespace TweaksAndFixes
                 TryPairPartsAndMountsOnce = true;
             }
 
-
-            if (UpdateActiveShip)
-            {
-                Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
-
-                if (Patch_Ship.LastCreatedShip != null)
-                {
-                    // Melon<TweaksAndFixes>.Logger.Msg($"Active ship: {Patch_Ship.LastCreatedShip.Name(false, false)}");
-                    UpdateActiveShip = false;
-                }
-            }
+            Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
 
             if (Patch_Ship.LastCreatedShip == null)
             {
@@ -1144,34 +1141,10 @@ namespace TweaksAndFixes
 
             bool inViewMode = Patch_GameManager.CurrentSubGameState == Patch_GameManager.SubGameState.InConstructorViewMode;
 
-            if (!inViewMode)
-            {
-                foreach (Part part in Patch_Ship.LastCreatedShip.parts)
-                {
-                    if (part == null) continue;
-
-                    // MountOverrideData.ApplyMountOverride(part);
-
-                    if (part.gameObject.GetChildren().Count == 0) continue;
-
-                    MountOverrideData.ApplyMountOverride(part, part.gameObject.GetChildren()[0], "", true);
-                }
-
-                Part hull = Patch_Ship.LastCreatedShip.hull;
-
-                if (hull != null &&
-                    hull.gameObject.GetChildren().Count > 0 &&
-                    hull.gameObject.GetChildren()[0].GetChildren().Count > 0 &&
-                    hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren().Count > 0)
-                {
-                    GameObject ship = Patch_Ship.LastCreatedShip.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChildren()[0];
-
-                    foreach (GameObject section in ship.GetChildren())
-                    {
-                        MountOverrideData.ApplyMountOverride(Patch_Ship.LastCreatedShip.hull, section, $"{Patch_Ship.LastCreatedShip.hull.GetChildren()[0].name.Replace("(Clone)", "")}/Visual/Sections/", true);
-                    }
-                }
-            }
+            // if (!inViewMode)
+            // {
+            //     MountOverrideData.ApplyMountOverridesToShip(Patch_Ship.LastCreatedShip);
+            // }
 
             if (!inViewMode && UseNewConstructionLogic() && Patch_Ship.LastCreatedShip.parts.Count > 0)
             {
@@ -1234,48 +1207,6 @@ namespace TweaksAndFixes
                 if (toRemove != null)
                 {
                     Patch_Part.applyMirrorFromTo.Remove(toRemove);
-                }
-
-                foreach (Part part in Patch_Ship.LastCreatedShip.parts)
-                {
-                    if (part == SelectedPart) continue;
-
-                    if (part.mount != null)
-                    {
-                        if (part.mount.transform.position.x < -99000)
-                        {
-                            part.mount = null;
-                        }
-                        else if (part.transform.position != part.mount.transform.position)
-                        {
-                            Vector3 partPos = part.transform.position;
-                            Vector3 mountPos = part.mount.transform.position;
-
-                            if (Math.Abs(partPos.x - mountPos.x) > 0.5f || Math.Abs(partPos.y - mountPos.y) > 0.5f || Math.Abs(partPos.z - mountPos.z) > 0.5f)
-                            {
-                                // Melon<TweaksAndFixes>.Logger.Msg($"Incorrect part snap, unparenting part {part.Name()} at {part.transform.position} from mount at {part.mount.transform.position}");
-                                part.mount = null;
-                                continue;
-                            }
-
-                            // Melon<TweaksAndFixes>.Logger.Msg($"Snapping {part.Name()} at {part.transform.position} to mount at {part.mount.transform.position}");
-                            part.transform.position = part.mount.transform.position;
-                        }
-                    }
-                    else
-                    {
-                        foreach (Mount mount in Patch_Ship.LastCreatedShip.mounts)
-                        {
-                            if (mount.employedPart != null) continue;
-
-                            if (ModUtils.NearlyEqual(mount.transform.position, part.transform.position))
-                            {
-                                // Melon<TweaksAndFixes>.Logger.Msg($"Snapping {part.Name()} at {part.transform.position} to mount at {mount.transform.position}");
-                                part.Mount(mount);
-                                break;
-                            }
-                        }
-                    }
                 }
 
                 // Loop over all current parts
