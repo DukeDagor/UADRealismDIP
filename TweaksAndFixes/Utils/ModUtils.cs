@@ -101,20 +101,17 @@ namespace TweaksAndFixes
 
         public static bool NearlyEqual(float a, float b)
         {
-            return (int)(Il2CppSystem.Math.Round(a * 1.0f) + 0.01f) == (int)(Il2CppSystem.Math.Round(b * 1.0f) + 0.01f);
+            return Math.Abs(a - b) < 0.01f;
         }
 
         public static bool NearlyEqual(Vector2 a, Vector2 b)
         {
-            return (int)(Il2CppSystem.Math.Round(a.x * 10.0f) + 0.01f) == (int)(Il2CppSystem.Math.Round(b.x * 10.0f) + 0.01f) &&
-                   (int)(Il2CppSystem.Math.Round(a.y * 10.0f) + 0.01f) == (int)(Il2CppSystem.Math.Round(b.y * 10.0f) + 0.01f);
+            return NearlyEqual(a.x, b.x) && NearlyEqual(a.y, b.y);
         }
 
         public static bool NearlyEqual(Vector3 a, Vector3 b)
         {
-            return (int)(Il2CppSystem.Math.Round(a.x * 10.0f) + 0.01f) == (int)(Il2CppSystem.Math.Round(b.x * 10.0f) + 0.01f) &&
-                   (int)(Il2CppSystem.Math.Round(a.y * 10.0f) + 0.01f) == (int)(Il2CppSystem.Math.Round(b.y * 10.0f) + 0.01f) &&
-                   (int)(Il2CppSystem.Math.Round(a.z * 10.0f) + 0.01f) == (int)(Il2CppSystem.Math.Round(b.z * 10.0f) + 0.01f);
+            return NearlyEqual(a.x, b.x) && NearlyEqual(a.y, b.y) && NearlyEqual(a.z, b.z);
         }
 
         public static string MountObjToCSV(int count, string path, float rotation, Vector3 pos, GameObject mount)
