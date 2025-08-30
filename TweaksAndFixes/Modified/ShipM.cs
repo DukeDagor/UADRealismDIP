@@ -19,7 +19,7 @@ namespace TweaksAndFixes
 {
     public static class ShipM
     {
-        public static List<Ship> ActiveShips = new();
+        public static List<Ship> ActiveShips = new(512); // TODO: If there's more active ships than this, then we have a problem...
 
         private static void UpdateActiveShipsList()
         {
@@ -47,6 +47,13 @@ namespace TweaksAndFixes
             }
 
             return ActiveShips[0];
+        }
+
+        public static List<Ship> GetActiveShips()
+        {
+            UpdateActiveShipsList();
+
+            return ActiveShips;
         }
 
         public static Dictionary<TKey, TValue> GetParamDict<TKey, TValue>(Ship _this, string pName) where TKey : notnull
