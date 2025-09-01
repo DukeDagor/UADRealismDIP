@@ -471,6 +471,97 @@ namespace TweaksAndFixes
 
             ModifyUi(ConstructorLeftPannel).SetChildOrder("Scrollbar Vertical", "Scrollbar Horizontal", "Viewport");
 
+            // uiRangesCont -> Child -> RangeCanvas
+
+            // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/NationAndYearSelection/ChooseYear
+
+            // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/ShipName
+
+            GameObject ChooseNationYearYearSelector = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/NationAndYearSelection/ChooseYear");
+            ModifyUi(ChooseNationYearYearSelector).SetEnabled(false);
+
+            GameObject ChooseNationYear = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/NationAndYearSelection");
+
+            // ModifyUi(ChooseNationYear).SetChildOrder();
+
+            GameObject InputChooseYear = GameObject.Instantiate(ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/ShipName"));
+            InputChooseYear.SetParent(ChooseNationYear);
+            InputChooseYear.transform.SetScale(1f, 1f, 1f);
+            InputChooseYear.name = "InputChooseYear";
+            InputChooseYear.GetComponent<LayoutElement>().preferredHeight = 40;
+
+            GameObject InputChooseYearEditName = InputChooseYear.GetChild("EditName");
+            LayoutGroup InputChooseYearEditNameLayout = InputChooseYearEditName.GetComponent<LayoutGroup>();
+            InputChooseYearEditName.GetComponent<LayoutElement>().preferredHeight = 40;
+
+            GameObject InputChooseYearBG = InputChooseYear.GetChild("EditName").GetChild("Bg");
+
+            GameObject InputChooseYearEdit = InputChooseYear.GetChild("EditName").GetChild("Edit");
+            InputChooseYearEdit.TryDestroyComponent<CheckShipName>();
+            InputChooseYearEdit.transform.SetScale(1.3f, 1.3f, 1.3f);
+            InputField InputChooseYearEditField = InputChooseYearEdit.GetComponent<InputField>();
+            InputChooseYearEditField.text = "1890";
+            //InputChooseYearEditField.textComponent.fontSize += 5;
+
+            GameObject InputChooseYearStatic = InputChooseYear.GetChild("EditName").GetChild("Static");
+            InputChooseYearStatic.GetChild("Header").TryDestroy();
+            InputChooseYearStatic.transform.SetScale(1.3f, 1.3f, 1.3f);
+            Text InputChooseYearStaticText = InputChooseYearStatic.GetChild("Text").GetComponent<Text>();
+            InputChooseYearStaticText.text = "1890";
+            //InputChooseYearStaticText.fontSize += 5;
+
+            GameObject spacer = GameObject.Instantiate(InputChooseYear.GetChild("EditName").GetChild("Static").GetChild("EditIcon"));
+            spacer.transform.SetParent(InputChooseYearStatic.transform);
+            spacer.transform.SetScale(1f, 1f, 1f);
+            spacer.transform.SetSiblingIndex(0);
+            spacer.TryDestroyComponent<Image>();
+            spacer.TryDestroyComponent<CanvasGroup>();
+            spacer.TryDestroyComponent<Outline>();
+
+            Button btn = InputChooseYear.GetChild("EditName").AddComponent<Button>();
+            btn.onClick.AddListener(new System.Action(() =>
+            {
+                InputChooseYearBG.SetActive(true);
+                InputChooseYearEdit.SetActive(true);
+                InputChooseYearEditField.ActivateInputField();
+                InputChooseYearStatic.SetActive(false);
+            }));
+            InputChooseYearEditField.onValidateInput = null;
+            InputChooseYearEditField.onValueChange.AddListener(new System.Action<string>((string value) =>
+            {
+                int _ = 0;
+
+                if (value.Length > 0 && !int.TryParse("" + value[^1], out _))
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Invalid: `{value[^1]}`");
+                    InputChooseYearEditField.text = InputChooseYearEditField.text.Substring(0, InputChooseYearEditField.text.Length - 1);
+                }
+            }));
+            InputChooseYearEditField.onEndEdit.AddListener(new System.Action<string>((string value) =>
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg($"Entered: `{value}`");
+                InputChooseYearBG.SetActive(false);
+                InputChooseYearEdit.SetActive(false);
+                InputChooseYearEditField.DeactivateInputField();
+                InputChooseYearStatic.SetActive(true);
+
+                int parsedYear = 0;
+
+                if (value.Length == 0 || !int.TryParse(value, out parsedYear) || parsedYear == G.ui.sharedDesignYear || parsedYear < 1890 || parsedYear > 1950)
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Parsed: `{parsedYear}`");
+                    InputChooseYearEditField.text = G.ui.sharedDesignYear.ToString();
+                    InputChooseYearStaticText.text = G.ui.sharedDesignYear.ToString();
+                }
+                else
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Parsed: `{parsedYear}`");
+                    G.ui.sharedDesignYear = parsedYear;
+                    GameManager.Instance.RefreshSharedDesign(parsedYear, G.ui.sharedDesignPlayer);
+                    InputChooseYearStaticText.text = value;
+                }
+            }));
+
             // GameObject root = G.ui.gameObject;
 
             // Canvas canvas = root.GetComponent<Canvas>();
