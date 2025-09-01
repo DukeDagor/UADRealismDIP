@@ -228,6 +228,50 @@ namespace TweaksAndFixes
             MountOverrideData.ApplyMountOverridesToShip(__instance);
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Ship.Update))]
+        internal static void Postfix_Update(Ship __instance)
+        {
+            if (__instance.uiRangesCont == null) return;
+            if (__instance.uiRangesCont.active == false) return;
+            
+            foreach (GameObject range in __instance.uiRangesCont.GetChildren())
+            {
+                if (range.active == false) continue;
+            
+                Camera cam = G.cam.cameraComp;
+            
+                RectTransform rect = range.GetChild("RangeCanvas").GetComponent<RectTransform>();
+                
+                Vector3 min = rect.transform.position;
+                min.x -= rect.sizeDelta.y / 2 * rect.localScale.x * 2;
+                min.y -= rect.sizeDelta.x / 2 * rect.localScale.x;
+                Vector3 worldMin = cam.WorldToScreenPoint(min);
+
+                Vector3 max = rect.transform.position;
+                max.x += rect.sizeDelta.y / 2 * rect.localScale.x * 2;
+                max.y += rect.sizeDelta.x / 2 * rect.localScale.x;
+                Vector3 worldMax = cam.WorldToScreenPoint(max);
+                
+                if (Input.mousePosition.x > worldMin.x && Input.mousePosition.x < worldMax.x && Input.mousePosition.y > worldMin.y && Input.mousePosition.y < worldMax.y)
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"{range.name}: INSIDE");
+                    if (rect.gameObject.active) rect.gameObject.SetActive(false);
+                }
+                else
+                {
+                    if (!rect.gameObject.active) rect.gameObject.SetActive(true);
+                }
+
+                // if (Input.GetKeyDown(KeyCode.J))
+                // {
+                //     Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name(false, false, false, false, true)} - {range.name}:");
+                //     Melon<TweaksAndFixes>.Logger.Msg($"  {Input.mousePosition} : {cam.WorldToScreenPoint(rect.transform.position)} : {worldMin} : {worldMax}");
+                //     Melon<TweaksAndFixes>.Logger.Msg($"  {Input.mousePosition.x > worldMin.x} {Input.mousePosition.x < worldMax.x} {Input.mousePosition.y > worldMin.y} {Input.mousePosition.y < worldMax.y}");
+                // }
+            }
+        }
+
 
         // ########## MODIFIED SHIP GENERATION ########## //
 
