@@ -4,16 +4,7 @@ using MelonLoader;
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using MelonLoader.NativeUtils;
-using Il2CppInterop.Runtime;
-using Il2CppInterop.Runtime.Startup;
-using static Il2Cpp.Ship;
-using static MelonLoader.MelonLogger;
-using Il2CppSystem.Linq;
-using static MelonLoader.Modules.MelonModule;
-using System.Drawing;
+using System.Diagnostics;
 
 #pragma warning disable CS8603
 
@@ -162,12 +153,27 @@ namespace TweaksAndFixes
             }
         }
 
-        // [HarmonyPatch(nameof(Part.LoadModel))]
-        // [HarmonyPostfix]
-        // internal static void Postfix_LoadModel(Part __instance)
-        // {
-        //     Melon<TweaksAndFixes>.Logger.Msg($"Load part model for {__instance.Name()}");
-        // }
+        public static Stopwatch stopWatchTotal = new Stopwatch();
+        public static Stopwatch stopWatch = new Stopwatch();
+        public static Dictionary<string, double> loadedModels = new();
+
+        [HarmonyPatch(nameof(Part.LoadModel))]
+        [HarmonyPrefix]
+        internal static void Prefix_LoadModel(Part __instance)
+        {
+            stopWatch.Restart();
+            stopWatchTotal.Start();
+        }
+
+        [HarmonyPatch(nameof(Part.LoadModel))]
+        [HarmonyPostfix]
+        internal static void Postfix_LoadModel(Part __instance)
+        {
+            stopWatchTotal.Stop();
+            stopWatch.Stop();
+            if (!loadedModels.ContainsKey(__instance.model.name.Replace("(Clone)", ""))) loadedModels.Add(__instance.model.name.Replace("(Clone)", ""), stopWatch.Elapsed.TotalSeconds);
+            else loadedModels[__instance.model.name.Replace("(Clone)", "")] += stopWatch.Elapsed.TotalSeconds;
+        }
 
 
         private static void OverrideFiringAngle(Part __instance, ref Part.FireSectorInfo fireSector)

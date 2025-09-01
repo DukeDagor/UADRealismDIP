@@ -899,6 +899,17 @@ namespace TweaksAndFixes
 
                 else if (Input.GetKeyDown(KeyCode.P))
                 {
+
+                    Melon<TweaksAndFixes>.Logger.Msg($"Part model loading time total: {Patch_Part.stopWatchTotal.Elapsed.TotalSeconds}");
+
+                    Melon<TweaksAndFixes>.Logger.Msg("Loaded Models: ");
+                    foreach (var res in Patch_Part.loadedModels)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"  {res.Value * 60,4} : {res.Key}");
+                    }
+
+                    Patch_Part.stopWatchTotal.Reset();
+                    Patch_Part.loadedModels.Clear();
                 }
 
                 else if (Input.GetKeyDown(KeyCode.M))
