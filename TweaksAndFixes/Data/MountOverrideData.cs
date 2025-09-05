@@ -375,7 +375,7 @@ namespace TweaksAndFixes
 
                 string concatPath = root + path.ToString();
 
-                string trueConcatPath = concatPath + (concatPath.Length != 0 && concatPath.EndsWith('/') ? "" : "/") + obj.name.Replace("(Clone)", "");
+                string trueConcatPath = concatPath + (concatPath.Length == 0 || concatPath.EndsWith('/') ? "" : "/") + obj.name.Replace("(Clone)", "");
 
                 // Melon<TweaksAndFixes>.Logger.Msg($"  Checking `{concatPath}` and `{trueConcatPath}`");
 
