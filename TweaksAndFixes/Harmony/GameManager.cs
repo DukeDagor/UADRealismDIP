@@ -48,8 +48,7 @@ namespace TweaksAndFixes
         {
             Melon<TweaksAndFixes>.Logger.Msg($"ToSharedDesignsConstructor: year {year}, nation {nation.nameUi}, forceCreateNew {forceCreateNew}");
             CurrentSubGameState = SubGameState.InSharedDesigner;
-            Patch_Ui.NeedsConstructionListsClear = true;
-            Patch_Ui.NeedsForcedUpdate = true;
+            Patch_Ui.OnConstructorShipChanged();
         }
 
         [HarmonyPostfix]
@@ -81,6 +80,16 @@ namespace TweaksAndFixes
                 $"Player newPlayer {(newPlayer != null ? newPlayer.Name(false) : "NULL")} "
             );
 
+            Patch_Ui.OnConstructorShipChanged();
+        }
+
+
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(GameManager.ToConstructor))]
+        internal static void Postfix_ToConstructor(bool newShip, Ship viewShip, bool allowEdit, IEnumerable<Ship> allowEditMany, ShipType shipTypeNew, bool needCleanup, Player newPlayer)
+        {
+            allowEdit = G.ui.allowEdit;
+
             if (newShip && allowEdit && viewShip == null)
             {
                 Melon<TweaksAndFixes>.Logger.Msg($"  Regular constructor with new desgin");
@@ -101,15 +110,7 @@ namespace TweaksAndFixes
                 Melon<TweaksAndFixes>.Logger.Msg($"  Unknown state!");
             }
 
-            Patch_Ui.NeedsForcedUpdate = true;
-            Patch_Ui.NeedsConstructionListsClear = true;
-        }
 
-
-        [HarmonyPostfix]
-        [HarmonyPatch(nameof(GameManager.ToConstructor))]
-        internal static void Postfix_ToConstructor(bool newShip, Ship viewShip, bool allowEdit, IEnumerable<Ship> allowEditMany, ShipType shipTypeNew, bool needCleanup, Player newPlayer)
-        {
             Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
             Melon<TweaksAndFixes>.Logger.Msg($"  Active Ship: {(Patch_Ship.LastCreatedShip == null ? "NULL" : Patch_Ship.LastCreatedShip.Name(false, false))}");
         }
