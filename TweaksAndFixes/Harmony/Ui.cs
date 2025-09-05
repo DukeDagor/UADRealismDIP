@@ -437,11 +437,11 @@ namespace TweaksAndFixes
 
             ui.conUpperRight.transform.position = new Vector3(ui.conUpperRight.transform.position.x, conUpperRightBasePostion * 0.875f, 0.0f);
             ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip").SetActive(true);
-            ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip").UiVisible(true);
 
-            ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").SetActive(true);
-            ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").UiVisible(true);
+            ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").SetActive(!G.ui.isConstructorRefitMode);
             ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").GetComponent<Button>().interactable = true;
+
+            ui.conUpperButtons.GetChild("Layout").GetChild("Undo").SetActive(false);
         }
 
         private static void AddConfirmationPopups(Ui ui)
@@ -649,6 +649,13 @@ namespace TweaksAndFixes
 
                 IsInAutoRotateMargin = false;
             }
+        }
+
+        public static void OnConstructorShipChanged()
+        {
+            NeedsForcedUpdate = true;
+            NeedsConstructionListsClear = true;
+            // UiM.OnConstructorShipChanged();
         }
 
         [HarmonyPatch(nameof(Ui.Update))]
