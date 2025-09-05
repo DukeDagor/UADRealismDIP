@@ -183,6 +183,15 @@ namespace TweaksAndFixes.Harmony
                             setRoleObj.GetComponent<Button>().interactable = true;
                         }
 
+                        if (element.Value.gameObject.transform.GetSiblingIndex() == 1)
+                        {
+                            if (!G.ui.FleetWindow.selectedElements.Contains(element.Value))
+                            {
+                                G.ui.FleetWindow.selectedElements.Add(element.Value);
+                            }
+                            // Melon<TweaksAndFixes>.Logger.Msg($"Selected {G.ui.FleetWindow.selectedElements.Count}");
+                        }
+
                         // foreach (GameObject child in fleetButtons.GetChildren())
                         // {
                         //     if (child.GetComponent<Button>() == null) continue;
