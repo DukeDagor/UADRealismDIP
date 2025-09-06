@@ -2,12 +2,8 @@
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
-using System.Collections.Generic;
 using UnityEngine.UI;
 using Il2CppTMPro;
-using UnityEngine.Events;
-using static TweaksAndFixes.Config;
-using static Il2CppSystem.Linq.Expressions.Interpreter.CastInstruction.CastInstructionNoT;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8603
@@ -562,15 +558,156 @@ namespace TweaksAndFixes
                 }
             }));
 
-            // GameObject root = G.ui.gameObject;
+            GameObject regularPopupsRoot = ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/PopWindows");
+            var regularPopups = regularPopupsRoot.GetChildren();
+            GameObject basePopupsRoot = ModUtils.GetChildAtPath("Ui/UiMain", G.container);
 
-            // Canvas canvas = root.GetComponent<Canvas>();
+            bool showPopups = true;
 
-            // Melon<TweaksAndFixes>.Logger.Msg($"{Config.Param("taf_ui_scale", 2.0f)}");
+            GameObject nextTurnButton = ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/Windows/Map Window/Next Turn Panel/Next Turn Button");
+            GameObject hidePopupsButton = GameObject.Instantiate(nextTurnButton);
+            hidePopupsButton.transform.SetParent(ModUtils.GetChildAtPath("Ui/UiMain", G.container));
+            hidePopupsButton.name = "Hide Popups";
+            hidePopupsButton.transform.SetScale(1,1,1);
+            hidePopupsButton.transform.position = new Vector3(3490, 110, 0);
+            hidePopupsButton.SetActive(false);
+            GameObject hidePopupsText = hidePopupsButton.GetChild("Text (TMP)");
+            hidePopupsText.TryDestroyComponent<LocalizeText>();
+            TMP_Text hidePopupsTextComp = hidePopupsText.GetComponent<TMP_Text>();
+            hidePopupsTextComp.text = "Hide Popups";
+            Button hidePopupsButtonComp = hidePopupsButton.GetComponent<Button>();
+            hidePopupsButtonComp.onClick.RemoveAllListeners();
+            hidePopupsButtonComp.onClick.AddListener(new System.Action(() => {
+                showPopups = !showPopups;
+                if (showPopups)
+                {
+                    hidePopupsTextComp.text = "Hide Popups";
+                }
+                else
+                {
+                    hidePopupsTextComp.text = "Show Popups";
+                }
+            }));
 
-            // canvas.scaleFactor = Config.Param("taf_ui_scale", 2.0f);
+            ModifyUi(basePopupsRoot).SetOnUpdate(new System.Action<GameObject>((GameObject ui) => {
+                bool hasPopups = false;
 
-            // G.ui.gameObject.GetComponent<Canvas>().scaleFactor = Config.Param("taf_ui_scale", 2.0f); // Base game: 2.8125f
+                if (!GameManager.IsWorld)
+                {
+                    hasPopups = false;
+                    showPopups = true;
+                    return;
+                }
+
+                foreach (GameObject child in regularPopups)
+                {
+                    if (child.name != "Event Window" && child.name != "Battle Window" && child.name != "WarReparationWindowUI" && child.name != "EventPopupUI") continue;
+
+                    if (child.active)
+                    {
+                        hasPopups = true;
+                        break;
+                    }
+                }
+            
+                regularPopupsRoot.SetActive(showPopups);
+            
+                if (basePopupsRoot.GetChild("MessageBox(Clone)", true) != null)
+                {
+                    bool isFirst = true;
+
+                    var children = basePopupsRoot.GetChildren();
+
+                    foreach (GameObject child in children)
+                    {
+                        if (child.name != "MessageBox(Clone)") continue;
+                        
+                        if (!isFirst)
+                        {
+                            child.TryDestroyComponent<Image>();
+                        }
+
+                        isFirst = false;
+
+                        hasPopups = true;
+            
+                        child.SetActive(showPopups);
+                    }
+
+                    hidePopupsButton.transform.SetSiblingIndex(children.Count - 1);
+                }
+
+                hidePopupsButton.SetActive((hasPopups || !showPopups) && (!GameManager.IsLoadingScreenActive && GameManager.IsWorldMap));
+            }));
+
+            // Global/Ui/UiMain/WorldEx/Windows/Map Window/Next Turn Panel/Next Turn Button
+
+            // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/(Beam/Draught)/Slider
+
+            // GameObject beamSetting = GameObject.Instantiate(ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Beam"));
+            // beamSetting.transform.SetParent(ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings"));
+            // beamSetting.transform.SetScale(1, 1, 1);
+            // beamSetting.name = "TAF Beam";
+            // beamSliderComp = beamSetting.GetChild("Slider").GetComponent<Slider>();
+            // beamSliderComp.onValueChanged.RemoveAllListeners();
+            // // ModifyUi(beamSetting).SetOnUpdate(new System.Action<GameObject>((GameObject obj) =>
+            // // {
+            // //     Ship ship = ShipM.GetActiveShip();
+            // // 
+            // //     if (ship == null) return;
+            // // 
+            // //     // ship.hull.data.paramx
+            // // 
+            // //     // beamSliderComp.maxValue;
+            // // }));
+            // beamSliderComp.onValueChanged.AddListener(new System.Action<float>((float value) =>
+            // {
+            //     Ship ship = ShipM.GetActiveShip();
+            // 
+            //     if (ship == null) return;
+            //     
+            //     Melon<TweaksAndFixes>.Logger.Msg($"{value}");
+            // 
+            //     ship.SetBeam(value / 10);
+            // }));
+            // GameObject beamOld = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Beam");
+            // beamOld.SetActive(false);
+
+            // GameObject draughtSlider = (ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Draught/Slider"));
+            // draughtSlider.transform.SetParent(ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Draught"));
+            // draughtSlider.transform.SetScale(1, 1, 1);
+            // draughtSlider.TryDestroyComponent<Slider>();
+            // draughtSlider.AddComponent<Slider>();
+            // draughtSlider.TryDestroyComponent<EventTrigger>();
+            // Slider draughtSliderComp = draughtSlider.GetComponent<Slider>();
+            // draughtSliderComp.onValueChanged.RemoveAllListeners();
+            // draughtSliderComp.onValueChanged.AddListener(new System.Action<float>((float value) =>
+            // {
+            //     Ship ship = ShipM.GetActiveShip();
+            // 
+            //     if (ship == null) return;
+            // 
+            //     ship.SetDraught(value - 5);
+            // }));
+            // GameObject draughtSliderOld = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Draught/Slider");
+            // draughtSliderOld.SetActive(false);
+        }
+
+        private static Slider beamSliderComp;
+
+        public static void OnConstructorShipChanged()
+        {
+            Ship ship = ShipM.GetActiveShip();
+
+            Melon<TweaksAndFixes>.Logger.Msg($"OnConstructorShipChanged");
+
+            if (ship == null) return;
+
+            Melon<TweaksAndFixes>.Logger.Msg($"{ship.hull.data.beamMin} ~ {ship.hull.data.beamMax}");
+
+            beamSliderComp.minValue = ship.hull.data.beamMin * 10;
+            beamSliderComp.maxValue = ship.hull.data.beamMax * 10;
+            beamSliderComp.value = ship.beam * 10;
         }
 
         private static void ApplyCampaginDesignTabModifications()
