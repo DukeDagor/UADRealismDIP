@@ -157,23 +157,23 @@ namespace TweaksAndFixes
         public static Stopwatch stopWatch = new Stopwatch();
         public static Dictionary<string, double> loadedModels = new();
 
-        [HarmonyPatch(nameof(Part.LoadModel))]
-        [HarmonyPrefix]
-        internal static void Prefix_LoadModel(Part __instance)
-        {
-            stopWatch.Restart();
-            stopWatchTotal.Start();
-        }
-
-        [HarmonyPatch(nameof(Part.LoadModel))]
-        [HarmonyPostfix]
-        internal static void Postfix_LoadModel(Part __instance)
-        {
-            stopWatchTotal.Stop();
-            stopWatch.Stop();
-            if (!loadedModels.ContainsKey(__instance.model.name.Replace("(Clone)", ""))) loadedModels.Add(__instance.model.name.Replace("(Clone)", ""), stopWatch.Elapsed.TotalSeconds);
-            else loadedModels[__instance.model.name.Replace("(Clone)", "")] += stopWatch.Elapsed.TotalSeconds;
-        }
+        // [HarmonyPatch(nameof(Part.LoadModel))]
+        // [HarmonyPrefix]
+        // internal static void Prefix_LoadModel(Part __instance)
+        // {
+        //     stopWatch.Restart();
+        //     stopWatchTotal.Start();
+        // }
+        // 
+        // [HarmonyPatch(nameof(Part.LoadModel))]
+        // [HarmonyPostfix]
+        // internal static void Postfix_LoadModel(Part __instance)
+        // {
+        //     stopWatchTotal.Stop();
+        //     stopWatch.Stop();
+        //     if (!loadedModels.ContainsKey(__instance.model.name.Replace("(Clone)", ""))) loadedModels.Add(__instance.model.name.Replace("(Clone)", ""), stopWatch.Elapsed.TotalSeconds);
+        //     else loadedModels[__instance.model.name.Replace("(Clone)", "")] += stopWatch.Elapsed.TotalSeconds;
+        // }
 
 
         private static void OverrideFiringAngle(Part __instance, ref Part.FireSectorInfo fireSector)
