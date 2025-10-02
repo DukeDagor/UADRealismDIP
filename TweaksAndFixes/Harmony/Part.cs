@@ -5,6 +5,8 @@ using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
 using System.Diagnostics;
+using static MelonLoader.MelonLogger;
+using Il2CppSystem.Linq.Expressions;
 
 #pragma warning disable CS8603
 
@@ -157,24 +159,45 @@ namespace TweaksAndFixes
         public static Stopwatch stopWatch = new Stopwatch();
         public static Dictionary<string, double> loadedModels = new();
 
-        // [HarmonyPatch(nameof(Part.LoadModel))]
+        [HarmonyPatch(nameof(Part.LoadModel))]
+        [HarmonyPrefix]
+        internal static void Prefix_LoadModel(Part __instance)
+        {
+            // stopWatch.Restart();
+            // stopWatchTotal.Start();
+
+            // if (__instance.data.model != "(custom)")
+            // {
+            //     // Util.ResourcesLoad<GameObject>(__instance.data.model);
+            //     if (!Util.resCache.ContainsKey(__instance.data.model)) Melon<TweaksAndFixes>.Logger.Msg($"Loaded: {__instance.data.model}");
+            // }
+        }
+
+        [HarmonyPatch(nameof(Part.LoadModel))]
+        [HarmonyPostfix]
+        internal static void Postfix_LoadModel(Part __instance)
+        {
+            MountOverrideData.ApplyMountOverridesToPart(__instance);
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Used: {__instance.model.name.Replace("(Clone)", "")}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"\n{ModUtils.DumpHierarchy(__instance.gameObject)}\n\n\n\n");
+
+            // stopWatchTotal.Stop();
+            // stopWatch.Stop();
+            // if (!loadedModels.ContainsKey(__instance.model.name.Replace("(Clone)", ""))) loadedModels.Add(__instance.model.name.Replace("(Clone)", ""), stopWatch.Elapsed.TotalSeconds);
+            // else loadedModels[__instance.model.name.Replace("(Clone)", "")] += stopWatch.Elapsed.TotalSeconds;
+        }
+
+        // [HarmonyPatch(nameof(Part.UnloadModel))]
         // [HarmonyPrefix]
-        // internal static void Prefix_LoadModel(Part __instance)
+        // internal static bool Prefix_UnloadModel(Part __instance)
         // {
-        //     stopWatch.Restart();
-        //     stopWatchTotal.Start();
-        // }
+        //     // Melon<TweaksAndFixes>.Logger.Msg($"Unloaded: {__instance.data.model}");
         // 
-        // [HarmonyPatch(nameof(Part.LoadModel))]
-        // [HarmonyPostfix]
-        // internal static void Postfix_LoadModel(Part __instance)
-        // {
-        //     stopWatchTotal.Stop();
-        //     stopWatch.Stop();
-        //     if (!loadedModels.ContainsKey(__instance.model.name.Replace("(Clone)", ""))) loadedModels.Add(__instance.model.name.Replace("(Clone)", ""), stopWatch.Elapsed.TotalSeconds);
-        //     else loadedModels[__instance.model.name.Replace("(Clone)", "")] += stopWatch.Elapsed.TotalSeconds;
+        //     return false;
         // }
 
+        // Refresh
 
         private static void OverrideFiringAngle(Part __instance, ref Part.FireSectorInfo fireSector)
         {
