@@ -13,6 +13,8 @@ namespace TweaksAndFixes
     public class CampaignControllerM
     {
         public static bool RequestForcedGameSave = false;
+        public static int RequestForcedGameSaveFrameDelay = 0;
+        private static GameObject BattleConclusionPopup = null;
 
         public static void Update()
         {
@@ -22,14 +24,25 @@ namespace TweaksAndFixes
                 return;
             }
 
-            if (RequestForcedGameSave)
+            if (BattleConclusionPopup == null)
             {
-                RequestForcedGameSave = false;
+                BattleConclusionPopup = ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/PopWindows/BattleWindow");
+            }
+
+            // Global/Ui/UiMain/WorldEx/PopWindows/BattleWindow
+
+            if (RequestForcedGameSave && 
+                (GameManager.Instance.CurrentState == GameManager.GameState.Constructor || GameManager.Instance.CurrentState == GameManager.GameState.World) && 
+                !BattleConclusionPopup.active)
+            {
+                if (RequestForcedGameSaveFrameDelay-- > 0) return;
 
                 Melon<TweaksAndFixes>.Logger.Msg($"Making auto save...");
                 // GameManager.Instance.SaveCampaignProgress();
                 GameManager.Instance.SaveInternal(true);
                 Melon<TweaksAndFixes>.Logger.Msg($"Save complete!");
+
+                RequestForcedGameSave = false;
             }
         }
 
