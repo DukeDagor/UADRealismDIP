@@ -68,6 +68,58 @@ namespace TweaksAndFixes
             return true;
         }
 
+        [HarmonyPatch(nameof(CampaignController.OnNewTurn))]
+        [HarmonyPrefix]
+        internal static void Prefix_OnNewTurn(CampaignController __instance)
+        {
+            // Melon<TweaksAndFixes>.Logger.Msg($"OnNewTurn"); // <<< Trigger on start of new turn
+            Patch_Player.ResetChangePlayerGDP();
+        }
+
+        // [HarmonyPatch(nameof(CampaignController.NextTurn))]
+        // [HarmonyPrefix]
+        // internal static void Prefix_NextTurn(CampaignController __instance)
+        // {
+        //     Melon<TweaksAndFixes>.Logger.Msg($"NextTurn"); // <<< Trigger on hit new turn button
+        // }
+
+        private static float AnswerEventWealth = 0;
+
+        [HarmonyPatch(nameof(CampaignController.AnswerEvent))]
+        [HarmonyPrefix]
+        internal static void Prefix_AnswerEvent(CampaignController __instance, EventX ev, ref EventData answer)
+        {
+            if (answer.wealth != 0) Patch_Player.RequestChangePlayerGDP(ev.player, answer.wealth / 100);
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Answer Event for {ev.player.Name(false)}:");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  {ev.date.AsDate().ToString("y")}\t: {ev.data.name} -> {answer.name}");
+            // var conditions = ev.data.param.Split(",");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Condition    : {(conditions.Length > 0 ? conditions[0] : "NO CONDITION")}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Naval Funds  : {answer.transferMoney} {answer.money}%");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Naval Budget : {answer.budget}%");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  GDP          : {answer.wealth}%");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Relations    : {answer.relation}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Prestige     : {answer.reputation}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Unrest       : {answer.respect}");
+
+            // ev.player.cash += player.Budget() * answer.money / 100;
+            // ev.player.budgetMod += answer.budget;
+            // ev.player.reputation += answer.reputation;
+            // ev.player.AddUnrest(-answer.respect);
+            // ev.data.param.Contains("special/message_for_player");
+
+            AnswerEventWealth = answer.wealth;
+            answer.wealth = 0;
+        }
+
+        [HarmonyPatch(nameof(CampaignController.AnswerEvent))]
+        [HarmonyPostfix]
+        internal static void Postfix_AnswerEvent(CampaignController __instance, EventX ev, EventData answer)
+        {
+            answer.wealth = AnswerEventWealth;
+            AnswerEventWealth = 0;
+        }
+
         [HarmonyPatch(nameof(CampaignController.CheckForCampaignEnd))]
         [HarmonyPostfix]
         internal static void Postfix_CheckForCampaignEnd(CampaignController __instance)
