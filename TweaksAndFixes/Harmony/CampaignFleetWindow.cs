@@ -102,7 +102,7 @@ namespace TweaksAndFixes.Harmony
                         TMP_Text roleText = entry.RoleSelectionButton.gameObject.GetParent().GetChild("RoleText").GetComponent<TMP_Text>();
                         TMP_Text trueRoleText = entry.RoleSelectionButton.gameObject.GetChildren()[0].GetComponent<TMP_Text>();
 
-                        if (entry.Sold.text.Length > 1 && roleText.text.StartsWith("Sold"))
+                        if (entry.Sold.text.Length > 1)
                         {
                             roleText.text = "Sold To:\n" + entry.Sold.text;
                             roleText.fontSizeMax = 8;
@@ -183,13 +183,9 @@ namespace TweaksAndFixes.Harmony
                             setRoleObj.GetComponent<Button>().interactable = true;
                         }
 
-                        if (element.Value.gameObject.transform.GetSiblingIndex() == 1)
+                        if (!G.ui.FleetWindow.selectedElements.Contains(element.Value))
                         {
-                            if (!G.ui.FleetWindow.selectedElements.Contains(element.Value))
-                            {
-                                G.ui.FleetWindow.selectedElements.Add(element.Value);
-                            }
-                            // Melon<TweaksAndFixes>.Logger.Msg($"Selected {G.ui.FleetWindow.selectedElements.Count}");
+                            G.ui.FleetWindow.selectedElements.Add(element.Value);
                         }
 
                         // foreach (GameObject child in fleetButtons.GetChildren())
