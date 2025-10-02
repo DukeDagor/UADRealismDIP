@@ -9,6 +9,7 @@ using TweaksAndFixes.Data;
 using Il2CppSystem.Linq;
 using static Il2Cpp.Ship;
 using System.Drawing;
+using UnityEngine.UI;
 using MelonLoader.TinyJSON;
 
 #pragma warning disable CS8625
@@ -213,33 +214,60 @@ namespace TweaksAndFixes
                 }
             }
         }
-        
+
+        public static HashSet<string> rangeNameSet = new HashSet<string>();
+
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Ship.Update))]
         internal static void Postfix_Update(Ship __instance)
         {
+            if (__instance.floatUpsCont != null && __instance.floatUpsCont.transform.localPosition.y < 100)
+            {
+                __instance.floatUpsCont.transform.localPosition = new Vector3(0, 120, 0);
+            }
+
             if (__instance.uiRangesCont == null) return;
             if (__instance.uiRangesCont.active == false) return;
-            
+
+            // if (Input.GetKeyDown(KeyCode.J))
+            // {
+            //     Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name(false, false, false, false, true)}");
+            //     // Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name(false, false, false, false, true)} - {range.name}:");
+            //     // Melon<TweaksAndFixes>.Logger.Msg($"  {Input.mousePosition} : {cam.WorldToScreenPoint(rect.transform.position)} : {worldMin} : {worldMax}");
+            //     // Melon<TweaksAndFixes>.Logger.Msg($"  {Input.mousePosition.x > worldMin.x} {Input.mousePosition.x < worldMax.x} {Input.mousePosition.y > worldMin.y} {Input.mousePosition.y < worldMax.y}");
+            // }
+
+            rangeNameSet.Clear();
+
             foreach (GameObject range in __instance.uiRangesCont.GetChildren())
             {
                 if (range.active == false) continue;
-            
-                Camera cam = G.cam.cameraComp;
-            
-                RectTransform rect = range.GetChild("RangeCanvas").GetComponent<RectTransform>();
-                
-                Vector3 min = rect.transform.position;
-                min.x -= rect.sizeDelta.y / 2 * rect.localScale.x * 2;
-                min.y -= rect.sizeDelta.x / 2 * rect.localScale.x;
-                Vector3 worldMin = cam.WorldToScreenPoint(min);
+                // ShipsActive/CA Alkmaar (Alkmaar) [netherlands]/ShipIngameUi(Clone)/GunRanges/GunRange:Torp/RangeCanvas/RangeLayout/RangeText
 
-                Vector3 max = rect.transform.position;
-                max.x += rect.sizeDelta.y / 2 * rect.localScale.x * 2;
-                max.y += rect.sizeDelta.x / 2 * rect.localScale.x;
-                Vector3 worldMax = cam.WorldToScreenPoint(max);
-                
-                if (Input.mousePosition.x > worldMin.x && Input.mousePosition.x < worldMax.x && Input.mousePosition.y > worldMin.y && Input.mousePosition.y < worldMax.y)
+                GameObject rangeCanvas = range.GetChild("RangeCanvas");
+
+                if (!rangeCanvas.GetComponent<Canvas>().enabled) continue;
+
+                RectTransform rect = rangeCanvas.GetComponent<RectTransform>();
+                GameObject txtObj = ModUtils.GetChildAtPath("RangeCanvas/RangeLayout/RangeText", range);
+                Text txt = txtObj.GetComponent<Text>(); // Text is monospace, each char is 30 wide and 100 tall.
+
+                if (rangeNameSet.Contains(txt.text))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Disabling duplicate range: {txt.text}");
+                    range.SetActive(false);
+                    continue;
+                }
+
+                rangeNameSet.Add(txt.text);
+
+                txtObj.TryDestroyComponent<OnEnter>();
+                txtObj.TryDestroyComponent<OnLeave>();
+
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(rect, Input.mousePosition, G.cam.cameraComp, out Vector2 outpoint);
+                outpoint.x += txt.text.Length * 30 / 2;
+
+                if (outpoint.x > 0 && -outpoint.y > 0 && outpoint.x < txt.text.Length * 30 && -outpoint.y < 100)
                 {
                     // Melon<TweaksAndFixes>.Logger.Msg($"{range.name}: INSIDE");
                     if (rect.gameObject.active) rect.gameObject.SetActive(false);
@@ -251,9 +279,7 @@ namespace TweaksAndFixes
 
                 // if (Input.GetKeyDown(KeyCode.J))
                 // {
-                //     Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name(false, false, false, false, true)} - {range.name}:");
-                //     Melon<TweaksAndFixes>.Logger.Msg($"  {Input.mousePosition} : {cam.WorldToScreenPoint(rect.transform.position)} : {worldMin} : {worldMax}");
-                //     Melon<TweaksAndFixes>.Logger.Msg($"  {Input.mousePosition.x > worldMin.x} {Input.mousePosition.x < worldMax.x} {Input.mousePosition.y > worldMin.y} {Input.mousePosition.y < worldMax.y}");
+                //     Melon<TweaksAndFixes>.Logger.Msg($"  {range.name}: {outpoint}");
                 // }
             }
         }
