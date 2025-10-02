@@ -276,6 +276,8 @@ namespace TweaksAndFixes
             mount.rotateSame = mountOverride.rotate_same == 1;
         }
 
+        public static StringBuilder path = new(1024);
+
         public static void ApplyMountOverride(Part part, GameObject model, string root, bool relitive = false, bool force = false)
         {
             if (!force)
@@ -312,11 +314,6 @@ namespace TweaksAndFixes
 
             stack.Push(model);
 
-            //foreach (GameObject child in model.GetChildren())
-            //{
-            //    stack.Push(child);
-            //}
-
             string partName = part.gameObject.GetChildren()[0].name;
 
             if (partName == "Effects") partName = part.gameObject.GetChildren()[1].name;
@@ -334,8 +331,6 @@ namespace TweaksAndFixes
             bool isTower    = BaseGamePartModelData._Data[partName].isTowerMain || BaseGamePartModelData._Data[partName].isTowerSec;
             bool isBarbette = BaseGamePartModelData._Data[partName].isBarbette;
 
-            StringBuilder path = new(4096);
-
             // Melon<TweaksAndFixes>.Logger.Msg($"Parsing: {partName}...");
             // Melon<TweaksAndFixes>.Logger.Msg($"  {model.name} : {model.transform.position}");
 
@@ -345,7 +340,7 @@ namespace TweaksAndFixes
 
                 if (obj == null)
                 {
-                    // Melon<TweaksAndFixes>.Logger.Msg($"  Failed to load: {data.Value.nameUi}");
+                    // Melon<TweaksAndFixes>.Logger.Msg($"    NULL OBJ!");
                     continue;
                 }
 
@@ -385,6 +380,8 @@ namespace TweaksAndFixes
 
                     foreach (MountOverrideData newData in _ParentToNewData[trueConcatPath])
                     {
+                        // Melon<TweaksAndFixes>.Logger.Msg($"      Mount:TAF_{obj.GetChildren().Count}");
+
                         GameObject newMount = new GameObject();
                         newMount.AddComponent<Mount>();
                         newMount.transform.SetParent(obj);
@@ -394,8 +391,6 @@ namespace TweaksAndFixes
                         newMount.transform.localRotation = new Quaternion();
                         newMount.name = $"Mount:TAF_{obj.GetChildren().Count}";
 
-                        // Melon<TweaksAndFixes>.Logger.Msg($"      Mount:TAF_{obj.GetChildren().Count}");
-
                         Mount newMountMount = newMount.GetComponent<Mount>();
 
                         if (relitive) UpdateMountParamitersRelitive(newMountMount, newData, part.gameObject);
@@ -404,7 +399,7 @@ namespace TweaksAndFixes
                         if (relitive && Patch_Ship.LastCreatedShip != null)
                         {
                             // Patch_Ship.LastCreatedShip.allowedMountsInternal.Add(newMount.GetComponent<Mount>());
-                            Patch_Ship.LastCreatedShip.mounts.Add(newMountMount);
+                            // Patch_Ship.LastCreatedShip.mounts.Add(newMountMount);
 
                             // Melon<TweaksAndFixes>.Logger.Msg($"    {(objPart != null ? objPart.Name() : "NULL")}");
                             part.mountsInside.Add(newMountMount);
@@ -516,6 +511,44 @@ namespace TweaksAndFixes
             }
         }
 
+        public static void ApplyMountOverridesToPart(Part part, bool forced = false)
+        {
+            // Melon<TweaksAndFixes>.Logger.Error($"{ship == null} : {GameManager.Instance == null}");
+
+            if (part == null) return;
+
+            if (GameManager.Instance.CurrentState == GameManager.GameState.Battle || Patch_GameManager.CurrentSubGameState == Patch_GameManager.SubGameState.LoadingPredefinedDesigns) return;
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Overriding mounts for part {part.name}");
+
+            if (!part.data.isHull)
+            {
+                if (part.gameObject.GetChildren().Count == 0) return;
+
+                // Melon<TweaksAndFixes>.Logger.Error($"Checking part {part.Name()}");
+
+                MountOverrideData.ApplyMountOverride(part, part.gameObject.GetChildren()[0], "", true, forced);
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"\n{ModUtils.DumpHierarchy(part.gameObject)}\n\n\n\n");
+            }
+            else
+            {
+                if (part.gameObject.GetChildren().Count > 0 &&
+                    part.gameObject.GetChildren()[0].GetChildren().Count > 0 &&
+                    part.gameObject.GetChildren()[0].GetChildren()[0].GetChildren().Count > 0)
+                {
+                    GameObject shipObj = part.gameObject.GetChildren()[0].GetChildren()[0].GetChildren()[0];
+
+                    // Melon<TweaksAndFixes>.Logger.Error($"Checking ship hull {hull.name}");
+
+                    foreach (GameObject section in shipObj.GetChildren())
+                    {
+                        MountOverrideData.ApplyMountOverride(part, section, $"{part.GetChildren()[0].name.Replace("(Clone)", "")}/Visual/Sections/", true, forced);
+                    }
+                }
+            }
+        }
+        
         public static void ApplyMountOverridesToShip(Ship ship, bool forced = false)
         {
             // Melon<TweaksAndFixes>.Logger.Error($"{ship == null} : {GameManager.Instance == null}");
@@ -613,34 +646,6 @@ namespace TweaksAndFixes
                     }
                 }
             }
-        }
-
-        public static void OverrideMountData()
-        {
-            foreach (var data in BaseGamePartModelData._Data)
-            {
-                if (data.Value.hasStickyMounts)
-                {
-                    _ModelsWithOverrides.Add(data.Key);
-                }
-            }
-
-            foreach (var data in _ModelsWithOverrides)
-            {
-                GameObject obj = Util.ResourcesLoad<GameObject>(data);
-
-                if (obj == null)
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"  Failed to load: {data}");
-                    continue;
-                }
-
-                // ApplyMountOverride(obj);
-
-                // Melon<TweaksAndFixes>.Logger.Msg($"Part: {(part == null ? "NULL" : part.)}");
-            }
-
-            return;
         }
 
         // Load CSV with comment lines and a default line.
