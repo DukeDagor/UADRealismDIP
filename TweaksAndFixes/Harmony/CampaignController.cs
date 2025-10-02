@@ -9,6 +9,7 @@ using Il2CppCoffee.UIExtensions;
 using Il2CppTMPro;
 using System.Collections;
 using static Il2Cpp.CampaignController;
+using Il2CppLitJson;
 
 #pragma warning disable CS8602
 #pragma warning disable CS8604
@@ -126,6 +127,14 @@ namespace TweaksAndFixes
         {
             Melon<TweaksAndFixes>.Logger.Msg("Checking for campaign end...");
 
+            if (__instance.CurrentDate.turn < 2)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg("  Ignoring because it's the first turn...");
+                return;
+            }
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Checking on {__instance.CurrentDate.turn}");
+
             int activeCount = 0;
             List<Player> activePlayers = new();
             
@@ -142,18 +151,18 @@ namespace TweaksAndFixes
             {
                 if (player.isDisabled) continue;
                 if (!player.isMajor) continue;
-
+            
                 activeCount++;
                 activePlayers.Add(player);
-
-                if (player.isMain) continue;
-
-                if (player.cash < -player.NationYearIncome() * 0.05f)
-                {
-                    // TotalBankrupt
-                    Melon<TweaksAndFixes>.Logger.Msg($"  {player.Name(false)} falls due to Total Bankruptcy.");
-                    // __instance.FinishCampaign(player, FinishCampaignType.TotalBankrupt);
-                }
+            
+                // if (player.isMain) continue;
+                //
+                // if (player.cash < -player.NationYearIncome() * 0.05f)
+                // {
+                //     // TotalBankrupt
+                //     Melon<TweaksAndFixes>.Logger.Msg($"  {player.Name(false)} falls due to Total Bankruptcy.");
+                //     // __instance.FinishCampaign(player, FinishCampaignType.TotalBankrupt);
+                // }
                 // else if (player.unrest >= 100)
                 // {
                 //     // HighUnrest
@@ -168,7 +177,7 @@ namespace TweaksAndFixes
                 // }
             }
 
-            if (activePlayers.Count <= 1)
+            if (activePlayers.Count == 1)
             {
                 // PeaceSigned
                 Melon<TweaksAndFixes>.Logger.Msg($"  {activePlayers[0].Name(false)} wins due to Total Victory.");
@@ -201,11 +210,30 @@ namespace TweaksAndFixes
                 __instance.FinishCampaign(MainPlayer, FinishCampaignType.HighUnrest);
                 return;
             }
+            else if (MainPlayer.reputation <= -100)
+            {
+                // Low reputation
+                Melon<TweaksAndFixes>.Logger.Msg($"  {MainPlayer.Name(false)} falls due to Low Reputation.");
+                __instance.FinishCampaign(MainPlayer, FinishCampaignType.LoseEvent);
+                return;
+            }
             else if (MainPlayer.cash < 0)
             {
                 // TotalBankrupt
-                Melon<TweaksAndFixes>.Logger.Msg($"  {MainPlayer.Name(false)} falls due to Total Bankruptcy.");
-                __instance.FinishCampaign(MainPlayer, FinishCampaignType.TotalBankrupt);
+
+                Melon<TweaksAndFixes>.Logger.Msg($"  {MainPlayer.Name(false)} ran out of cash!");
+
+                if (MainPlayer.Budget() * 2 < -MainPlayer.cash)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"  {MainPlayer.Name(false)} falls due to Total Bankruptcy.");
+                    __instance.FinishCampaign(MainPlayer, FinishCampaignType.TotalBankrupt);
+                    return;
+                }
+
+                Melon<TweaksAndFixes>.Logger.Msg($"  {MainPlayer.Name(false)} is getting a bailout!");
+
+                UiM.ShowBailoutPopupForPlayer(MainPlayer);
+
                 return;
             }
             else if (MainPlayer.provinces.Count == 0)
