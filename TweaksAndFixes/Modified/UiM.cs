@@ -1240,20 +1240,33 @@ namespace TweaksAndFixes
             if (SavePath.Exists)
             {
                 Melon<TweaksAndFixes>.Logger.Msg($"Loading settings from {SavePath.path}...");
-                TAF_Settings.settings = Serializer.JSON.LoadJsonFile<TAF_Settings>(SavePath.path);
 
-                if (TAF_Settings.settings.version != TAF_Settings.CurrentSettingsVersion)
+                try
                 {
-                    Melon<TweaksAndFixes>.Logger.Msg($"  Settings file out of date, resetting file. File: {TAF_Settings.settings.version} != Latest: {TAF_Settings.CurrentSettingsVersion}");
+                    TAF_Settings.settings = Serializer.JSON.LoadJsonFile<TAF_Settings>(SavePath.path);
+                
+                    if (TAF_Settings.settings == null)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"  Settings file corrupted, resetting file.");
+                        TAF_Settings.settings = new TAF_Settings();
+                    }
+                    else if (TAF_Settings.settings.version != TAF_Settings.CurrentSettingsVersion)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"  Settings file out of date, resetting file. File: {TAF_Settings.settings.version} != Latest: {TAF_Settings.CurrentSettingsVersion}");
+                        TAF_Settings.settings = new TAF_Settings();
+                    }
+                    else
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"         version : {TAF_Settings.settings.version}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"         uiScale : {TAF_Settings.settings.uiScale}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"  uiScaleDefault : {TAF_Settings.settings.uiScaleDefault}");
+                    }
+                }
+                catch (Exception e)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Settings file corrupted, resetting file.");
                     TAF_Settings.settings = new TAF_Settings();
                 }
-                else
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"         version : {TAF_Settings.settings.version}");
-                    Melon<TweaksAndFixes>.Logger.Msg($"         uiScale : {TAF_Settings.settings.uiScale}");
-                    Melon<TweaksAndFixes>.Logger.Msg($"  uiScaleDefault : {TAF_Settings.settings.uiScaleDefault}");
-                }
-
             }
             else
             {
