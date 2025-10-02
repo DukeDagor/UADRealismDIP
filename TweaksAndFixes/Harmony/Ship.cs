@@ -9,8 +9,9 @@ using TweaksAndFixes.Data;
 using Il2CppSystem.Linq;
 using static Il2Cpp.Ship;
 using System.Drawing;
-using UnityEngine.UI;
 using MelonLoader.TinyJSON;
+using UnityEngine.UI;
+using MelonLoader.ICSharpCode.SharpZipLib.Zip;
 
 #pragma warning disable CS8625
 
@@ -117,7 +118,7 @@ namespace TweaksAndFixes
             // LastCreatedShip = __result;
             // 
             // if (LastCreatedShip == null) return;
-        
+
             // Melon<TweaksAndFixes>.Logger.Msg($"{__result.id} : {__result.tonnage} + {(design != null ? (design.id + " : " + design.tonnage) : "NO DESIGN")}");
 
             LastClonedShipWeight = 0;
@@ -141,7 +142,7 @@ namespace TweaksAndFixes
             // Melon<TweaksAndFixes>.Logger.Msg($"                     Original `{__result}`");
 
             string prefix = __result.Contains(__instance.Name(false, false, false, false, true)) ? $"{__instance.Name(false, false, false, false, true)}" : "";
-            
+
             // string prefix = __result[^1] != '2' ? $"{__result.Substring(0, __result.LastIndexOf('(') - 1)}" : "";
 
             __result = $"{prefix} ({ModUtils.NumToMonth(CampaignController.Instance.CurrentDate.AsDate().Month)}. {CampaignController.Instance.CurrentDate.AsDate().Year})";
@@ -284,6 +285,73 @@ namespace TweaksAndFixes
             }
         }
 
+        // AimAndShoot
+
+        public static List<Il2CppSystem.Collections.Generic.KeyValuePair<PartData, Il2CppSystem.Collections.Generic.Dictionary<GunsPlace, Il2CppSystem.Collections.Generic.List<Part>>>> ignoreAimAndShoot = new();
+
+        // private static Il2CppSystem.Collections.Generic.KeyValuePair<PartData, Il2CppSystem.Collections.Generic.Dictionary<GunsPlace, Il2CppSystem.Collections.Generic.List<Part>>> emptyPair = new();
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(Ship.AimAndShoot))]
+        internal static void Prefix_AimAndShoot(Ship __instance)
+        {
+            if (__instance.torpedoMode == ShootMode.Aggressive) return;
+
+            if (__instance.torpedoesAll.Count == 0) return;
+
+            PartData torpData = __instance.torpedoesAll[0].data;
+
+            Ship enemy = __instance.GetEnemy(torpData);
+
+            if (enemy == null) return;
+
+            if (!__instance.weaponRangesCache.ContainsKey(torpData)) return;
+
+            float rangeToEnemy = __instance.transform.position.GetDistanceXZ(enemy.transform.position);
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"  {__instance.Name(false, false)} : {rangeToEnemy} > {__instance.weaponRangesCache[torpData]}");
+
+            if (rangeToEnemy > __instance.weaponRangesCache[torpData] * 0.8f)
+            {
+                // Ugly but it works...
+
+                foreach (var part in __instance.gunGroupsBySideAndData)
+                {
+                    if (part.Key == torpData)
+                    {
+                        ignoreAimAndShoot.Add(part);
+                    }
+                }
+
+                foreach (var part in ignoreAimAndShoot)
+                {
+                    __instance.gunGroupsBySideAndData.Remove(part.Key);
+                }
+
+            }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Ship.AimAndShoot))]
+        internal static void Postfix_AimAndShoot(Ship __instance)
+        {
+            if (ignoreAimAndShoot.Count > 0)
+            {
+                foreach (var part in ignoreAimAndShoot)
+                {
+                    __instance.gunGroupsBySideAndData.Add(part.Key, part.Value);
+                }
+
+                ignoreAimAndShoot.Clear();
+            }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(Ship.HitChanceTorpedoEst))]
+        internal static void Prefix_HitChanceTorpedoEst(Ship ally, Ship enemy, ref float rangeToEnemy, float torpedoRange, ref float __result)
+        {
+            rangeToEnemy = ally.transform.position.GetDistanceXZ(enemy.transform.position);
+        }
 
         // ########## MODIFIED SHIP GENERATION ########## //
 
@@ -542,7 +610,7 @@ namespace TweaksAndFixes
             __state = component.weight;
 
             var weight = ComponentDataM.GetWeight(component, __instance.shipType);
-            
+
             //if (weight == component.weight)
             //    return true;
             //Melon<TweaksAndFixes>.Logger.Msg($"For component {component.name} and shipType {__instance.shipType.name}, overriding weight to {weight:F0}");
