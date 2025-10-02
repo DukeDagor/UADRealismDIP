@@ -97,16 +97,44 @@ namespace TweaksAndFixes.Harmony
                         // Check if province is under attack
                         if (provincesUnderAttack.Contains(province)) continue;
 
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  {area.Name} -> {province.Name}");
+
                         // Check if the province is owned by the enemy
-                        if (province.ControllerPlayer != Defender) continue;
+                        if (province.ControllerPlayer != Defender)
+                        {
+                            // Melon<TweaksAndFixes>.Logger.Msg($"    Checking Minor Allies:");
+
+                            if (!CampaignController.Instance.CampaignData.MinorAlliancesPerPlayer.ContainsKey(Defender.data))
+                            {
+                                // Melon<TweaksAndFixes>.Logger.Msg($"      {Defender.Name(false)} has no minor ally alliance data!");
+                                continue;
+                            }
+
+                            // If not check all minor allies
+                            bool ownedByMinorAlly = false;
+
+                            foreach (var alliance in CampaignController.Instance.CampaignData.MinorAlliancesPerPlayer[Defender.data])
+                            {
+                                // Melon<TweaksAndFixes>.Logger.Msg($"      {alliance.MinorPlayer.name}...");
+
+                                if (province.ControllerPlayer.data != alliance.MinorPlayer) continue;
+
+                                // Melon<TweaksAndFixes>.Logger.Msg($"      {alliance.MinorPlayer.name} is controller!");
+
+                                ownedByMinorAlly = true;
+                                break;
+                            }
+
+                            if (!ownedByMinorAlly) continue;
+                        }
 
                         // Check we are already invading them
                         if (G.ui.NavalInvasionElement.choosenProvince == province) continue;
 
                         // Sanity check to ensure we are still at war
-                        if (province.ControllerPlayer.AtWarWith().Contains(Attacker))
+                        if (Defender.AtWarWith().Contains(Attacker))
                         {
-                            // Melon<TweaksAndFixes>.Logger.Msg("  " + area.Name + " -> " + province.Name);
+                            // Melon<TweaksAndFixes>.Logger.Msg($"  Can attack!");
 
                             provinces.Add(province);
                         }
@@ -162,16 +190,44 @@ namespace TweaksAndFixes.Harmony
                         // Check if province is under attack
                         if (provincesUnderAttack.Contains(province)) continue;
 
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  {area.Name} -> {province.Name}");
+
                         // Check if the province is owned by the enemy
-                        if (province.ControllerPlayer != Defender) continue;
+                        if (province.ControllerPlayer != Defender)
+                        {
+                            // Melon<TweaksAndFixes>.Logger.Msg($"    Checking Minor Allies:");
+
+                            if (!CampaignController.Instance.CampaignData.MinorAlliancesPerPlayer.ContainsKey(Defender.data))
+                            {
+                                // Melon<TweaksAndFixes>.Logger.Msg($"      {Defender.Name(false)} has no minor ally alliance data!");
+                                continue;
+                            }
+
+                            // If not check all minor allies
+                            bool ownedByMinorAlly = false;
+
+                            foreach (var alliance in CampaignController.Instance.CampaignData.MinorAlliancesPerPlayer[Defender.data])
+                            {
+                                // Melon<TweaksAndFixes>.Logger.Msg($"      {alliance.MinorPlayer.name}...");
+
+                                if (province.ControllerPlayer.data != alliance.MinorPlayer) continue;
+
+                                // Melon<TweaksAndFixes>.Logger.Msg($"      {alliance.MinorPlayer.name} is controller!");
+
+                                ownedByMinorAlly = true;
+                                break;
+                            }
+
+                            if (!ownedByMinorAlly) continue;
+                        }
 
                         // Check we are already invading them
                         if (G.ui.NavalInvasionElement.choosenProvince == province) continue;
 
                         // Sanity check to ensure we are still at war
-                        if (province.ControllerPlayer.AtWarWith().Contains(Attacker))
+                        if (Defender.AtWarWith().Contains(Attacker))
                         {
-                            // Melon<TweaksAndFixes>.Logger.Msg(area.Name + " -> " + province.Name);
+                            // Melon<TweaksAndFixes>.Logger.Msg($"  Can attack!");
 
                             provinces.Add(province);
                         }
