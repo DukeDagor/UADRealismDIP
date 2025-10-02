@@ -8,6 +8,7 @@ using UnityEngine.UI;
 using static Il2Cpp.GameManager;
 using Il2CppSystem.Globalization;
 using Il2CppTMPro;
+using UnityEngine.SceneManagement;
 
 namespace TweaksAndFixes
 {
@@ -62,7 +63,6 @@ namespace TweaksAndFixes
         internal static void Postfix_ToSharedDesignsConstructor(int year, PlayerData nation, bool forceCreateNew)
         {
             Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
-            // Melon<TweaksAndFixes>.Logger.Msg($"  Active Ship: {(Patch_Ship.LastCreatedShip == null ? "NULL" : Patch_Ship.LastCreatedShip.Name(false, false))}");
         }
 
         [HarmonyPrefix]
@@ -74,17 +74,17 @@ namespace TweaksAndFixes
                 allowEdit = true;
             }
 
-            Melon<TweaksAndFixes>.Logger.Msg(
-                $"ToConstructor: " +
-                $"bool newShip {newShip}, " +
-                $"Ship viewShip {(viewShip != null ? viewShip.Name(false, false) : "NULL")}, " +
-                $"bool allowEdit {allowEdit}, " +
-                // $"IEnumerable<Ship> allowEditMany {(allowEditMany != null ? new List<Ship>(allowEditMany).Count : "NULL")}, " +
-                $"IEnumerable<Ship> allowEditMany {allowEditMany}, " +
-                $"ShipType shipTypeNew, {(shipTypeNew != null ? shipTypeNew.nameUi : "NULL")} " +
-                $"bool needCleanup, {needCleanup} " +
-                $"Player newPlayer {(newPlayer != null ? newPlayer.Name(false) : "NULL")} "
-            );
+            // Melon<TweaksAndFixes>.Logger.Msg(
+            //     $"ToConstructor: " +
+            //     $"bool newShip {newShip}, " +
+            //     $"Ship viewShip {(viewShip != null ? viewShip.Name(false, false) : "NULL")}, " +
+            //     $"bool allowEdit {allowEdit}, " +
+            //     // $"IEnumerable<Ship> allowEditMany {(allowEditMany != null ? new List<Ship>(allowEditMany).Count : "NULL")}, " +
+            //     $"IEnumerable<Ship> allowEditMany {allowEditMany}, " +
+            //     $"ShipType shipTypeNew, {(shipTypeNew != null ? shipTypeNew.nameUi : "NULL")} " +
+            //     $"bool needCleanup, {needCleanup} " +
+            //     $"Player newPlayer {(newPlayer != null ? newPlayer.Name(false) : "NULL")} "
+            // );
 
             Patch_Ui.OnConstructorShipChanged();
         }
@@ -98,42 +98,53 @@ namespace TweaksAndFixes
 
             if (newShip && allowEdit && viewShip == null)
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"  Regular constructor with new desgin");
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Regular constructor with new desgin");
                 CurrentSubGameState = SubGameState.InConstructorNew;
             }
             else if (!newShip && allowEdit && viewShip != null)
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"  Refit mode or existing design: {viewShip.Name(false, false)}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Refit mode or existing design: {viewShip.Name(false, false)}");
                 CurrentSubGameState = SubGameState.InConstructorExisting;
             }
             else if (!newShip && !allowEdit && viewShip != null)
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"  View mode for: {viewShip.Name(false, false)}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"  View mode for: {viewShip.Name(false, false)}");
                 CurrentSubGameState = SubGameState.InConstructorViewMode;
             }
             else
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"  Unknown state!");
+                Melon<TweaksAndFixes>.Logger.Error($"Unknown constructor state!");
+                Melon<TweaksAndFixes>.Logger.Error(
+                    $"ToConstructor: " +
+                    $"bool newShip {newShip}, " +
+                    $"Ship viewShip {(viewShip != null ? viewShip.Name(false, false) : "NULL")}, " +
+                    $"bool allowEdit {allowEdit}, " +
+                    // $"IEnumerable<Ship> allowEditMany {(allowEditMany != null ? new List<Ship>(allowEditMany).Count : "NULL")}, " +
+                    $"IEnumerable<Ship> allowEditMany {allowEditMany}, " +
+                    $"ShipType shipTypeNew, {(shipTypeNew != null ? shipTypeNew.nameUi : "NULL")} " +
+                    $"bool needCleanup, {needCleanup} " +
+                    $"Player newPlayer {(newPlayer != null ? newPlayer.Name(false) : "NULL")} "
+                );
             }
 
 
             Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
-            Melon<TweaksAndFixes>.Logger.Msg($"  Active Ship: {(Patch_Ship.LastCreatedShip == null ? "NULL" : Patch_Ship.LastCreatedShip.Name(false, false))}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Active Ship: {(Patch_Ship.LastCreatedShip == null ? "NULL" : Patch_Ship.LastCreatedShip.Name(false, false))}");
         }
 
-        [HarmonyPrefix]
-        [HarmonyPatch(nameof(GameManager.UpdateLoadingConstructor))]
-        internal static void Prefix_UpdateLoadingConstructor(bool needCleanup, Il2CppSystem.Action onDone)
-        {
-            Melon<TweaksAndFixes>.Logger.Msg($"UpdateLoadingConstructor: bool needCleanup {needCleanup}, Il2CppSystem.Action onDone {(onDone != null ? onDone.method_ptr : "NULL")}");
-        }
+        // [HarmonyPrefix]
+        // [HarmonyPatch(nameof(GameManager.UpdateLoadingConstructor))]
+        // internal static void Prefix_UpdateLoadingConstructor(bool needCleanup, Il2CppSystem.Action onDone)
+        // {
+        //     Melon<TweaksAndFixes>.Logger.Msg($"UpdateLoadingConstructor: bool needCleanup {needCleanup}, Il2CppSystem.Action onDone {(onDone != null ? onDone.method_ptr : "NULL")}");
+        // }
 
-        [HarmonyPrefix]
-        [HarmonyPatch(nameof(GameManager.ChangeState))]
-        internal static void Prefix_ChangeState(GameState newState, bool raiseEnterStateEvents)
-        {
-            Melon<TweaksAndFixes>.Logger.Msg($"ChangeState: GameState newState {newState}, bool raiseEnterStateEvents {raiseEnterStateEvents}");
-        }
+        // [HarmonyPrefix]
+        // [HarmonyPatch(nameof(GameManager.ChangeState))]
+        // internal static void Prefix_ChangeState(GameState newState, bool raiseEnterStateEvents)
+        // {
+        //     Melon<TweaksAndFixes>.Logger.Msg($"ChangeState: GameState newState {newState}, bool raiseEnterStateEvents {raiseEnterStateEvents}");
+        // }
 
         public static GameObject GameSavedInfoText = new();
         public static Text GameSavedInfoTextElement = new();
