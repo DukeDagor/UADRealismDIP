@@ -7,6 +7,7 @@ using static TweaksAndFixes.ModUtils;
 using Il2CppUiExt;
 using System.Text;
 using System.Xml.Linq;
+using TweaksAndFixes.Data;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -678,11 +679,6 @@ namespace TweaksAndFixes
 
             var activeShips = ShipM.GetActiveShips();
 
-            for (int i = 0; i < activeShips.Count; i++)
-            {
-                MountOverrideData.ApplyMountOverridesToShip(activeShips[i]);
-            }
-
             // New UI elements
             if (Config.Param("taf_dockyard_new_logic", 1) == 1)
             {
@@ -692,15 +688,15 @@ namespace TweaksAndFixes
                 UpdateShipTypeButtons(__instance);
             }
             
-            if (MountOverrideData.canary == null)
-            {
-                Melon<TweaksAndFixes>.Logger.Msg($"Reloading overrides after indirect cache clear...");
-                // MountOverrideData.OverrideMountData();
-                SpriteDatabase.Instance.OverrideResources();
-                // FlagDatabase.Recreate();
-                MountOverrideData.canary = new();
-                Melon<TweaksAndFixes>.Logger.Msg($"Done!");
-            }
+            // if (MountOverrideData.canary == null)
+            // {
+            //     Melon<TweaksAndFixes>.Logger.Msg($"Reloading overrides after indirect cache clear...");
+            //     // MountOverrideData.OverrideMountData();
+            //     SpriteDatabase.Instance.OverrideResources();
+            //     // FlagDatabase.Recreate();
+            //     MountOverrideData.canary = new();
+            //     Melon<TweaksAndFixes>.Logger.Msg($"Done!");
+            // }
 
             if (Patch_GameManager.CurrentSubGameState == Patch_GameManager.SubGameState.InConstructorViewMode && GameManager.Instance.isCampaign)
             {
