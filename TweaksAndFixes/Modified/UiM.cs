@@ -465,6 +465,10 @@ namespace TweaksAndFixes
 
             ApplySettingsMenuModifications();
 
+            CreateBailoutPopup();
+
+            // Global/Ui/UiMain/Loading/LayoutDesc/Desc/DescText
+
             // Global/Ui/UiMain/Constructor/Left/Scroll View/
 
             GameObject ConstructorLeftPannel = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View");
@@ -712,6 +716,116 @@ namespace TweaksAndFixes
             beamSliderComp.minValue = ship.hull.data.beamMin * 10;
             beamSliderComp.maxValue = ship.hull.data.beamMax * 10;
             beamSliderComp.value = ship.beam * 10;
+        }
+
+        private static GameObject bailoutEvent;
+        private static TMP_Text bailoutEventWindowBodyText;
+        private static TMP_Text bailoutEventWindowYesText;
+        private static Player bailoutPlayer;
+
+        public static void CreateBailoutPopup()
+        {
+            // Global/Ui/UiMain/Popup/Generic
+
+            // Global/Ui/UiMain/Popup/Bailout Event/Window/TextScrollView/Viewport/Content/Text
+
+            bailoutEvent = GameObject.Instantiate(ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/Generic"));
+            bailoutEvent.transform.SetParent(ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/PopWindows"));
+            bailoutEvent.name = "Bailout Event";
+            bailoutEvent.transform.SetScale(1, 1, 1);
+            bailoutEvent.transform.localPosition = Vector3.zero;
+            RectTransform bailoutEventTransform = bailoutEvent.GetComponent<RectTransform>();
+            bailoutEventTransform.offsetMin = Vector3.zero;
+            bailoutEventTransform.offsetMax = Vector3.zero;
+            bailoutEvent.GetChild("BgScreen").TryDestroy();
+
+            GameObject bailoutEventWindow = bailoutEvent.GetChild("Window");
+            bailoutEventWindow.GetChild("Image").TryDestroy();
+            bailoutEventWindow.GetChild("TextScrollView").TryDestroy();
+            bailoutEventWindow.GetChild("Bg").GetComponent<Image>().color = new Color(0,0,0,0.9f);
+            ModUtils.GetChildAtPath("Buttons/Ok", bailoutEventWindow).TryDestroy();
+            ModUtils.GetChildAtPath("Buttons/No", bailoutEventWindow).TryDestroy();
+
+            GameObject bailoutEventWindowYes = ModUtils.GetChildAtPath("Buttons/Yes", bailoutEventWindow);
+            bailoutEventWindowYes.transform.SetScale(1.2f, 1.2f, 1.2f);
+            GameObject bailoutEventWindowYesTextObj = bailoutEventWindowYes.GetChild("Text (TMP)");
+            bailoutEventWindowYesTextObj.TryDestroyComponent<LocalizeText>();
+            bailoutEventWindowYesText = bailoutEventWindowYesTextObj.GetComponent<TMP_Text>();
+            Button bailoutEventWindowYesBtn = bailoutEventWindowYes.GetComponent<Button>();
+            bailoutEventWindowYesBtn.onClick.RemoveAllListeners();
+            bailoutEventWindowYesBtn.onClick.AddListener(new System.Action(() =>
+            {
+                if (bailoutPlayer == null)
+                {
+                    bailoutEvent.SetActive(false);
+                    Melon<TweaksAndFixes>.Logger.Error($"Error: Invalid player for bailout event!");
+                    return;
+                }
+
+                EventData prompt = G.GameData.events["81"];
+                EventData response = G.GameData.events["81_a"];
+
+                EventX ev = new EventX();
+                ev.date = CampaignController.Instance.CurrentDate;
+                ev.showEventToMainPlayer = true;
+                ev.data = prompt;
+                ev.player = bailoutPlayer;
+                ev.Init();
+
+                Melon<TweaksAndFixes>.Logger.Msg($"Bailout accepted!");
+
+                CampaignController.Instance.AnswerEvent(ev, response);
+
+                bailoutEvent.SetActive(false);
+            }));
+
+            GameObject bailoutEventWindowHeader = bailoutEventWindow.GetChild("Header");
+            bailoutEventWindowHeader.GetComponent<TMP_Text>().text = "Government Bailout"; // TODO: Localize
+
+            GameObject bailoutEventWindowBody = bailoutEventWindow.GetChild("TextOld");
+            bailoutEventWindowBody.name = "Text";
+            bailoutEventWindowBody.SetActive(true);
+            bailoutEventWindowBodyText = bailoutEventWindowBody.GetComponent<TMP_Text>();
+        }
+        
+        public static void ShowBailoutPopupForPlayer(Player player)
+        {
+            EventData prompt = G.GameData.events["81"];
+            EventData response = G.GameData.events["81_a"];
+
+            bailoutPlayer = player;
+
+            // TODO: Localize
+            string promptStr = LocalizeManager.Localize(prompt.text);
+            promptStr += $"\n\n{ModUtils.ColorNumber(response.money, "", "%", false, true)} Naval Funds ({ModUtils.ColorNumber(player.Budget() * response.money / 100, "$", "", false, true)})";
+            promptStr += $"\n{ModUtils.ColorNumber(response.budget, "", "%")} Naval Budget";
+            promptStr += $"\n{ModUtils.ColorNumber(response.wealth, "", "%")} GDP";
+            promptStr += $"\n{ModUtils.ColorNumber(response.reputation)} Naval Prestige";
+            promptStr += $"\n{ModUtils.ColorNumber(response.respect, "", "", true)} Unrest";
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"cash:                      {bailoutPlayer.cash}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"inflation:                 {bailoutPlayer.inflation}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"wealth:                    {bailoutPlayer.wealth}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowth:              {bailoutPlayer.wealthGrowth}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowthMul:           {bailoutPlayer.wealthGrowthMul}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowthEffectivePrev: {bailoutPlayer.wealthGrowthEffectivePrev}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"nationBaseIncomeGrowth:    {bailoutPlayer.nationBaseIncomeGrowth}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"budgetMod:                 {bailoutPlayer.budgetMod}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"unrest:                    {bailoutPlayer.unrest}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"reputation:                {bailoutPlayer.reputation}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowthEff:           {bailoutPlayer.WealthGrowthEffective()}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowthHit:           {(response.wealth / 100 + 1) * (bailoutPlayer.WealthGrowthEffective() + 1) - 1}");
+            // 
+            // bailoutPlayer.cash += player.Budget() * response.money / 100;
+            // bailoutPlayer.wealthGrowth = -0.5f;//(response.wealth / 100 + 1) * (bailoutPlayer.WealthGrowthEffective() + 1) - 1;
+            // bailoutPlayer.budgetMod += response.budget;
+            // bailoutPlayer.reputation += response.reputation;
+            // bailoutPlayer.AddUnrest(-response.respect);
+            
+            bailoutEventWindowBodyText.text = promptStr;
+            bailoutEventWindowYesText.text = LocalizeManager.Localize(response.text);
+
+            bailoutEvent.SetActive(true);
         }
 
         private static void ApplyCampaginDesignTabModifications()
