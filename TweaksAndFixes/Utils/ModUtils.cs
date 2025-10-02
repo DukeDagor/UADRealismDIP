@@ -152,6 +152,93 @@ namespace TweaksAndFixes
             return NearlyEqual(a.x, b.x) && NearlyEqual(a.y, b.y) && NearlyEqual(a.z, b.z);
         }
 
+        public static string Vec3ToCSV(Vector3 vector)
+        {
+            return $"\"({vector.x:0.0000}, {vector.y:0.0000}, {vector.z:0.0000})\"";
+        }
+
+        public static string ColliderObjToCSV(int count, string path, float rotation, Vector3 pos, GameObject decor)
+        {
+            if (decor == null)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"    Null Object!");
+
+                return "";
+            }
+
+            if (decor.name.StartsWith("DeckBorder")) decor.name = "DeckBorder";
+            if (decor.name.StartsWith("DeckWall")) decor.name = "DeckWall";
+
+            string output = "\n" +
+                $"{count},,\"{path}\",\"{decor.name}\",{rotation:0.00},{Vec3ToCSV(pos)},{Vec3ToCSV(decor.transform.localScale)}";
+
+            return output;
+        }
+
+        public static string DecorObjToCSV(int count, string path, float rotation, Vector3 pos, GameObject decor)
+        {
+            if (decor == null)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"    Null Object!");
+
+                return "";
+            }
+
+            Decor data = decor.GetComponent<Decor>();
+
+            /*
+                public unsafe Bounds bounds
+
+                public unsafe bool check
+
+                public unsafe List<GameObject> children
+
+            
+                public unsafe Vector3 minOverlapSizeBox
+
+                public unsafe Vector3 maxOverlapSizeBox
+
+                public unsafe string forceOverlap
+
+                public unsafe string forceIgnore
+
+
+                public unsafe HashSet<string> forceOverlapX
+
+                public unsafe HashSet<string> forceIgnoreX
+
+
+                public unsafe Part part
+
+             */
+
+
+            // Accidents:
+            if (data == null)
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg($"\n{ModUtils.DumpHierarchy(decor)}");
+
+                return "";
+            }
+
+            var children = decor.GetChildren();
+
+            // if (data.children != null)
+            {
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"    Children: {children.Count} {(children.Count > 0 ? children[0].name : "NONE")}");
+            }
+
+            string output = "\n" +
+                $"{count},,\"{path}\",{rotation:0.00},{Vec3ToCSV(pos)}," +
+                $"{(data.check ? "1" : "0")},{(children.Count != 1 || children[0] == null ? "" : children[0].name)}," +
+                $"{Vec3ToCSV(data.bounds.center)},{Vec3ToCSV(data.bounds.size)}," +
+                $"{Vec3ToCSV(data.minOverlapSizeBox)},{Vec3ToCSV(data.maxOverlapSizeBox)}," +
+                $"\"{data.forceOverlap}\",\"{data.forceIgnore}\"";
+
+            return output;
+        }
+
         public static string MountObjToCSV(int count, string path, float rotation, Vector3 pos, GameObject mount)
         {
             Mount data = mount.GetComponent<Mount>();
@@ -442,7 +529,30 @@ namespace TweaksAndFixes
 
             return "Failed to find mount!";
         }
-        
+
+        public static string ColorNumber(float val, string prefix = "", string affix = "", bool invert = false, bool asInt = false)
+        {
+            Color color = (val >= 0 && !invert) || (val < 0 && invert) ? Color.green : Color.red;
+
+            int r = (int)(color.r * 255);
+            int g = (int)(color.g * 255);
+            int b = (int)(color.b * 255);
+
+            // Format the hexadecimal string
+            string hex = $"#{r:X2}{g:X2}{b:X2}";
+
+            string num = asInt ? ($"{val:N0}") : ($"{val}");
+
+            if (val >= 0)
+            {
+                return $"<color={hex}>+{prefix}{num}{affix}</color>";
+            }
+            else
+            {
+                return $"<color={hex}>{prefix}{num}{affix}</color>";
+            }
+        }
+
         public static string DumpSelectedPartData(Part SelectedPart)
         {
             string print = "";
