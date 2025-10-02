@@ -46,9 +46,15 @@ namespace TweaksAndFixes
         [HarmonyPatch(nameof(GameManager.ToSharedDesignsConstructor))]
         internal static void Prefix_ToSharedDesignsConstructor(int year, PlayerData nation, bool forceCreateNew)
         {
-            Melon<TweaksAndFixes>.Logger.Msg($"ToSharedDesignsConstructor: year {year}, nation {nation.nameUi}, forceCreateNew {forceCreateNew}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"ToSharedDesignsConstructor: year {year}, nation {nation.nameUi}, forceCreateNew {forceCreateNew}");
             CurrentSubGameState = SubGameState.InSharedDesigner;
             Patch_Ui.OnConstructorShipChanged();
+
+            if (UiM.InputChooseYearEditField != null)
+            {
+                UiM.InputChooseYearEditField.text = year.ToString();
+                UiM.InputChooseYearStaticText.text = year.ToString();
+            }
         }
 
         [HarmonyPostfix]

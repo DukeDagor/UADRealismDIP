@@ -452,6 +452,10 @@ namespace TweaksAndFixes
             return uiModifications.ContainsKey(ui);
         }
 
+        public static InputField InputChooseYearEditField;
+
+        public static Text InputChooseYearStaticText;
+
         public static void ApplyUiModifications()
         {
             UiM.ModifyUi(G.ui.FleetWindow.Root.GetChild("Root")).MultiplyOffsets(new Vector2(800f / 640f, 400f / 343.9f), new Vector2(800f / 640f, 400f / 343.9f));
@@ -495,14 +499,14 @@ namespace TweaksAndFixes
             GameObject InputChooseYearEdit = InputChooseYear.GetChild("EditName").GetChild("Edit");
             InputChooseYearEdit.TryDestroyComponent<CheckShipName>();
             InputChooseYearEdit.transform.SetScale(1.3f, 1.3f, 1.3f);
-            InputField InputChooseYearEditField = InputChooseYearEdit.GetComponent<InputField>();
+            InputChooseYearEditField = InputChooseYearEdit.GetComponent<InputField>();
             InputChooseYearEditField.text = "1890";
             //InputChooseYearEditField.textComponent.fontSize += 5;
 
             GameObject InputChooseYearStatic = InputChooseYear.GetChild("EditName").GetChild("Static");
             InputChooseYearStatic.GetChild("Header").TryDestroy();
             InputChooseYearStatic.transform.SetScale(1.3f, 1.3f, 1.3f);
-            Text InputChooseYearStaticText = InputChooseYearStatic.GetChild("Text").GetComponent<Text>();
+            InputChooseYearStaticText = InputChooseYearStatic.GetChild("Text").GetComponent<Text>();
             InputChooseYearStaticText.text = "1890";
             //InputChooseYearStaticText.fontSize += 5;
 
