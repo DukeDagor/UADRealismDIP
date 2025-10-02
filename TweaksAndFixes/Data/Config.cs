@@ -238,7 +238,7 @@ namespace TweaksAndFixes
         [ConfigParse("Use Non-Home Population for Crew", "crew_pool_colony_pop_ratio")]
         public static bool UseColonyInCrewPool = false;
         [ConfigParse("Use Improved Armor Generation Defaults", "genarmor_use_defaults")]
-        public static bool UseGenArmorDefaults = false;
+        public static bool UseGenArmorDefaults = true;
         [ConfigParse("Don't Force AI Tech with Predefined Designs", "no_force_tech_with_predefs")]
         public static bool DontClobberTechForPredefs = false;
         [ConfigParse("Disallow Predefined Designs in New Campaigns", "force_no_predef_designs")]
