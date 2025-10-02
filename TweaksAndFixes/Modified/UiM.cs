@@ -566,6 +566,7 @@ namespace TweaksAndFixes
                 }
             }));
 
+            GameObject popupSaveWindow = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/SaveWindow");
             GameObject regularPopupsRoot = ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/PopWindows");
             var regularPopups = regularPopupsRoot.GetChildren();
             GameObject basePopupsRoot = ModUtils.GetChildAtPath("Ui/UiMain", G.container);
@@ -577,7 +578,11 @@ namespace TweaksAndFixes
             hidePopupsButton.transform.SetParent(ModUtils.GetChildAtPath("Ui/UiMain", G.container));
             hidePopupsButton.name = "Hide Popups";
             hidePopupsButton.transform.SetScale(1,1,1);
-            hidePopupsButton.transform.position = new Vector3(3490, 110, 0);
+            hidePopupsButton.transform.position = new Vector3(3490, 110, 0); // -125 40
+            RectTransform hidePopupsButtonRect = hidePopupsButton.GetComponent<RectTransform>();
+            hidePopupsButtonRect.anchoredPosition = new Vector2(-125, 40);
+            hidePopupsButtonRect.anchorMin = new Vector2(1, 0);
+            hidePopupsButtonRect.anchorMax = new Vector2(1, 0);
             hidePopupsButton.SetActive(false);
             GameObject hidePopupsText = hidePopupsButton.GetChild("Text (TMP)");
             hidePopupsText.TryDestroyComponent<LocalizeText>();
@@ -600,36 +605,46 @@ namespace TweaksAndFixes
             ModifyUi(basePopupsRoot).SetOnUpdate(new System.Action<GameObject>((GameObject ui) => {
                 bool hasPopups = false;
 
+                // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"Update popup tracker:");
+
                 if (!GameManager.IsWorld)
                 {
                     hasPopups = false;
                     showPopups = true;
+                    // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"  Not in world");
                     return;
                 }
 
+                // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"  Checking premade popups...");
+
                 foreach (GameObject child in regularPopups)
                 {
-                    if (child.name != "Event Window" && child.name != "Battle Window" && child.name != "WarReparationWindowUI" && child.name != "EventPopupUI") continue;
+                    if (child.name != "Event Window" && child.name != "Battle Window" && child.name != "WarReparationWindowUI") continue;
 
                     if (child.active)
                     {
+                        // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"    Found popup {child.name}!");
                         hasPopups = true;
                         break;
                     }
                 }
-            
+
                 regularPopupsRoot.SetActive(showPopups);
-            
+
                 if (basePopupsRoot.GetChild("MessageBox(Clone)", true) != null)
                 {
                     bool isFirst = true;
 
                     var children = basePopupsRoot.GetChildren();
 
+                    // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"  Checking generic popups...");
+
                     foreach (GameObject child in children)
                     {
                         if (child.name != "MessageBox(Clone)") continue;
-                        
+
+                        // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"    Parsing popup...");
+
                         if (!isFirst)
                         {
                             child.TryDestroyComponent<Image>();
@@ -645,8 +660,11 @@ namespace TweaksAndFixes
                     hidePopupsButton.transform.SetSiblingIndex(children.Count - 1);
                 }
 
-                hidePopupsButton.SetActive((hasPopups || !showPopups) && (!GameManager.IsLoadingScreenActive && GameManager.IsWorldMap));
+                // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"  Has popups: {hasPopups} | !Show popups {!showPopups} | !Loading Screen {!GameManager.IsLoadingScreenActive} | World Map {GameManager.IsWorldMap} | !Save Menu {!popupSaveWindow.active}");
+
+                hidePopupsButton.SetActive((hasPopups || !showPopups) && (!GameManager.IsLoadingScreenActive && GameManager.IsWorldMap && !popupSaveWindow.active));
             }));
+
 
             // Global/Ui/UiMain/WorldEx/Windows/Map Window/Next Turn Panel/Next Turn Button
 
