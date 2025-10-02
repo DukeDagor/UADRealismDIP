@@ -44,6 +44,44 @@ namespace TweaksAndFixes
         // instead of allocating each time.
         public static Il2CppSystem.Nullable<int>  _NullableEmpty_Int = new Il2CppSystem.Nullable<int>();
 
+        public class SaveTextureToFileUtility
+        {
+            public enum SaveTextureFileFormat
+            {
+                JPG, PNG
+            };
+
+            static public void SaveTexture2DToFile(Texture2D tex, string filePath, SaveTextureFileFormat fileFormat, int jpgQuality = 95)
+            {
+                switch (fileFormat)
+                {
+                    case SaveTextureFileFormat.JPG:
+                        System.IO.File.WriteAllBytes(filePath + ".jpg", tex.EncodeToJPG(jpgQuality));
+                        break;
+                    case SaveTextureFileFormat.PNG:
+                        System.IO.File.WriteAllBytes(filePath + ".png", tex.EncodeToPNG());
+                        break;
+                }
+            }
+
+            static public void SaveRenderTextureToFile(RenderTexture renderTexture, string filePath, SaveTextureFileFormat fileFormat = SaveTextureFileFormat.PNG, int jpgQuality = 95)
+            {
+                Texture2D tex;
+                tex = new Texture2D(renderTexture.width, renderTexture.height, TextureFormat.ARGB32, false, false);
+                var oldRt = RenderTexture.active;
+                RenderTexture.active = renderTexture;
+                tex.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0);
+                tex.Apply();
+                RenderTexture.active = oldRt;
+                SaveTexture2DToFile(tex, filePath, fileFormat, jpgQuality);
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(tex);
+                else
+                    UnityEngine.Object.DestroyImmediate(tex);
+            }
+
+        }
+
         public static readonly CultureInfo _InvariantCulture = CultureInfo.InvariantCulture;
 
         private static string[] months = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
