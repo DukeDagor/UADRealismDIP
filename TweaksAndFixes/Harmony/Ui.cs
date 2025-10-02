@@ -900,9 +900,426 @@ namespace TweaksAndFixes
                     File.WriteAllText(Config._BasePath + "\\mounts.txt", finalCount.ToString());
                 }
 
-                else if (Input.GetKeyDown(KeyCode.P))
+                else if (Input.GetKeyDown(KeyCode.N))
+                {
+                    // string finalCount = "";
+
+                    StringBuilder finalCount = new StringBuilder(2 ^ 24);
+
+                    finalCount.Append("# Index,Enabled,Part ID,Rotation,Position,Enable Collision,Decor Model,Collider Offset,Collider Size,Minimum Overlap,Maximum Overlap,Force Overlap,Force Ignore,# Comment 1,# Comment 2\n");
+                    finalCount.Append("#,,,(0-360),\"(x: +Starboard/-Port, y: +Up/-Down, z: Fore/Aft)\",Hide on overlap,See Comment,,,,,,,Editing/Creating\n");
+                    finalCount.Append("@index,enabled,parent,rotation,position,check,model,bounds_center,bounds_size,min_overlap_size_box,max_overlap_size_box,force_overlap,force_ignore,Editing,Do not change @index.\n");
+                    finalCount.Append("default,1,,0,,1,,,,,,none,none,Creating,\"For creating new mounts, set the index to -1.\"");
+
+                    HashSet<string> parsedModels = new HashSet<string>();
+
+                    Queue<GameObject> models = new Queue<GameObject>();
+
+                    // TODO: (Duke) Change this to use TAFData/baseGamePartModelData.csv instead
+
+                    string str = File.ReadAllText(Config._BasePath + "\\partmodels.txt");
+
+                    var split = str.Split("\n");
+
+                    foreach (string name in split)
+                    {
+                        var modelName = name.TrimEnd();
+
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Loading: {modelName}");
+                        models.Enqueue(Util.ResourcesLoad<GameObject>(modelName, false));
+                    }
+
+                    Stack<Tuple<GameObject, int>> stack = new Stack<Tuple<GameObject, int>>();
+
+                    while (models.Count > 0)
+                    {
+                        // string partCount = $"\n# {data.Value.model}:";
+
+                        GameObject model = models.Dequeue();
+
+                        foreach (GameObject child in model.GetChildren())
+                        {
+                            stack.Push(new Tuple<GameObject, int>(child, 0));
+                        }
+
+                        bool isHull = model.name.Contains("_hull_") || model.name.StartsWith("hull_") || model.name.EndsWith("_hull");
+                        bool isTower = model.name.Contains("_tower_") || model.name.StartsWith("tower_") || model.name.EndsWith("_tower");
+                        bool isBarbette = model.name.Contains("_barbette_") || model.name.StartsWith("barbette_") || model.name.EndsWith("_barbette");
+
+                        finalCount.Append($"\n# {model.name},,,,,,,,,,,,,,,,,");
+
+                        List<string> path = new();
+
+                        Melon<TweaksAndFixes>.Logger.Msg($"Parsing: {model.name}...");
+
+                        Dictionary<string, int> depthToIndex = new Dictionary<string, int>();
+
+                        while (stack.Count > 0)
+                        {
+                            var pair = stack.Pop();
+                            GameObject obj = pair.Item1;
+                            int depth = pair.Item2;
+
+                            if (obj == null)
+                            {
+                                // Melon<TweaksAndFixes>.Logger.Msg($"  Failed to load: {data.Value.nameUi}");
+                                continue;
+                            }
+
+                            // Melon<TweaksAndFixes>.Logger.Msg($"  Sub-parsing {obj.name} : {obj.Pointer}...");
+
+                            Il2CppSystem.Collections.Generic.List<GameObject> children;
+
+                            try
+                            {
+                                children = obj.GetChildren();
+                            }
+                            catch
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"  Error while parsing {obj.name}...");
+                                continue;
+                            }
+
+                            foreach (GameObject child in children)
+                            {
+                                stack.Push(new Tuple<GameObject, int>(child, depth + 1));
+                            }
+
+                            // Update path:
+                            //   Remove path elements based on current depth
+                            //   Add current obj to path
+                            path.Clear();
+                            GameObject head = obj.GetParent();
+                            int stop = 10;
+
+                            while (head != null)
+                            {
+                                path.Insert(0, head.name + "/");
+                                head = head.GetParent();
+                                if (stop-- == 0) break;
+                            }
+
+                            path[^1] = path[^1].Replace("/", "");
+
+                            string concatPath = string.Concat(path);
+
+                            if (!obj.name.StartsWith("Decor"))
+                            {
+                                if (isHull)
+                                {
+                                    GameObject parent = obj.GetParent();
+
+                                    if (parent == null) continue;
+
+                                    if (parent.name == "Sections" || parent.name == "Variation")
+                                    {
+                                        finalCount.Append($"\n# {concatPath},,,,,,,,,,,,,,,,,");
+                                    }
+                                }
+
+                                continue;
+                            }
+
+                            if (!depthToIndex.ContainsKey(concatPath)) depthToIndex[concatPath] = 0;
+                            depthToIndex[concatPath]++;
+
+                            // Melon<TweaksAndFixes>.Logger.Msg($"PATH: {string.Concat(path)} + #{count} : {obj.name}");
+
+                            finalCount.Append(DecorObjToCSV(depthToIndex[concatPath], concatPath, obj.transform.localEulerAngles.y, obj.transform.localPosition, obj));
+                        }
+                    }
+
+                    Melon<TweaksAndFixes>.Logger.Msg($"Done!");
+
+                    File.WriteAllText(Config._BasePath + "\\decor.csv", finalCount.ToString());
+                }
+
+                else if (Input.GetKeyDown(KeyCode.B))
+                {
+                    // string finalCount = "";
+
+                    StringBuilder finalCount = new StringBuilder(2 ^ 24);
+
+                    finalCount.Append("# Index,Enabled,Part ID,Name,Rotation,Position,Scale\n");
+                    finalCount.Append("#,,,,(0-360),\"(x: +Starboard/-Port, y: +Up/-Down, z: Fore/Aft)\"\n");
+                    finalCount.Append("@index,enabled,parent,name,rotation,position,scale\n");
+                    finalCount.Append("default,1,,,0,,");
+
+                    HashSet<string> parsedModels = new HashSet<string>();
+
+                    Queue<GameObject> models = new Queue<GameObject>();
+
+                    // TODO: (Duke) Change this to use TAFData/baseGamePartModelData.csv instead
+
+                    string str = File.ReadAllText(Config._BasePath + "\\partmodels.txt");
+
+                    var split = str.Split("\n");
+
+                    foreach (string name in split)
+                    {
+                        var modelName = name.TrimEnd();
+
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Loading: {modelName}");
+                        models.Enqueue(Util.ResourcesLoad<GameObject>(modelName, false));
+                    }
+
+                    Stack<Tuple<GameObject, int>> stack = new Stack<Tuple<GameObject, int>>();
+
+                    while (models.Count > 0)
+                    {
+                        // string partCount = $"\n# {data.Value.model}:";
+
+                        GameObject model = models.Dequeue();
+
+                        foreach (GameObject child in model.GetChildren())
+                        {
+                            stack.Push(new Tuple<GameObject, int>(child, 0));
+                        }
+
+                        bool isHull = model.name.Contains("_hull_") || model.name.StartsWith("hull_") || model.name.EndsWith("_hull");
+                        bool isTower = model.name.Contains("_tower_") || model.name.StartsWith("tower_") || model.name.EndsWith("_tower");
+                        bool isBarbette = model.name.Contains("_barbette_") || model.name.StartsWith("barbette_") || model.name.EndsWith("_barbette");
+
+                        finalCount.Append($"\n# {model.name},,,,,,,,,,,,,,,,,");
+
+                        List<string> path = new();
+
+                        Melon<TweaksAndFixes>.Logger.Msg($"Parsing: {model.name}...");
+
+                        Dictionary<string, int> depthToIndex = new Dictionary<string, int>();
+
+                        while (stack.Count > 0)
+                        {
+                            var pair = stack.Pop();
+                            GameObject obj = pair.Item1;
+                            int depth = pair.Item2;
+
+                            if (obj == null)
+                            {
+                                // Melon<TweaksAndFixes>.Logger.Msg($"  Failed to load: {data.Value.nameUi}");
+                                continue;
+                            }
+
+                            // Melon<TweaksAndFixes>.Logger.Msg($"  Sub-parsing {obj.name} : {obj.Pointer}...");
+
+                            Il2CppSystem.Collections.Generic.List<GameObject> children;
+
+                            try
+                            {
+                                children = obj.GetChildren();
+                            }
+                            catch
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"  Error while parsing {obj.name}...");
+                                continue;
+                            }
+
+                            foreach (GameObject child in children)
+                            {
+                                stack.Push(new Tuple<GameObject, int>(child, depth + 1));
+                            }
+
+                            // Update path:
+                            //   Remove path elements based on current depth
+                            //   Add current obj to path
+                            path.Clear();
+                            GameObject head = obj.GetParent();
+                            int stop = 10;
+
+                            while (head != null)
+                            {
+                                path.Insert(0, head.name + "/");
+                                head = head.GetParent();
+                                if (stop-- == 0) break;
+                            }
+
+                            path[^1] = path[^1].Replace("/", "");
+
+                            string concatPath = string.Concat(path);
+
+                            /*
+                            Deck (container - Only used most of the time, the deck hitboxes can be put anywhere in the hierarchy)
+                             - DeckPlace (buildable area)
+                              - BoxClollider
+                             - DeckBorder[Left/Right/Front/Back/lBack/Middle/Edge/Brack/Bottom] (parts can't collide with this)
+                              - BoxCollider
+                              - RidgedBody
+                              - Visual (Needs to be cloned!)
+                             - DeckWall[Middle/Side/Left/Right/Front/Back/High + #] (Geometry built into the hull)
+                             - DeckSize (?)
+                             - HangSize (Only used for weapons, maybe for how far the part can hang off the deck?)
+                             - DeckFake (?)
+                            */
+
+                            // TODO:
+                            // Decκ
+
+                            if (!obj.name.StartsWith("Deck") && !obj.name.StartsWith("Decκ") && !obj.name.StartsWith("HangSize") && !obj.name.StartsWith("Deckhouse"))
+                            {
+                                // if (!obj.name.StartsWith("Mount") && !obj.name.StartsWith("Decor") && !obj.name.StartsWith("Place") &&
+                                //     !obj.name.StartsWith("Variation") && !obj.name.StartsWith("Sections") && !obj.name.StartsWith("LOD") &&
+                                //     !obj.name.StartsWith("Visual"))
+                                // {
+                                //     Melon<TweaksAndFixes>.Logger.Msg($"{obj.name} : {string.Concat(path)}");
+                                // }
+
+                                if (isHull)
+                                {
+                                    GameObject parent = obj.GetParent();
+
+                                    if (parent == null) continue;
+
+                                    if (parent.name == "Sections" || parent.name == "Variation")
+                                    {
+                                        finalCount.Append($"\n# {concatPath},,,,,,,,,,,,,,,,,");
+                                    }
+                                }
+
+                                continue;
+                            }
+
+                            if (!depthToIndex.ContainsKey(concatPath)) depthToIndex[concatPath] = 0;
+                            depthToIndex[concatPath]++;
+
+                            // Melon<TweaksAndFixes>.Logger.Msg($"PATH: {string.Concat(path)} : {obj.name}");
+
+                            finalCount.Append(ColliderObjToCSV(depthToIndex[concatPath], concatPath, obj.transform.localEulerAngles.y, obj.transform.localPosition, obj));
+                        }
+                    }
+
+                    Melon<TweaksAndFixes>.Logger.Msg($"Done!");
+
+                    File.WriteAllText(Config._BasePath + "\\colliders.csv", finalCount.ToString());
+                }
+
+                else if (Input.GetKeyDown(KeyCode.Y))
+                {
+                    Stack<Tuple<GameObject, int>> stack = new Stack<Tuple<GameObject, int>>();
+
+
+                    GameObject model = Patch_Ship.LastCreatedShip.gameObject.GetChildren()[0].GetChildren()[0].GetChildren()[0];
+
+                    foreach (GameObject child in model.GetChildren())
+                    {
+                        stack.Push(new Tuple<GameObject, int>(child, 0));
+                    }
+
+                    foreach (GameObject child in Patch_Ship.LastCreatedShip.partsCont.GetChildren())
+                    {
+                        stack.Push(new Tuple<GameObject, int>(child, 0));
+                    }
+
+                    List<string> path = new();
+
+                    Dictionary<string, int> depthToIndex = new Dictionary<string, int>();
+
+                    while (stack.Count > 0)
+                    {
+                        var pair = stack.Pop();
+                        GameObject obj = pair.Item1;
+                        int depth = pair.Item2;
+
+                        if (obj == null)
+                        {
+                            // Melon<TweaksAndFixes>.Logger.Msg($"  Failed to load: {data.Value.nameUi}");
+                            continue;
+                        }
+
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  Sub-parsing {obj.name} : {obj.Pointer}...");
+
+                        Il2CppSystem.Collections.Generic.List<GameObject> children;
+
+                        try
+                        {
+                            children = obj.GetChildren();
+                        }
+                        catch
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"  Error while parsing {obj.name}...");
+                            continue;
+                        }
+
+                        foreach (GameObject child in children)
+                        {
+                            stack.Push(new Tuple<GameObject, int>(child, depth + 1));
+                        }
+
+                        // Update path:
+                        //   Remove path elements based on current depth
+                        //   Add current obj to path
+                        path.Clear();
+                        GameObject head = obj.GetParent();
+                        int stop = 10;
+
+                        while (head != null)
+                        {
+                            path.Insert(0, head.name + "/");
+                            head = head.GetParent();
+                            if (stop-- == 0) break;
+                        }
+
+                        path[^1] = path[^1].Replace("/", "");
+
+                        string concatPath = string.Concat(path);
+
+                        /*
+                        Deck (container - Only used most of the time, the deck hitboxes can be put anywhere in the hierarchy)
+                         - DeckPlace (buildable area)
+                          - BoxClollider
+                         - DeckBorder[Left/Right/Front/Back/lBack/Middle/Edge/Brack/Bottom] (parts can't collide with this)
+                          - BoxCollider
+                          - RidgedBody
+                          - Visual (Needs to be cloned!)
+                         - DeckWall[Middle/Side/Left/Right/Front/Back/High + #] (Geometry built into the hull)
+                         - DeckSize (?)
+                         - HangSize (Only used for weapons, maybe for how far the part can hang off the deck?)
+                         - DeckFake (?)
+                        */
+
+                        // TODO:
+                        // Decκ
+
+                        if (!obj.name.StartsWith("Deck") && !obj.name.StartsWith("Decκ") && !obj.name.StartsWith("HangSize") && !obj.name.StartsWith("Deckhouse"))
+                        {
+                            // if (!obj.name.StartsWith("Mount") && !obj.name.StartsWith("Decor") && !obj.name.StartsWith("Place") &&
+                            //     !obj.name.StartsWith("Variation") && !obj.name.StartsWith("Sections") && !obj.name.StartsWith("LOD") &&
+                            //     !obj.name.StartsWith("Visual"))
+                            // {
+                            //     Melon<TweaksAndFixes>.Logger.Msg($"{obj.name} : {string.Concat(path)}");
+                            // }
+
+                            continue;
+                        }
+
+                        if (!depthToIndex.ContainsKey(concatPath)) depthToIndex[concatPath] = 0;
+                        depthToIndex[concatPath]++;
+
+                        BoxCollider coll = obj.GetComponent<BoxCollider>();
+
+                        if (coll == null) continue;
+
+                        GameObject visual = GameObject.Instantiate(TAFGlobalCache.cubeVisualizer);
+                        visual.transform.SetParent(obj);
+                        visual.transform.localPosition = Vector3.zero;
+                        visual.transform.position += new Vector3(0, 0.1f, 0);
+                        visual.transform.localScale = Vector3.one * 0.1f;
+
+                        Melon<TweaksAndFixes>.Logger.Msg($"PATH: {obj.name}");
+
+                        // finalCount.Append(DecorObjToCSV(depthToIndex[concatPath], concatPath, obj.transform.localEulerAngles.y, obj.transform.localPosition, obj));
+                    }
+                }
+
+                else if (Input.GetKeyDown(KeyCode.F))
                 {
 
+                    // TAFGlobalCache.Init();
+
+                    UiM.ShowBailoutPopupForPlayer(ExtraGameData.MainPlayer());
+                }
+
+                else if (Input.GetKeyDown(KeyCode.P))
+                {
                     Melon<TweaksAndFixes>.Logger.Msg($"Part model loading time total: {Patch_Part.stopWatchTotal.Elapsed.TotalSeconds}");
 
                     Melon<TweaksAndFixes>.Logger.Msg("Loaded Models: ");
