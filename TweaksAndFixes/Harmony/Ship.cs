@@ -215,20 +215,6 @@ namespace TweaksAndFixes
         }
         
         [HarmonyPostfix]
-        [HarmonyPatch(nameof(Ship.AddPart))]
-        internal static void Postfix_AddPart(Ship __instance, Part part)
-        {
-            MountOverrideData.ApplyMountOverridesToShip(__instance);
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(nameof(Ship.RefreshHull))]
-        internal static void Postfix_RefreshHull(Ship __instance)
-        {
-            MountOverrideData.ApplyMountOverridesToShip(__instance);
-        }
-
-        [HarmonyPostfix]
         [HarmonyPatch(nameof(Ship.Update))]
         internal static void Postfix_Update(Ship __instance)
         {
