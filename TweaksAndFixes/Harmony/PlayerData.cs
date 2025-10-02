@@ -18,6 +18,8 @@ namespace TweaksAndFixes
 
         internal static void PatchPlayerMaterials()
         {
+            Melon<TweaksAndFixes>.Logger.Msg($"************************************************** Patching Player Materials");
+
             foreach (var pd in G.GameData.players.Values)
             {
                 if (pd.type == "major" && pd.PlayerMaterial == null)
