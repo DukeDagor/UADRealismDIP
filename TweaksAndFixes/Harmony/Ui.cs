@@ -2092,8 +2092,9 @@ namespace TweaksAndFixes
 
             if (!PartPreviewCache.ContainsKey(LastPartPreviewGuid))
             {
-                if (Config.Param("taf_part_previews_half_resolution", 1) == 1)
+                if (Config.Param("taf_part_previews_half_resolution", 0) == 1)
                 {
+                    // Melon<TweaksAndFixes>.Logger.Msg("Cashed new part preview: Half resolution");
                     __result = Resize(__result, __result.width / 2, __result.height / 2);
                 }
 
