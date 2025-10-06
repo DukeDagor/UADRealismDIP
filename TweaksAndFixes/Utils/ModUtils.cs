@@ -700,20 +700,18 @@ namespace TweaksAndFixes
 
             void AppendNumericEntry(string name, float value, bool usePercent = false, float percent = 0)
             {
-                dump += name.PadLeft(lpad) + sepearator + value.ToString("N0") + " " + (usePercent ? ($"({percent.ToString("N2")}%)") : "") + "\n";
+                dump += name.PadLeft(lpad) + sepearator + value.ToString("N0") + " " + (usePercent ? ($"({percent.ToString("N3")}%)") : "") + "\n";
             }
 
             void AppendPercentEntry(string name, float value, bool usePercent = false, float percent = 0)
             {
-                dump += name.PadLeft(lpad) + sepearator + value.ToString("N2") + "% " + (usePercent ? ($"({percent.ToString("N2")}%)") : "") + "\n";
+                dump += name.PadLeft(lpad) + sepearator + value.ToString("N3") + "% " + (usePercent ? ($"({percent.ToString("N3")}%)") : "") + "\n";
             }
 
             void AppendStringEntry(string name, string value)
             {
                 dump += name.PadLeft(lpad) + sepearator + value + "\n";
             }
-
-            float gdp = player.NationYearIncome();
 
             AppendHeading(player.Name(false));
 
@@ -723,23 +721,28 @@ namespace TweaksAndFixes
             AppendPercentEntry("Transport Capacity", player.transportCapacity * 100);
             AppendNumericEntry("Shipyard Size", player.shipyard);
             AppendNumericEntry("Shipbuilding Capacity", player.GetTotalPortCapacity());
+            AppendNumericEntry("Unrest", player.unrest);
+            AppendNumericEntry("Prestige", player.reputation);
 
             AppendTitle("FINANCES");
 
             AppendSubTitle("GDP");
-            AppendNumericEntry("GDP", gdp);
-            AppendNumericEntry("Growth", player.nationBaseIncomeGrowth, true, player.nationBaseIncomeGrowth / gdp * 100);
+            AppendNumericEntry("Total GDP", player.StateBudget());
+            AppendNumericEntry("Base Growth", player.StateBudget() * player.WealthGrowthEffective(), true, player.WealthGrowthEffective() * 100);
+            AppendNumericEntry("Event Modifier", player.StateBudget() * Patch_Player.GetRequestedChangePlayerGDP(player), true, Patch_Player.GetRequestedChangePlayerGDP(player) * 100);
+            AppendNumericEntry("Net Growth",
+                player.StateBudget() * (Patch_Player.GetRequestedChangePlayerGDP(player) + player.WealthGrowthEffective()),
+                true, Patch_Player.GetRequestedChangePlayerGDP(player) + player.WealthGrowthEffective() * 100);
 
             AppendSubTitle("Army");
             AppendNumericEntry("Budget", player.yearlyArmyBudget);
-            AppendPercentEntry("Percent of GDP", player.yearlyArmyBudget / gdp);
 
             AppendSubTitle("Navy");
             AppendNumericEntry("Funds", player.cash);
             AppendNumericEntry("Budget", player.Budget());
             AppendPercentEntry("Percent of GDP", player.NavalBudgetPercent());
             AppendNumericEntry("Expenses", player.Expenses());
-            AppendNumericEntry("Net Budget", player.Budget() - player.Expenses());
+            AppendNumericEntry("Net Budget", player.Budget());
 
             AppendSubTitle("Navy Expenses");
             AppendNumericEntry("Shipyard Expansions", player.ExpensesShipyardBudget());
@@ -783,7 +786,10 @@ namespace TweaksAndFixes
 
                 AppendSubTitle(province.Name);
                 AppendNumericEntry("Income", province.Income());
+                AppendNumericEntry("Income Multiplier", province.incomeMultiplier);
+                AppendNumericEntry("Income Growth", province.IncomeGrowth);
                 AppendNumericEntry("Population", province.GetPopulation());
+                AppendNumericEntry("Population Growth", province.PopulationGrowth);
                 AppendNumericEntry("Port Tonnage", province.Port);
                 AppendNumericEntry("Oil", province.oilCapacity);
             }
@@ -943,6 +949,14 @@ namespace TweaksAndFixes
 
             return root;
         }
+
+        // public static GameObject GetChildrenOfName(string name, GameObject root)
+        // {
+        //     foreach (var child in root.GetChildren())
+        //     {
+        //         
+        //     }
+        // }
 
         public static GameObject FindDeepChild(this GameObject obj, string name, bool allowInactive = true)
         {
