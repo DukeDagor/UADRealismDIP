@@ -428,23 +428,6 @@ namespace TweaksAndFixes
 
         }
 
-        private static float conUpperRightBasePostion = -1;
-
-        public static void UpdateShipTypeButtons(Ui ui)
-        {
-            // __instance.conUpperRight
-
-            if (conUpperRightBasePostion == -1) conUpperRightBasePostion = ui.conUpperRight.transform.position.y;
-
-            ui.conUpperRight.transform.position = new Vector3(ui.conUpperRight.transform.position.x, conUpperRightBasePostion * 0.875f, 0.0f);
-            ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip").SetActive(true);
-
-            ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").SetActive(!G.ui.isConstructorRefitMode);
-            ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").GetComponent<Button>().interactable = true;
-
-            ui.conUpperButtons.GetChild("Layout").GetChild("Undo").SetActive(false);
-        }
-
         private static void AddConfirmationPopups(Ui ui)
         {
             var TopBarChildren = ui.conUpperButtons.GetChild("Layout").GetChildren();
@@ -685,9 +668,15 @@ namespace TweaksAndFixes
                 UpdateTopBarRotationButton(__instance);
                 UpdateTopBarRotationText(__instance);
                 UpdateArmorQualityButton(__instance);
-                UpdateShipTypeButtons(__instance);
+
+                G.ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip").SetActive(true);
+
+                G.ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").SetActive(!G.ui.isConstructorRefitMode);
+                G.ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").GetComponent<Button>().interactable = true;
+
+                G.ui.conUpperButtons.GetChild("Layout").GetChild("Undo").SetActive(false);
             }
-            
+
             // if (MountOverrideData.canary == null)
             // {
             //     Melon<TweaksAndFixes>.Logger.Msg($"Reloading overrides after indirect cache clear...");

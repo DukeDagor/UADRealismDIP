@@ -467,6 +467,8 @@ namespace TweaksAndFixes
 
             CreateBailoutPopup();
 
+            ApplyShipTypeButtonsModifications();
+
             // Global/Ui/UiMain/Loading/LayoutDesc/Desc/DescText
 
             // Global/Ui/UiMain/Constructor/Left/Scroll View/
@@ -717,6 +719,14 @@ namespace TweaksAndFixes
             // }));
             // GameObject draughtSliderOld = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Draught/Slider");
             // draughtSliderOld.SetActive(false);
+        }
+
+        public static void ApplyShipTypeButtonsModifications()
+        {
+            // MAX -265 -50
+            // MIN 780 0
+
+            UiM.ModifyUi(G.ui.conUpperRight).ReplaceOffsets(new Vector2(780, 0), new Vector2(-265, -50));
         }
 
         private static Slider beamSliderComp;
