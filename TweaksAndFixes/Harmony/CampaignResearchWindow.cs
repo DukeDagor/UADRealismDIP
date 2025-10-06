@@ -13,7 +13,7 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static void Prefix_Show()
         {
-            // SpriteDatabase.Instance.OverrideResources();
+            SpriteDatabase.Instance.OverrideResources();
         }
     }
 }

@@ -80,7 +80,7 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static void Prefix_ChooseComponentType()
         {
-            // SpriteDatabase.Instance.OverrideResources();
+            SpriteDatabase.Instance.OverrideResources();
         }
 
 
@@ -2415,7 +2415,7 @@ namespace TweaksAndFixes
         internal static void Prefix_RefreshConstructorInfo(Ui __instance)
         {
             ClearAllButtons(__instance);
-            // SpriteDatabase.Instance.OverrideResources();
+            SpriteDatabase.Instance.OverrideResources();
         }
 
         [HarmonyPatch(nameof(Ui.RefreshConstructorInfo))]
