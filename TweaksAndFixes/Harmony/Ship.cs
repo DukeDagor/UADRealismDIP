@@ -311,7 +311,7 @@ namespace TweaksAndFixes
 
             // Melon<TweaksAndFixes>.Logger.Msg($"  {__instance.Name(false, false)} : {rangeToEnemy} > {__instance.weaponRangesCache[torpData]}");
 
-            if (rangeToEnemy > __instance.weaponRangesCache[torpData] * 0.8f)
+            if (rangeToEnemy > __instance.weaponRangesCache[torpData] * Config.Param("taf_torpedo_max_launch_range_percent", 0.8f))
             {
                 // Ugly but it works...
 
