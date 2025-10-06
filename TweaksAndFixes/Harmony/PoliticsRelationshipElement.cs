@@ -29,12 +29,6 @@ namespace TweaksAndFixes.Harmony
             __instance.TopBar.gameObject.transform.position += new Vector3(0f, 14f, 0f);
             __instance.BottomBar.gameObject.transform.position -= new Vector3(0f, 14f, 0f);
         }
-
-        [HarmonyPatch(nameof(PoliticsRelationshipElement.InitBar))]
-        [HarmonyPostfix]
-        internal static void Postfix_InitBar(PoliticsRelationshipElement __instance)
-        {
-        }
     }
 
     [HarmonyPatch(typeof(CampaignPolitics_ElementUI))]
