@@ -27,6 +27,11 @@ namespace TweaksAndFixes
         private static Dictionary<Player, float> GDPMultiplierNext = new();
         private static int TurnForGDPMultipler = -1;
 
+        public static float GetRequestedChangePlayerGDP(Player player)
+        {
+            return GDPMultiplier.ContainsKey(player) ? GDPMultiplier[player] : 0f;
+        }
+
         public static void RequestChangePlayerGDP(Player player, float multiplier)
         {
             if (TurnForGDPMultipler == -1) TurnForGDPMultipler = CampaignController.Instance.CurrentDate.turn;
