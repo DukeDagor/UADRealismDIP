@@ -71,9 +71,11 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_WealthGrowthEffective(Player __instance, ref float __result)
         {
+            if (!Patch_CampaignController.isLoadingNewTurn) return;
+
             if (GDPMultiplier.ContainsKey(__instance))
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"Apply event GDP% modifier to {__instance.Name(false)} : Base {__result} | Modifier {GDPMultiplier[__instance]}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"Apply event GDP% modifier to {__instance.Name(false)} : Base {__result} | Modifier {GDPMultiplier[__instance]}");
             
                 __result += GDPMultiplier[__instance];
             }

@@ -69,20 +69,24 @@ namespace TweaksAndFixes
             return true;
         }
 
+        public static bool isLoadingNewTurn = false;
+
+        [HarmonyPatch(nameof(CampaignController.NextTurn))]
+        [HarmonyPrefix]
+        internal static void Prefix_NextTurn(CampaignController __instance)
+        {
+            // Melon<TweaksAndFixes>.Logger.Msg($"NextTurn"); // <<< Trigger on hit new turn button
+            isLoadingNewTurn = true;
+        }
+
         [HarmonyPatch(nameof(CampaignController.OnNewTurn))]
         [HarmonyPrefix]
         internal static void Prefix_OnNewTurn(CampaignController __instance)
         {
             // Melon<TweaksAndFixes>.Logger.Msg($"OnNewTurn"); // <<< Trigger on start of new turn
             Patch_Player.ResetChangePlayerGDP();
+            isLoadingNewTurn = false;
         }
-
-        // [HarmonyPatch(nameof(CampaignController.NextTurn))]
-        // [HarmonyPrefix]
-        // internal static void Prefix_NextTurn(CampaignController __instance)
-        // {
-        //     Melon<TweaksAndFixes>.Logger.Msg($"NextTurn"); // <<< Trigger on hit new turn button
-        // }
 
         private static float AnswerEventWealth = 0;
 
@@ -133,7 +137,7 @@ namespace TweaksAndFixes
                 return;
             }
 
-            Melon<TweaksAndFixes>.Logger.Msg($"  Checking on {__instance.CurrentDate.turn}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Checking on {__instance.CurrentDate.turn}");
 
             int activeCount = 0;
             List<Player> activePlayers = new();
