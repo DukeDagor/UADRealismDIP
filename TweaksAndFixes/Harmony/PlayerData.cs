@@ -16,14 +16,19 @@ namespace TweaksAndFixes
         //{
         //}
 
+        private static bool hasMessagedPatchingPlayerMaterials = false;
+
         internal static void PatchPlayerMaterials()
         {
-            Melon<TweaksAndFixes>.Logger.Msg($"************************************************** Patching Player Materials");
-
             foreach (var pd in G.GameData.players.Values)
             {
                 if (pd.type == "major" && pd.PlayerMaterial == null)
                 {
+                    if (!hasMessagedPatchingPlayerMaterials)
+                    {
+                        hasMessagedPatchingPlayerMaterials = true;
+                        Melon<TweaksAndFixes>.Logger.Msg($"************************************************** Patching Player Materials");
+                    }
                     var newMat = UnityEngine.Resources.Load<Material>(@"Campaign UI\Materials\PlayerMaterials\player-britain");
                     if (newMat == null)
                         continue;
