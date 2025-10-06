@@ -45,6 +45,13 @@ namespace TweaksAndFixes
             GenArmorData.LoadData();
             AccuraciesExInfo.LoadData();
             MountOverrideData.LoadData();
+
+            // TODO: Ew! Replace this trash!!!
+            foreach (var ev in G.GameData.events)
+            {
+                ev.Value.param.Replace("low_money", "");
+                if (ev.Value.paramx.ContainsKey("low_money")) ev.Value.paramx.Remove("low_money");
+            }
         }
 
         private static readonly List<string> _FixKeys = new List<string>();
