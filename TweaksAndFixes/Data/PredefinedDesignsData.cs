@@ -159,7 +159,7 @@ namespace TweaksAndFixes
                     }
                 }
 
-                bool careAboutThisPredef = isLast && careAboutPredefs;
+                bool careAboutThisPredef = isLast && careAboutPredefs && Config.Param("taf_predef_ignore_missing", 0) == 0;
                 if (!LoadPredefs(path, out var store, out int dCount, careAboutThisPredef))
                 {
                     Melon<TweaksAndFixes>.Logger.Error($"Tried to load predefined designs file {errorFilename} but failed to load it correctly.");
