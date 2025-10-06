@@ -730,7 +730,7 @@ namespace TweaksAndFixes
                     }
                 }
 
-                else if (Input.GetKeyDown(KeyCode.L))
+                else if (false && Input.GetKeyDown(KeyCode.L))
                 {
                     // string finalCount = "";
 
@@ -887,6 +887,173 @@ namespace TweaksAndFixes
                     Melon<TweaksAndFixes>.Logger.Msg($"Done!");
 
                     File.WriteAllText(Config._BasePath + "\\mounts.txt", finalCount.ToString());
+                }
+
+                else if (Input.GetKeyDown(KeyCode.L))
+                {
+                    // string finalCount = "";
+
+                    HashSet<string> parsedModels = new HashSet<string>();
+
+                    HashSet<string> materials = new HashSet<string>();
+                    HashSet<string> textures = new HashSet<string>();
+
+                    Queue<GameObject> models = new Queue<GameObject>();
+
+                    // TODO: (Duke) Change this to use TAFData/baseGamePartModelData.csv instead
+
+                    string str = File.ReadAllText(Config._BasePath + "\\partmodels.txt");
+
+                    var split = str.Split("\n");
+
+                    foreach (string name in split)
+                    {
+                        var modelName = name.TrimEnd();
+
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Loading: {modelName}");
+                        models.Enqueue(Util.ResourcesLoad<GameObject>(modelName, false));
+                    }
+
+                    Stack<Tuple<GameObject, int>> stack = new Stack<Tuple<GameObject, int>>();
+
+                    while (models.Count > 0)
+                    {
+                        // string partCount = $"\n# {data.Value.model}:";
+
+                        GameObject model = models.Dequeue();
+
+                        foreach (GameObject child in model.GetChildren())
+                        {
+                            stack.Push(new Tuple<GameObject, int>(child, 0));
+                        }
+
+                        bool isHull = model.name.Contains("_hull_") || model.name.StartsWith("hull_") || model.name.EndsWith("_hull");
+                        bool isTower = model.name.Contains("_tower_") || model.name.StartsWith("tower_") || model.name.EndsWith("_tower");
+                        bool isBarbette = model.name.Contains("_barbette_") || model.name.StartsWith("barbette_") || model.name.EndsWith("_barbette");
+
+
+                        List<string> path = new();
+
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Parsing: {model.name}...");
+
+                        Dictionary<string, int> depthToIndex = new Dictionary<string, int>();
+
+                        while (stack.Count > 0)
+                        {
+                            var pair = stack.Pop();
+                            GameObject obj = pair.Item1;
+                            int depth = pair.Item2;
+
+                            if (obj == null)
+                            {
+                                // Melon<TweaksAndFixes>.Logger.Msg($"  Failed to load: {data.Value.nameUi}");
+                                continue;
+                            }
+
+                            // Melon<TweaksAndFixes>.Logger.Msg($"  Sub-parsing {obj.name} : {obj.Pointer}...");
+
+                            Il2CppSystem.Collections.Generic.List<GameObject> children;
+
+                            try
+                            {
+                                children = obj.GetChildren();
+                            }
+                            catch
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"  Error while parsing {obj.name}...");
+                                continue;
+                            }
+
+                            foreach (GameObject child in children)
+                            {
+                                stack.Push(new Tuple<GameObject, int>(child, depth + 1));
+                            }
+
+                            // Update path:
+                            //   Remove path elements based on current depth
+                            //   Add current obj to path
+                            path.Clear();
+                            GameObject head = obj.GetParent();
+                            int stop = 10;
+
+                            while (head != null)
+                            {
+                                path.Insert(0, head.name + "/");
+                                head = head.GetParent();
+                                if (stop-- == 0) break;
+                            }
+
+                            path[^1] = path[^1].Replace("/", "");
+
+                            string concatPath = string.Concat(path);
+
+
+                            if (!depthToIndex.ContainsKey(concatPath)) depthToIndex[concatPath] = 0;
+                            depthToIndex[concatPath]++;
+
+                            MeshRenderer renderer = obj.GetComponent<MeshRenderer>();
+
+                            bool hasPrinted = false;
+
+                            if (renderer != null && renderer.materials.Length > 0)
+                            {
+                                string matList = "";
+
+                                foreach (Material mat in renderer.materials)
+                                {
+                                    if (!materials.Contains(mat.name))
+                                    {
+                                        // if (mat.mainTexture == null) continue;
+
+                                        // if (!hasPrinted) Melon<TweaksAndFixes>.Logger.Msg($"New Mat: {string.Concat(path)} : {obj.name}");
+                                    
+                                        hasPrinted = true;
+                                    
+                                        Melon<TweaksAndFixes>.Logger.Msg($"{mat.name} : {(mat.mainTexture == null ? "" : mat.mainTexture.name)} : {mat.color}");
+
+                                        materials.Add(mat.name);
+
+                                    }
+
+                                    // matList += $"{mat.name}, ";
+
+                                    // if (mat.mainTexture != null && !textures.Contains(mat.mainTexture.name))
+                                    // {
+                                    //     textures.Add(mat.mainTexture.name);
+                                    // 
+                                    //     Melon<TweaksAndFixes>.Logger.Msg($"{mat.name} : {mat.mainTexture.name}");
+                                    // }
+                                }
+                            }
+
+                            // if (isBarbette)
+                            // {
+                            //     if (!obj.name.StartsWith("Mount:barbette"))
+                            //     {
+                            //         continue;
+                            //     }
+                            // }
+                            // else if (isTower)
+                            // {
+                            //     if (obj.name.StartsWith("Mount:tower_main") || obj.name.StartsWith("Mount:si_barbette"))
+                            //     {
+                            //         continue;
+                            //     }
+                            // }
+                            // else if (isHull)
+                            // {
+                            //     if (obj.name.StartsWith("Mount:tower_main") || obj.name.StartsWith("Mount:tower_sec") || obj.name.StartsWith("Mount:funnel") || obj.name.StartsWith("Mount:si_barbette"))
+                            //     {
+                            //         continue;
+                            //     }
+                            // }
+
+
+                            // Melon<TweaksAndFixes>.Logger.Msg($"PATH: {string.Concat(path)} + #{count} : {obj.name}");
+                        }
+                    }
+
+                    Melon<TweaksAndFixes>.Logger.Msg($"Done!");
                 }
 
                 else if (Input.GetKeyDown(KeyCode.N))
