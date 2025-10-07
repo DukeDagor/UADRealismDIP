@@ -11,6 +11,7 @@ using UnityEngine;
 using Il2Cpp;
 using Il2CppInterop.Runtime.Attributes;
 using Il2CppSystem.Runtime.Remoting.Messaging;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
 
 #pragma warning disable CS0649
 #pragma warning disable CS8600
@@ -207,6 +208,69 @@ namespace TweaksAndFixes
             }
         }
 
+        public class AreaDTO : MapDataLoader<Area>
+        {
+            [Serializer.Field]
+            private string nameUi;
+
+            public override void Apply(Area old)
+            {
+                old.Name = nameUi;
+            }
+
+            public override void FillFrom(Area old)
+            {
+                name = old.Id;
+                nameUi = old.Name;
+            }
+        }
+
+        public class CanalDTO
+        {
+            [Serializer.Field]
+            private string name;
+
+            [Serializer.Field]
+            private string nameUi;
+
+            [Serializer.Field]
+            private string provinceId;
+
+            [Serializer.Field]
+            private int availability_year;
+
+            public void Apply(MapCanal old)
+            {
+                old.Name = nameUi;
+                old.ProvinceId = provinceId;
+                old.AvailableFrom = availability_year;
+            }
+
+            public static bool Load()
+            {
+                string textFromFileOrAsset = Serializer.CSV.GetTextFromFileOrAsset("canals");
+                if (textFromFileOrAsset == null)
+                {
+                    return false;
+                }
+                if (textFromFileOrAsset.Length < 2)
+                {
+                    Melon<TweaksAndFixes>.Logger.Error("Fewer than 2 lines of text in asset `canals.csv`");
+                    return false;
+                }
+                Dictionary<string, CanalDTO> dictionary = new Dictionary<string, CanalDTO>();
+                bool result = Serializer.CSV.Read<Dictionary<string, CanalDTO>, string, CanalDTO>(textFromFileOrAsset, dictionary, "name", useComments: true, useDefault: true);
+                foreach (MapCanal item in (Il2CppArrayBase<MapCanal>)(object)MapCanals.Instance.Canals)
+                {
+                    if (dictionary.TryGetValue(item.Id, out var value))
+                    {
+                        value.Apply(item);
+                    }
+                }
+                return result;
+            }
+        }
+
         public static void LoadMapData()
         {
             if (Config.OverrideMap == Config.OverrideMapOptions.DumpData)
@@ -351,6 +415,8 @@ namespace TweaksAndFixes
             bool success = true;
             success &= Load<PortElementDTO, PortElement>("ports", CampaignMap.Instance.Ports.Ports);
             success &= Load<ProvinceDTO, Province>("provinces", CampaignMap.Instance.Provinces.Provinces);
+            success &= Load<AreaDTO, Area>("areas", CampaignMap.Instance.Areas.Areas);
+            success &= CanalDTO.Load();
             success &= PopulateProvinceHolderByYear();
             success &= VerifyProvinces(CampaignMap.Instance.Provinces.Provinces);
             if (success)
