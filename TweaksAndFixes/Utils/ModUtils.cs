@@ -732,7 +732,7 @@ namespace TweaksAndFixes
             AppendNumericEntry("Event Modifier", player.StateBudget() * Patch_Player.GetRequestedChangePlayerGDP(player), true, Patch_Player.GetRequestedChangePlayerGDP(player) * 100);
             AppendNumericEntry("Net Growth",
                 player.StateBudget() * (Patch_Player.GetRequestedChangePlayerGDP(player) + player.WealthGrowthEffective()),
-                true, Patch_Player.GetRequestedChangePlayerGDP(player) + player.WealthGrowthEffective() * 100);
+                true, (Patch_Player.GetRequestedChangePlayerGDP(player) + player.WealthGrowthEffective()) * 100);
 
             AppendSubTitle("Army");
             AppendNumericEntry("Budget", player.yearlyArmyBudget);
