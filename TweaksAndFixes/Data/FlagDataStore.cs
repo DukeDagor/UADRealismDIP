@@ -84,7 +84,8 @@ namespace TweaksAndFixes
                             Melon<TweaksAndFixes>.Logger.Error("Failed to load flag image file " + filePath);
                         }
                         //Debug.Log($"Texture {file} has size {tex.width}x{tex.height}@{tex.format}");
-                        sprite = Sprite.Create(tex, new Rect(0, 0, 256, 128), new Vector2(0.5f, 0.5f));
+                        // sprite = Sprite.Create(tex, new Rect(0, 0, 256, 128), new Vector2(0.5f, 0.5f));
+                        sprite = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height), new Vector2(0.5f, 0.5f));
                         Instance.AddSprite(file, sprite);
                     }
 
