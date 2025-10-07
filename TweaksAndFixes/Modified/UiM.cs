@@ -790,8 +790,10 @@ namespace TweaksAndFixes
                     return;
                 }
 
-                EventData prompt = G.GameData.events["81"];
-                EventData response = G.GameData.events["81_a"];
+                int bailoutEventNumber = Config.Param("taf_bailout_event_number", 81);
+
+                EventData prompt = G.GameData.events[$"{bailoutEventNumber}"];
+                EventData response = G.GameData.events[$"{bailoutEventNumber}_a"];
 
                 EventX ev = new EventX();
                 ev.date = CampaignController.Instance.CurrentDate;
@@ -818,8 +820,10 @@ namespace TweaksAndFixes
         
         public static void ShowBailoutPopupForPlayer(Player player)
         {
-            EventData prompt = G.GameData.events["81"];
-            EventData response = G.GameData.events["81_a"];
+            int bailoutEventNumber = Config.Param("taf_bailout_event_number", 81);
+
+            EventData prompt = G.GameData.events[$"{bailoutEventNumber}"];
+            EventData response = G.GameData.events[$"{bailoutEventNumber}_a"];
 
             bailoutPlayer = player;
 
