@@ -10,7 +10,7 @@ namespace TweaksAndFixes.Harmony
     {
         public static float RandomRange(float root, float range)
         {
-            return (float)System.Random.Shared.NextDouble() * Math.Abs(range) + root - range / 2;
+            return (float)System.Random.Shared.NextDouble() * Math.Abs(range) + root;
         }
 
         public static Torpedo reference = null;
