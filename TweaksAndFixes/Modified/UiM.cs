@@ -551,11 +551,6 @@ namespace TweaksAndFixes
             ApplyCampaignWindowModifications();
             ApplyDockyardModifications();
 
-            GameObject bugReporter = G.ui.commonUi.GetChild("Options").GetChild("BugReport");
-
-            bugReporter.SetActive(false);
-            bugReporter.UiVisible(false);
-
             // Global/Ui/UiMain/Loading/LayoutDesc/Desc/DescText
 
             // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/(Beam/Draught)/Slider
@@ -1302,6 +1297,8 @@ namespace TweaksAndFixes
             CreateTopBarRotationText();
             CreateArmorQualityButton();
 
+            GameObject bugReporter = G.ui.commonUi.GetChild("Options").GetChild("BugReport");
+
             ModifyUi(ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor")).SetOnUpdate(new System.Action<GameObject>((GameObject ui) => {
                 if (Config.Param("taf_dockyard_remove_per_design_copy_delete_buttons", 1) == 1)
                 {
@@ -1334,6 +1331,7 @@ namespace TweaksAndFixes
                     AddConfirmationPopups();
                 }
 
+                if (bugReporter.active) bugReporter.SetActive(false);
             }));
         }
 
