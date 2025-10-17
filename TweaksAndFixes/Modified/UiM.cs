@@ -270,6 +270,7 @@ namespace TweaksAndFixes
             {
                 modOffset = true;
                 this.offsetMin = offsetMin;
+                this.offsetMax = this.offsetMaxOriginal;
 
                 return this;
             }
@@ -1375,7 +1376,7 @@ namespace TweaksAndFixes
             float lowVPThreshold = Config.Param("taf_war_low_vp_threshold", 0f);
 
             float peace_min_vp_difference = MonoBehaviourExt.Param("peace_min_vp_difference", 10000f);
-            float peace_enemy_vp_ratio = MonoBehaviourExt.Param("peace_enemy_vp_ratio", 2f);
+            float peace_enemy_vp_ratio = MonoBehaviourExt.Param("peace_enemy_vp_ratio ", 2f);
             float peace_vp_sum_prolonged_war = MonoBehaviourExt.Param("peace_vp_sum_prolonged_war", 150000f);
 
             var CD = CampaignController.Instance.CampaignData;
