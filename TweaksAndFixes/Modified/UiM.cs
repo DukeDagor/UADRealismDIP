@@ -386,6 +386,70 @@ namespace TweaksAndFixes
         public static Dictionary<GameObject, UiModification> uiModifications = new();
         private static bool NeedsUpdate = false;
 
+        public static GameObject InstanciateUI(GameObject template, GameObject parent, string name, Vector3 localPos, Vector3 scale)
+        {
+            GameObject ui = GameObject.Instantiate(template);
+            ui.transform.SetParent(parent);//fleetButtons.GetComponent<LayoutGroup>().transform);
+            ui.transform.localPosition = localPos;
+            ui.transform.SetScale(scale);
+            ui.name = name;
+            return ui;
+        }
+
+        public static void SetLocalizedTextTag(GameObject ui, string tag)
+        {
+            LocalizeText localize = ui.GetComponent<LocalizeText>();
+
+            if (localize == null)
+            {
+                Melon<TweaksAndFixes>.Logger.Error($"Failed to get LocalizeText component from {ui.name}");
+                return;
+            }
+
+            if (localize.LocalizedElements.Length != 1)
+            {
+                Melon<TweaksAndFixes>.Logger.Error($"{ui.name}.LocalizedElements.Length == {localize.LocalizedElements.Length}. Should be 1.");
+                return;
+            }
+
+            TextMeshProUGUI textElement = localize.LocalizedElements[0].TextMeshPro;
+
+            if (textElement == null)
+            {
+                Melon<TweaksAndFixes>.Logger.Error($"Failed to get TextMeshProUGUI component from {ui.name}.LocalizeText.LocalizedElements");
+                return;
+            }
+
+            localize.LocalizedElements[0] = new LocalizeText.LocalizedElement();
+            localize.LocalizedElements[0].Tag = tag;
+            localize.LocalizedElements[0].DefaultText = "";
+            localize.LocalizedElements[0].TextMeshPro = textElement;
+        }
+
+        public static void SetButtonOnClick(GameObject ui, System.Action action)
+        {
+            Button button = ui.GetComponent<Button>();
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(action);
+        }
+
+        public static void AddTooltip(GameObject ui, string content)
+        {
+            OnEnter onEnter = ui.AddComponent<OnEnter>();
+            onEnter.action = new System.Action(() => {
+                if (!ui.active) return;
+
+                G.ui.ShowTooltip(LocalizeManager.Localize(content), ui);
+            });
+
+            OnLeave onLeave = ui.AddComponent<OnLeave>();
+            onLeave.action = new System.Action(() => {
+                if (!ui.active) return;
+
+                G.ui.HideTooltip();
+            });
+        }
+
         public static UiModification ModifyUi(GameObject ui)
         {
             NeedsUpdate = true;
@@ -406,6 +470,15 @@ namespace TweaksAndFixes
             uiModifications.Add(ui, new UiModification(ui));
 
             return uiModifications[ui];
+        }
+
+        public static UiModification ModifyUi(GameObject ui, string childPath)
+        {
+            GameObject child = ModUtils.GetChildAtPath(childPath, ui);
+
+            if (!child) return null;
+
+            return ModifyUi(child);
         }
 
         public static void UpdateModifications(bool debug = false)
