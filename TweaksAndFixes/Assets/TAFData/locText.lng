@@ -50,3 +50,8 @@ $TAF_Ui_Dockyard_ArmorTab_UpdateArmorQualitySetting;Update Armor Preview Setting
 $TAF_Ui_Predef_Error_MalformedPredefFile;Malformed predefs. Check log: `..\\steamapps\\common\\Ultimate Admiral Dreadnoughts\\MelonLoader\\Latest.log`.
 $TAF_Ui_FleetWindow_Confirm_Action_Delete;Are you sure you want to delete this design?
 $TAF_Ui_FleetWindow_Confirm_Action_Scrap;Are you sure you want to scrap the selected ship(s)?
+$Ui_World_FleetDesign_ViewOnMap;View On Map
+$Ui_World_FleetDesign_SetRole;Set Role
+$TAF_tooltip_set_role;Set the role of one or more ships.
+$TAF_tooltip_set_crew;Set the crew level or mothball one or more ships.
+$TAF_tooltip_view_on_map;Center camera on the map location of the selected ship.
