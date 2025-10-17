@@ -794,6 +794,126 @@ namespace TweaksAndFixes
                         Slider slider = popup.GetChild("Root").GetChild("Campaign Slider").GetComponent<Slider>();
                     }
                 }
+                else if (G.ui.FleetWindow.selectedElements.Count > 1)
+                {
+                    // Create base-popup
+                    G.ui.FleetWindow.selectedElements[0].CrewAction.onClick.Invoke();
+
+                    GameObject popup = G.ui.gameObject.GetChild("MessageBox(Clone)", true);
+
+                    if (popup != null)
+                    {
+                        // Settup ship names for body text (TODO: make sure this works in other languages)
+                        string shipNames = G.ui.FleetWindow.selectedElements[0].CurrentShip.Name(false, true);
+
+                        for (int i = 1; i < G.ui.FleetWindow.selectedElements.Count && i < 3; i++)
+                        {
+                            shipNames += $", {G.ui.FleetWindow.selectedElements[i].CurrentShip.Name(false, true)}";
+                        }
+
+                        if (G.ui.FleetWindow.selectedElements.Count > 3)
+                        {
+                            shipNames += $", ... (+{G.ui.FleetWindow.selectedElements.Count - 3})";
+                        }
+
+                        // Calculate crew stats
+                        float totalCrewCap = 0;
+                        float existingCrew = 0;
+                        float crewPool = G.ui.FleetWindow.selectedElements[0].CurrentShip.player.crewPool;
+
+                        foreach (var element in G.ui.FleetWindow.selectedElements)
+                        {
+                            totalCrewCap += element.CurrentShip.GetTotalCrew();
+                            existingCrew += element.CurrentShip.GetShipCrew();
+                        }
+
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Crew Counts");
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  totalCrewCap:  {totalCrewCap}");
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  existingCrew:  {existingCrew}");
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  crewPool:      {crewPool}");
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  Max Percent:   {(int)(Math.Min(1f, crewPool / (totalCrewCap - existingCrew)) * 100f)}");
+
+                        // Get body text
+                        TMP_Text text = ModUtils.GetChildAtPath("Root/Data", popup).GetComponent<TMP_Text>();
+
+                        // Configure slider
+                        Slider slider = ModUtils.GetChildAtPath("Root/Campaign Slider", popup).GetComponent<Slider>();
+                        slider.minValue = 0;
+                        slider.maxValue = (int)(Math.Min(1f, crewPool / (totalCrewCap - existingCrew)) * 100f);
+                        slider.onValueChanged.RemoveAllListeners();
+                        slider.onValueChanged.AddListener(new System.Action<float>((float value) =>
+                        {
+                            // Melon<TweaksAndFixes>.Logger.Msg($"Slider value changed: {value}");
+
+                            string extraInfo = "";
+
+                            if (value < 70 && value > 0)
+                            {
+                                extraInfo += String.Format(LocalizeManager.Localize("$Ui_World_FleetDesign_ShipStatusWillBeSetToCrew"), "<color=#FFDA2F>", "</color>");
+                            }
+                            else if (value == 0)
+                            {
+                                extraInfo += String.Format(LocalizeManager.Localize("$Ui_World_FleetDesign_ShipStatusWillBeSetToMoth"), "<color=#B5B5B5>", "</color>");
+                            }
+
+                            text.text = String.Format(LocalizeManager.Localize("$Ui_World_FleetDesign_ShipCrewAmount2"), $"{value:N0}%", shipNames, extraInfo);
+                        }));
+                        slider.Set(slider.maxValue); // Invoke after configuring onValueChanged
+
+                        // Configure OK button
+                        Button ok = ModUtils.GetChildAtPath("Root/Buttons/Ok", popup).GetComponent<Button>();
+                        ok.onClick.RemoveAllListeners();
+                        ok.onClick.AddListener(new System.Action(() => {
+                            foreach (var element in G.ui.FleetWindow.selectedElements)
+                            {
+                                // Get new crew values
+                                int existing = (int)(element.CurrentShip.GetShipCrew() + 0.05);
+                                int setTo = (int)(Math.Round(element.CurrentShip.GetTotalCrew() * (slider.value / 100f)) + 0.05);
+
+                                // Melon<TweaksAndFixes>.Logger.Msg($"{element.CurrentShip.Name(false, false)}");
+                                // Melon<TweaksAndFixes>.Logger.Msg($"  GetTotalCrew:  {element.CurrentShip.GetTotalCrew()}");
+                                // Melon<TweaksAndFixes>.Logger.Msg($"  GetShipCrew:   {existing}");
+                                // Melon<TweaksAndFixes>.Logger.Msg($"  Set Crew To:   {existing} -> {setTo}");
+
+                                if (setTo == existing) continue;
+
+                                // Invoke the popup for seting the crew for a single ship.
+                                // This is *horrifiyingly ugly* but doing it manually causes way too many problems
+                                element.CrewAction.onClick.Invoke();
+
+                                GameObject subPopup = null;
+
+                                foreach (var child in G.ui.gameObject.GetChildren())
+                                {
+                                    if (child.name != "MessageBox(Clone)") continue;
+
+                                    if (child == popup) continue;
+
+                                    subPopup = child;
+                                    break;
+                                }
+
+                                if (subPopup == null)
+                                {
+                                    Melon<TweaksAndFixes>.Logger.Error($"Failed to configure crew for ship {element.CurrentShip.Name(false, false)}!");
+                                    continue;
+                                }
+
+                                Slider subSlider = ModUtils.GetChildAtPath("Root/Campaign Slider", subPopup).GetComponent<Slider>();
+                                subSlider.Set(setTo);
+
+                                Button subOk = ModUtils.GetChildAtPath("Root/Buttons/Ok", subPopup).GetComponent<Button>();
+                                subOk.onClick.Invoke();
+
+                                // Delete popup afterwords otherwise it sticks around for a frame
+                                subPopup.transform.SetParent(null, false);
+                            }
+
+                            // Cleanup multi-ship popup
+                            popup.transform.SetParent(null, false);
+                        }));
+                    }
+                }
             }));
 
             GameObject viewOnMap = InstanciateUI(fleetButtons.GetChild("View"), fleetButtons, "View On Map", Vector3.zero, new Vector3(1.2114f, 1.2114f, 1.2114f));

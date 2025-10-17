@@ -156,7 +156,7 @@ namespace TweaksAndFixes.Harmony
                         bool isBeingBuilt = lastSelection.Status.text.Contains("Building");
                         bool isOurs = element.Value.Sold.text.Length == 0;
 
-                        if (selectedCount > 1 || !isActive || !isOurs)
+                        if (selectedCount == 0 || !isActive || !isOurs)
                         {
                             setCrewObj.GetComponent<Button>().interactable = false;
                         }
