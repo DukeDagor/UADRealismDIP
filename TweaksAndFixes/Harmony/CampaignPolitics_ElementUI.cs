@@ -42,21 +42,21 @@ namespace TweaksAndFixes
                 }
             }));
 
-            var rt = __instance.RelationsRoot.GetComponent<RectTransform>();
-            MelonCoroutines.Start(FixAnchor(rt));
+            // var rt = __instance.RelationsRoot.GetComponent<RectTransform>();
+            // MelonCoroutines.Start(FixAnchor(rt));
         }
 
-        internal static System.Collections.IEnumerator FixAnchor(RectTransform rt)
-        {
-            // For some reason we have to wait 2 frames.
-            // Presumably the anchor is getting reset after
-            // Init, somewhere.
-            yield return new WaitForEndOfFrame();
-            yield return new WaitForEndOfFrame();
-
-            if (rt == null)
-                yield break;
-            rt.anchorMin = new Vector2(-0.03f, 1f);
-        }
+        // internal static System.Collections.IEnumerator FixAnchor(RectTransform rt)
+        // {
+        //     // For some reason we have to wait 2 frames.
+        //     // Presumably the anchor is getting reset after
+        //     // Init, somewhere.
+        //     yield return new WaitForEndOfFrame();
+        //     yield return new WaitForEndOfFrame();
+        // 
+        //     if (rt == null)
+        //         yield break;
+        //     rt.anchorMin = new Vector2(-0.03f, 1f);
+        // }
     }
 }

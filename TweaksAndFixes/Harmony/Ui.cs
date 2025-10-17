@@ -25,8 +25,6 @@ namespace TweaksAndFixes
         internal static void Postfix_Start(Ui __instance)
         {
             UpdateVersionString(__instance);
-
-            UiM.ApplyUiModifications();
         }
 
 
@@ -171,6 +169,16 @@ namespace TweaksAndFixes
 
         // ////////// General Use Functions ////////// //
 
+        public static void AutoOrient()
+        {
+            if (SelectedPart != null && !FixedRotation)
+            {
+                if (Mounted) MountedPartRotation = 0;
+                else PartRotation = SelectedPart.transform.position.z > 0 ? 0 : 180;
+                // Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + SelectedPart.transform.eulerAngles.y);
+            }
+        }
+
         public static bool UseNewConstructionLogic()
         {
             if (Config.Param("taf_dockyard_new_logic", 1) != 1)
@@ -186,58 +194,6 @@ namespace TweaksAndFixes
             DeleteShipNextTurn = true;
         }
 
-        public static void AddConfirmPopupToButton(Button button, string text = default, System.Action before = null, System.Action after = null)
-        {
-            if (button.onClick.PrepareInvoke().Count == 1)
-            {
-                if (text == default)
-                {
-                    text = "Are you sure?";
-                }
-                else
-                {
-                    text = LocalizeManager.Localize(text);
-                }
-
-                var baseCall = button.onClick.PrepareInvoke()[0];
-                button.onClick.RemoveAllListeners();
-                button.onClick.AddListener(new System.Action(() =>
-                {
-                    G.ui.ShowConfirmation(text,
-                        new System.Action(() =>
-                        {
-                            if (before != null) before.Invoke();
-                            baseCall.Invoke(new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(System.Array.Empty<Il2CppSystem.Object>()));
-                            if (after != null) after.Invoke();
-                        }),
-                        new System.Action(() => { })
-                    );
-                }));
-                button.onClick.AddListener(new System.Action(() => { }));
-            }
-        }
-
-        public static void DisableKeyButton(Button button, System.Action before = null, System.Action after = null)
-        {
-            if (button.onClick.PrepareInvoke().Count == 1)
-            {
-                var baseCall = button.onClick.PrepareInvoke()[0];
-                button.onClick.RemoveAllListeners();
-                button.onClick.AddListener(new System.Action(() =>
-                {
-                    if (!Input.anyKey && !Input.anyKeyDown)
-                    {
-                        before?.Invoke();
-                        baseCall.Invoke(new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(System.Array.Empty<Il2CppSystem.Object>()));
-                        after?.Invoke();
-                    }
-                }));
-                button.onClick.AddListener(new System.Action(() => { }));
-            }
-
-            ModUtils.DestroyChild(button.GetChild("HkBox(Clone)", true));
-        }
-
         public static void UpdateRotationIncrament()
         {
             if (!FixedRotationValue)
@@ -248,16 +204,6 @@ namespace TweaksAndFixes
                     RotationValue = 15.0f;
                 }
                 // Melon<TweaksAndFixes>.Logger.Msg("Rotation inc: " + RotationValue);
-            }
-        }
-
-        public static void AutoOrient()
-        {
-            if (SelectedPart != null && !FixedRotation)
-            {
-                if (Mounted) MountedPartRotation = 0;
-                else PartRotation = SelectedPart.transform.position.z > 0 ? 0 : 180;
-                // Melon<TweaksAndFixes>.Logger.Msg("Auto rotate: " + SelectedPart.transform.eulerAngles.y);
             }
         }
 
@@ -428,109 +374,6 @@ namespace TweaksAndFixes
 
         }
 
-        private static void AddConfirmationPopups(Ui ui)
-        {
-            var TopBarChildren = ui.conUpperButtons.GetChild("Layout").GetChildren();
-
-            // ui.conUpperButtons.GetChild("Layout").GetComponent<LayoutGroup>();
-
-            foreach (GameObject child in TopBarChildren)
-            {
-                if (child == null) continue;
-                if (child.name.Contains("SpaceEater")) child.transform.SetParent(null, false);
-                if (child.name.Contains("Space")) continue;
-                if (child.name == "Undo") continue;
-                if (child.name.StartsWith("TAF")) continue;
-                //Melon<TweaksAndFixes>.Logger.Msg("  " + child.name);
-            
-                Button button = child.GetComponent<Button>();
-                if (button != null)
-                {
-                    string key = "$TAF_Ui_Dockyard_Confirm_Action_" + child.name;
-
-                    System.Action before = null;
-                    System.Action after = null;
-
-                    if (child.name == "Save")
-                    {
-                        after = new System.Action(() =>
-                        {
-                            if (Patch_Ship.LastCreatedShip.IsValid())
-                            {
-                                CampaignControllerM.RequestForcedGameSave = true;
-                            }
-                        });
-                    }
-
-                    AddConfirmPopupToButton(button, key, before, after);
-                }
-            }
-
-            // ui.conUpperButtons.GetChild("Layout").GetChild("Save").GetComponent<Button>().onClick.AddListener(new System.Action(() =>
-            // {
-            //     CampaignControllerM.RequestForcedGameSave = true;
-            // }));
-
-            var ShipOptions = ui.conShipTabs.GetChild("Cont").GetChildren();
-            foreach (GameObject child in ShipOptions)
-            {
-                if (child.name == "Ship(Clone)")
-                {
-                    Button button = child.GetChild("Button").GetComponent<Button>();
-                    if (button != null)
-                    {
-                        DisableKeyButton(button);
-                        ModUtils.DestroyChild(button.GetChild("CloneShip", true), false);
-                        ModUtils.DestroyChild(button.GetChild("DeleteShip", true), false);
-                    }
-                }
-            }
-
-            var PartCatagories = ui.constructorUi.GetChild("PartCategories").GetChildren();
-            foreach (GameObject child in PartCatagories)
-            {
-                if (child.name == "PartCategory(Clone)")
-                {
-                    Button button = child.GetChild("Button").GetComponent<Button>();
-                    if (button != null)
-                    {
-                        DisableKeyButton(button);
-                    }
-                }
-            }
-
-            var Parts = ui.constructorUi.GetChild("Parts").GetChild("ScrollRect").GetChild("Viewport").GetChild("Content").GetChildren();
-            foreach (GameObject child in Parts)
-            {
-                if (child.name == "Part(Clone)")
-                {
-                    Button button = child.GetChild("Button").GetComponent<Button>();
-                    if (button != null)
-                    {
-                        DisableKeyButton(button);
-                    }
-                }
-                else if (child.name == "Back")
-                {
-                    Button button = child.GetComponent<Button>();
-                    if (button != null)
-                    {
-                        DisableKeyButton(button, null, new System.Action(() => {
-                            if (Patch_Ship.LastCreatedShip.shipType.name != "bb" && Patch_Ship.LastCreatedShip.shipType.name != "bc" && Patch_Ship.LastCreatedShip.shipType.name != "ca")
-                                child.SetActive(false);
-                            if (Patch_Ship.LastCreatedShip.shipType.name == "ca" && Patch_Ship.LastCreatedShip.hull.data.maxAllowedCaliber != -1 && Patch_Ship.LastCreatedShip.hull.data.maxAllowedCaliber < 9)
-                                child.SetActive(false);
-                            if (PartCategory.name != "gun_main")
-                                child.SetActive(false);
-                        }));
-                    }
-                }
-            }
-
-            AddConfirmPopupToButton(ui.FleetWindow.Delete, "$TAF_Ui_FleetWindow_Confirm_Action_Delete");
-            AddConfirmPopupToButton(ui.FleetWindow.Scrap, "$TAF_Ui_FleetWindow_Confirm_Action_Scrap");
-        }
-
         public static void UpdateSelectedPart(Part part)
         {
             // Track the part selected from the toolbox
@@ -646,16 +489,6 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_Update(Ui __instance)
         {
-            GameObject bugReporter = __instance.commonUi.GetChild("Options").GetChild("BugReport");
-
-            bugReporter.SetActive(false);
-            bugReporter.UiVisible(false);
-
-            if (Config.Param("taf_add_confirmation_popups", 1) == 1)
-            {
-                AddConfirmationPopups(__instance);
-            }
-
             UiM.UpdateModifications();
             Patch_GameManager.Update();
             CampaignControllerM.Update();
@@ -1469,9 +1302,9 @@ namespace TweaksAndFixes
                 else if (Input.GetKeyDown(KeyCode.F))
                 {
 
-                    // TAFGlobalCache.Init();
+                    TAFGlobalCache.Init();
 
-                    UiM.ShowBailoutPopupForPlayer(ExtraGameData.MainPlayer());
+                    // UiM.ShowBailoutPopupForPlayer(ExtraGameData.MainPlayer());
                 }
 
                 else if (Input.GetKeyDown(KeyCode.P))
@@ -2564,7 +2397,6 @@ namespace TweaksAndFixes
         {
             ClearAllButtons(__instance);
             EnsureAllButtons(__instance);
-            AddConfirmationPopups(__instance);
         }
 
         [HarmonyPatch(nameof(Ui.RefreshConstructorInfo))]

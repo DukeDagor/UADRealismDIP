@@ -12,6 +12,51 @@ namespace TweaksAndFixes
 {
     public class UiM
     {
+        private class UIDataMinMax
+        {
+            private bool mod = false;
+            private Vector2 min = Vector2.zero;
+            private Vector2 minOriginal = Vector2.zero;
+            private Vector2 max = Vector2.zero;
+            private Vector2 maxOriginal = Vector2.zero;
+
+            private UiModification _this;
+
+            public UiModification ReplaceAnchors(Vector2 anchorMin, Vector2 anchorMax)
+            {
+                mod = true;
+                this.min = anchorMin;
+                this.max = anchorMax;
+
+                return _this;
+            }
+
+            public UiModification ReplaceAnchorMin(Vector2 anchorMin)
+            {
+                mod = true;
+                this.min = anchorMin;
+
+                return _this;
+            }
+
+            public UiModification ReplaceAnchorMax(Vector2 anchorMax)
+            {
+                mod = true;
+                this.max = anchorMax;
+
+                return _this;
+            }
+
+            public UiModification ResetAnchors()
+            {
+                mod = false;
+                this.min = minOriginal;
+                this.max = maxOriginal;
+
+                return _this;
+            }
+        }
+
         public class UiModification
         {
             public RectTransform rectTransform;
@@ -223,24 +268,6 @@ namespace TweaksAndFixes
                 return this;
             }
 
-            public UiModification MultiplyAnchors(float min, float max)
-            {
-                modAnchor = true;
-                this.anchorMin = anchorMinOriginal * min;
-                this.anchorMax = anchorMaxOriginal * max;
-
-                return this;
-            }
-
-            public UiModification MultiplyAnchors(Vector2 min, Vector2 max)
-            {
-                modAnchor = true;
-                this.anchorMin = anchorMinOriginal * min;
-                this.anchorMax = anchorMaxOriginal * max;
-
-                return this;
-            }
-
             public UiModification ResetAnchors()
             {
                 modAnchor = false;
@@ -251,6 +278,7 @@ namespace TweaksAndFixes
             }
 
 
+            private UIDataMinMax modOffsetData = new UIDataMinMax();
             private bool modOffset = false;
             private Vector2 offsetMin = Vector2.zero;
             private Vector2 offsetMinOriginal = Vector2.zero;
@@ -279,24 +307,7 @@ namespace TweaksAndFixes
             {
                 modOffset = true;
                 this.offsetMax = offsetMax;
-
-                return this;
-            }
-
-            public UiModification MultiplyOffsets(float min, float max)
-            {
-                modOffset = true;
-                this.offsetMin = offsetMinOriginal * min;
-                this.offsetMax = offsetMaxOriginal * max;
-
-                return this;
-            }
-
-            public UiModification MultiplyOffsets(Vector2 min, Vector2 max)
-            {
-                modOffset = true;
-                this.offsetMin = offsetMinOriginal * min;
-                this.offsetMax = offsetMaxOriginal * max;
+                this.offsetMin = this.offsetMinOriginal;
 
                 return this;
             }
@@ -317,11 +328,11 @@ namespace TweaksAndFixes
             private float layoutHeight = 0f;
             private float layoutHeightOriginal = 0f;
 
-            public UiModification MultiplyLayoutDimensions(float width, float height)
+            public UiModification ReplaceLayoutDimensions(float width, float height)
             {
                 modLayoutDimensions = true;
-                this.layoutWidth = layoutWidthOriginal * width;
-                this.layoutHeight = layoutHeightOriginal * height;
+                this.layoutWidth = width;
+                this.layoutHeight = height;
 
                 return this;
             }
@@ -348,14 +359,6 @@ namespace TweaksAndFixes
                 return this;
             }
 
-            public UiModification MultiplyAnchoredPosition(Vector2 mult)
-            {
-                modAnchoredPosition = true;
-                this.anchoredPosition = anchoredPositionOriginal * mult;
-
-                return this;
-            }
-
             public UiModification ResetAnchoredPosition()
             {
                 modAnchoredPosition = false;
@@ -363,6 +366,8 @@ namespace TweaksAndFixes
 
                 return this;
             }
+
+
 
             private bool hasOnUpdate = false;
             private Action<GameObject> onUpdate;
@@ -526,24 +531,647 @@ namespace TweaksAndFixes
             return uiModifications.ContainsKey(ui);
         }
 
-        public static InputField InputChooseYearEditField;
 
-        public static Text InputChooseYearStaticText;
+
+        ////////////////////// MODIFICATIONS //////////////////////
+
+
 
         public static void ApplyUiModifications()
         {
-            UiM.ModifyUi(G.ui.FleetWindow.Root.GetChild("Root")).MultiplyOffsets(new Vector2(800f / 640f, 400f / 343.9f), new Vector2(800f / 640f, 400f / 343.9f));
+            CreateBailoutPopup();
+
+            CreateHidePopupsButton();
+
+            ApplySettingsMenuModifications();
+
+            ApplyCampaignWindowModifications();
+            ApplyDockyardModifications();
+
+            if (Config.Param("taf_add_confirmation_popups", 1) == 1)
+            {
+                AddConfirmationPopups();
+            }
+
+            GameObject bugReporter = G.ui.commonUi.GetChild("Options").GetChild("BugReport");
+
+            bugReporter.SetActive(false);
+            bugReporter.UiVisible(false);
+
+            // Global/Ui/UiMain/Loading/LayoutDesc/Desc/DescText
+
+            // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/(Beam/Draught)/Slider
+
+            // GameObject beamSetting = GameObject.Instantiate(ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Beam"));
+            // beamSetting.transform.SetParent(ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings"));
+            // beamSetting.transform.SetScale(1, 1, 1);
+            // beamSetting.name = "TAF Beam";
+            // beamSliderComp = beamSetting.GetChild("Slider").GetComponent<Slider>();
+            // beamSliderComp.onValueChanged.RemoveAllListeners();
+            // // ModifyUi(beamSetting).SetOnUpdate(new System.Action<GameObject>((GameObject obj) =>
+            // // {
+            // //     Ship ship = ShipM.GetActiveShip();
+            // // 
+            // //     if (ship == null) return;
+            // // 
+            // //     // ship.hull.data.paramx
+            // // 
+            // //     // beamSliderComp.maxValue;
+            // // }));
+            // beamSliderComp.onValueChanged.AddListener(new System.Action<float>((float value) =>
+            // {
+            //     Ship ship = ShipM.GetActiveShip();
+            // 
+            //     if (ship == null) return;
+            //     
+            //     Melon<TweaksAndFixes>.Logger.Msg($"{value}");
+            // 
+            //     ship.SetBeam(value / 10);
+            // }));
+            // GameObject beamOld = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Beam");
+            // beamOld.SetActive(false);
+
+            // GameObject draughtSlider = (ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Draught/Slider"));
+            // draughtSlider.transform.SetParent(ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Draught"));
+            // draughtSlider.transform.SetScale(1, 1, 1);
+            // draughtSlider.TryDestroyComponent<Slider>();
+            // draughtSlider.AddComponent<Slider>();
+            // draughtSlider.TryDestroyComponent<EventTrigger>();
+            // Slider draughtSliderComp = draughtSlider.GetComponent<Slider>();
+            // draughtSliderComp.onValueChanged.RemoveAllListeners();
+            // draughtSliderComp.onValueChanged.AddListener(new System.Action<float>((float value) =>
+            // {
+            //     Ship ship = ShipM.GetActiveShip();
+            // 
+            //     if (ship == null) return;
+            // 
+            //     ship.SetDraught(value - 5);
+            // }));
+            // GameObject draughtSliderOld = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Draught/Slider");
+            // draughtSliderOld.SetActive(false);
+        }
+
+        public static void AddConfirmPopupToButton(Button button, string text = default, System.Action before = null, System.Action after = null)
+        {
+            if (button.onClick.PrepareInvoke().Count == 1)
+            {
+                if (text == default)
+                {
+                    text = "Are you sure?";
+                }
+                else
+                {
+                    text = LocalizeManager.Localize(text);
+                }
+
+                var baseCall = button.onClick.PrepareInvoke()[0];
+                button.onClick.RemoveAllListeners();
+                button.onClick.AddListener(new System.Action(() =>
+                {
+                    G.ui.ShowConfirmation(text,
+                        new System.Action(() =>
+                        {
+                            if (before != null) before.Invoke();
+                            baseCall.Invoke(new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(System.Array.Empty<Il2CppSystem.Object>()));
+                            if (after != null) after.Invoke();
+                        }),
+                        new System.Action(() => { })
+                    );
+                }));
+                button.onClick.AddListener(new System.Action(() => { }));
+            }
+        }
+
+        public static void AddConfirmationPopups()
+        {
+            Ui ui = G.ui;
+
+            var TopBarChildren = ui.conUpperButtons.GetChild("Layout").GetChildren();
+
+            // ui.conUpperButtons.GetChild("Layout").GetComponent<LayoutGroup>();
+
+            foreach (GameObject child in TopBarChildren)
+            {
+                if (child == null) continue;
+                if (child.name.Contains("SpaceEater")) child.transform.SetParent(null, false);
+                if (child.name.Contains("Space")) continue;
+                if (child.name == "Undo") continue;
+                if (child.name.StartsWith("TAF")) continue;
+                //Melon<TweaksAndFixes>.Logger.Msg("  " + child.name);
+
+                Button button = child.GetComponent<Button>();
+                if (button != null)
+                {
+                    string key = "$TAF_Ui_Dockyard_Confirm_Action_" + child.name;
+
+                    System.Action before = null;
+                    System.Action after = null;
+
+                    if (child.name == "Save")
+                    {
+                        after = new System.Action(() =>
+                        {
+                            if (Patch_Ship.LastCreatedShip.IsValid())
+                            {
+                                CampaignControllerM.RequestForcedGameSave = true;
+                            }
+                        });
+                    }
+
+                    AddConfirmPopupToButton(button, key, before, after);
+                }
+            }
+
+            // ui.conUpperButtons.GetChild("Layout").GetChild("Save").GetComponent<Button>().onClick.AddListener(new System.Action(() =>
+            // {
+            //     CampaignControllerM.RequestForcedGameSave = true;
+            // }));
+
+            AddConfirmPopupToButton(ui.FleetWindow.Delete, "$TAF_Ui_FleetWindow_Confirm_Action_Delete");
+            AddConfirmPopupToButton(ui.FleetWindow.Scrap, "$TAF_Ui_FleetWindow_Confirm_Action_Scrap");
+        }
+
+        // ========== CAMPAIGN ========== //
+
+        public static void ApplyCampaignWindowModifications()
+        {
+            UiM.ModifyUi(G.ui.FleetWindow.Root.GetChild("Root")).ReplaceOffsets(new Vector2(-800f, -400f), new Vector2(800f, 400f));
 
             ApplyCampaginDesignTabModifications();
             ApplyCampaignFleetTabModifications();
 
-            ApplySettingsMenuModifications();
+            ApplyPoliticsWindowModifications();
+        }
 
-            CreateBailoutPopup();
+        public static void ApplyPoliticsWindowModifications()
+        {
+            GameObject politicsWindow = ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/Windows/Politics Window/");
 
+            GameObject politicsHeader = ModUtils.GetChildAtPath("Root/Header", politicsWindow);
+
+            politicsHeader.GetComponent<HorizontalLayoutGroup>().childControlWidth = true;
+
+            politicsHeader.GetChild("FlagAndName").GetComponent<LayoutElement>().preferredWidth = 200;
+
+            politicsHeader.GetChild("GeneralInfo").GetComponent<LayoutElement>().preferredWidth = 270;
+
+            politicsHeader.GetChild("Financial").GetComponent<LayoutElement>().preferredWidth = 310;
+
+            politicsHeader.GetChild("Naval").GetComponent<LayoutElement>().preferredWidth = 250;
+
+            politicsHeader.GetChild("Minor Allies").GetComponent<LayoutElement>().preferredWidth = 200;
+
+            politicsHeader.GetChild("Minor Allies").GetComponent<LayoutElement>().flexibleWidth = -1;
+
+            politicsHeader.GetChild("Relations").GetComponent<LayoutElement>().minWidth = 500;
+
+            politicsHeader.GetChild("Relations").GetComponent<LayoutElement>().flexibleWidth = 12.5f;
+
+            politicsHeader.GetChild("Actions").GetComponent<LayoutElement>().preferredWidth = 250;
+
+            GameObject RelationsTemplate = politicsHeader.GetChild("Relations").GetChild("Template");
+
+            UiM.ModifyUi(RelationsTemplate).SetOnUpdate(new System.Action<GameObject>((GameObject ui) => {
+                if (RelationsTemplate.transform.localPosition.x != 0) RelationsTemplate.transform.localPosition = Vector3.zero;
+            }));
+        }
+
+        private static void ApplyCampaginDesignTabModifications()
+        {
+            UiM.ModifyUi(G.ui.FleetWindow.Root, "Root/Design Ships").ReplaceOffsetMin(new Vector2(-1200.0f, -700.0f));
+
+            UiM.ModifyUi(G.ui.FleetWindow.Root, "Root/Design Ships/Scrollbar Vertical").ReplaceOffsetMin(new Vector2(-15.0f, 0.0f));
+
+            UiM.ModifyUi(G.ui.FleetWindow.DesignHeader.gameObject).ReplaceOffsetMin(new Vector2(-1200.0f, -44.4f));
+
+            UiM.ModifyUi(G.ui.FleetWindow.DesignShipInfoRoot, "ShipIsoImage/ShipIsometrImage").ReplaceOffsets(new Vector2(0.0f, -332.5f), new Vector2(350.0f, 0.0f));
+
+            UiM.ModifyUi(G.ui.FleetWindow.DesignShipInfoRoot, "Text/ShipTextInfo").ReplaceOffsets(new Vector2(0.0f, -470.0f), new Vector2(350.0f, 0.0f));
+
+            UiM.ModifyUi(G.ui.FleetWindow.DesignHeader, "Name").ReplaceLayoutDimensions(500f, -1.0f);
+
+            UiM.ModifyUi(G.ui.FleetWindow.DesignTemplate.Name.gameObject).ReplaceLayoutDimensions(500f, -1.0f);
+
+            UiM.ModifyUi(G.ui.FleetWindow.DesignButtonsRoot).ReplaceOffsetMin(new Vector2(-1200.0f, 31.1f));
+        }
+
+        private static void ApplyCampaignFleetTabModifications()
+        {
+            // Fleet Buttons
+
+            FleetWindow_ShipElementUI fleetTemplate = G.ui.FleetWindow.FleetTemplate;
+
+            GameObject fleetButtons = G.ui.FleetWindow.FleetButtonsRoot;
+
+            UiM.ModifyUi(fleetButtons).ReplaceOffsetMin(new Vector2(-1463.6f, 31.1f));
+
+            fleetTemplate.gameObject.GetComponent<Button>().onClick.RemoveAllListeners();
+
+            GameObject setRole = InstanciateUI(fleetButtons.GetChild("View"), fleetButtons, "Set Role", Vector3.zero, new Vector3(1.2114f, 1.2114f, 1.2114f));
+            SetLocalizedTextTag(setRole.gameObject.GetChildren()[0], "$Ui_World_FleetDesign_SetRole");
+            AddTooltip(setRole, $"$TAF_tooltip_set_role");
+            SetButtonOnClick(setRole, new System.Action(() =>
+            {
+                if (G.ui.FleetWindow.selectedElements.Count > 0)
+                {
+                    G.ui.FleetWindow.selectedElements[^1].RoleSelectionButton.onClick.Invoke();
+                }
+            }));
+
+            GameObject setCrew = InstanciateUI(fleetButtons.GetChild("View"), fleetButtons, "Set Crew", Vector3.zero, new Vector3(1.2114f, 1.2114f, 1.2114f));
+            SetLocalizedTextTag(setCrew.gameObject.GetChildren()[0], "$Ui_World_FleetDesign_SetCrew");
+            AddTooltip(setCrew, $"$TAF_tooltip_set_crew");
+            SetButtonOnClick(setCrew, new System.Action(() =>
+            {
+                if (G.ui.FleetWindow.selectedElements.Count == 1)
+                {
+                    G.ui.FleetWindow.selectedElements[0].CrewAction.onClick.Invoke();
+
+                    GameObject popup = G.ui.gameObject.GetChild("MessageBox(Clone)", true);
+
+                    if (popup != null)
+                    {
+                        Slider slider = popup.GetChild("Root").GetChild("Campaign Slider").GetComponent<Slider>();
+                    }
+                }
+            }));
+
+            GameObject viewOnMap = InstanciateUI(fleetButtons.GetChild("View"), fleetButtons, "View On Map", Vector3.zero, new Vector3(1.2114f, 1.2114f, 1.2114f));
+            SetLocalizedTextTag(viewOnMap.gameObject.GetChildren()[0], "$Ui_World_FleetDesign_ViewOnMap");
+            AddTooltip(viewOnMap, $"$TAF_tooltip_view_on_map");
+            SetButtonOnClick(viewOnMap, new System.Action(() =>
+            {
+                if (G.ui.FleetWindow.selectedElements.Count == 1)
+                {
+                    // Needs to be invoked twice to center the camera
+                    G.ui.FleetWindow.selectedElements[0].AreaButton.onClick.Invoke();
+                    G.ui.FleetWindow.selectedElements[0].AreaButton.onClick.Invoke();
+                }
+            }));
+
+            UiM.ModifyUi(fleetButtons.GetChild("Mothballed")).SetActive(false, false);
+
+            UiM.ModifyUi(fleetButtons.GetChild("View")).SetActive(false, false);
+
+            UiM.ModifyUi(fleetButtons).SetChildOrder("AddCrewToggle", "Set Role", "View On Map", "ChangePort", "Set Crew", "Suspend", "Scrap", "Cancel Sale");
+
+
+
+
+            // Fleet Ships
+
+            UiM.ModifyUi(G.ui.FleetWindow.Root.GetChild("Root").GetChild("Fleet Ships")).ReplaceOffsetMin(new Vector2(-1585.0f, -700.0f));
+
+
+
+
+            // Fleet Template
+
+            LayoutGroup templateGroup = fleetTemplate.GetComponent<LayoutGroup>();
+            templateGroup.padding.left = 10;
+            templateGroup.padding.right = 10;
+
+            fleetTemplate.gameObject.GetChild("Crew").name = "CrewAction";
+            
+            GameObject roleText = InstanciateUI(
+                fleetTemplate.RoleSelectionButton.gameObject.GetChildren()[0],
+                fleetTemplate.RoleSelectionButton.gameObject.GetParent(),
+                "RoleText", Vector3.zero, Vector3.one
+            );
+            roleText.GetComponent<TMP_Text>().text = "ERROR";
+            roleText.GetComponent<TMP_Text>().fontSize = 11;
+            roleText.GetComponent<TMP_Text>().fontSizeMin = 11;
+            roleText.GetComponent<TMP_Text>().fontSizeMax = 11;
+
+            UiM.ModifyUi(fleetTemplate.gameObject).SetChildOrder(
+                "Selected", "Type", "Name", "NameInputField", "Class", "Damage", "Ammo", "Fuel", "Role",
+                "Status", "Area", "Port", "Port Selection", "Cost", "Crew", "Tonnage", "Date", "Speed", "Weapons", "Sold"
+            );
+
+            UiM.ModifyUi(fleetTemplate.Type.gameObject).ReplaceLayoutDimensions(60f, -1.0f);
+
+            UiM.ModifyUi(fleetTemplate.Name.gameObject).ReplaceLayoutDimensions(275f, -1.0f);
+
+            UiM.ModifyUi(fleetTemplate.NameInputField.gameObject).ReplaceLayoutDimensions(275f, -1.0f);
+
+            fleetTemplate.NameInputField.gameObject.GetComponent<TMP_InputField>().onValidateInput = null;
+
+            UiM.ModifyUi(fleetTemplate.Class.gameObject).ReplaceLayoutDimensions(275f, -1.0f);
+
+            UiM.ModifyUi(fleetTemplate.Damage.gameObject).ReplaceLayoutDimensions(60f, -1.0f);
+
+            UiM.ModifyUi(fleetTemplate.Ammo.gameObject).ReplaceLayoutDimensions(60f, -1.0f);
+
+            UiM.ModifyUi(fleetTemplate.Fuel.gameObject).ReplaceLayoutDimensions(60f, -1.0f);
+
+            GameObject hidenElements = new GameObject();
+            hidenElements.SetParent(fleetTemplate.gameObject);
+            hidenElements.name = "HidenElements";
+            hidenElements.SetActive(false);
+
+            UiM.ModifyUi(fleetTemplate.Speed.gameObject).SetActive(false, false);
+
+            UiM.ModifyUi(fleetTemplate.Weapons.gameObject).SetActive(false, false);
+
+            UiM.ModifyUi(fleetTemplate.RoleSelectionButton.gameObject).SetActive(false, false);
+
+            UiM.ModifyUi(fleetTemplate.CrewAction.gameObject.GetParent()).SetActive(false, false);
+
+            UiM.ModifyUi(fleetTemplate.Sold.gameObject).SetActive(false, false);
+
+            fleetTemplate.Area.gameObject.name = "Area (old)";
+
+            GameObject areaText = GameObject.Instantiate(fleetTemplate.Area.gameObject);
+            areaText.SetParent(fleetTemplate.gameObject);
+            areaText.transform.SetScale(1, 1, 1);
+            // areaText.transform.localPosition = new Vector3();
+            areaText.name = "Area";
+            areaText.TryDestroyComponent<LocalizeFont>();
+            areaText.TryDestroyComponent<Button>();
+            areaText.GetComponent<TMP_Text>().text = "ERROR";
+            areaText.GetComponent<TMP_Text>().fontSize = 11;
+            areaText.GetComponent<TMP_Text>().fontSizeMin = 11;
+            areaText.GetComponent<TMP_Text>().fontSizeMax = 11;
+
+            fleetTemplate.Area.gameObject.SetParent(hidenElements);
+
+            // UiM.ModifyUi(fleetTemplate.Port.gameObject).SetActive(false, false);
+
+            fleetTemplate.Port.gameObject.name = "Port (old)";
+
+            GameObject portText = GameObject.Instantiate(fleetTemplate.Port.gameObject);
+            portText.SetParent(fleetTemplate.gameObject);
+            portText.transform.SetScale(1, 1, 1);
+            // portText.transform.localPosition = new Vector3();
+            portText.name = "Port";
+            portText.TryDestroyComponent<LocalizeFont>();
+            portText.TryDestroyComponent<Button>();
+            portText.GetComponent<TMP_Text>().text = "ERROR";
+            portText.GetComponent<TMP_Text>().fontSize = 13;
+            portText.GetComponent<TMP_Text>().fontSizeMin = 13;
+            portText.GetComponent<TMP_Text>().fontSizeMax = 13;
+
+            fleetTemplate.Port.gameObject.SetParent(hidenElements);
+
+
+            // Fleet Header
+
+            GameObject fleetHeader = G.ui.FleetWindow.FleetHeader;
+
+            var headerGroup = fleetHeader.GetComponent<LayoutGroup>();
+            headerGroup.padding.left = 0;
+            headerGroup.padding.right = 0;
+
+            UiM.ModifyUi(fleetHeader)
+                .ReplaceOffsetMin(new Vector2(-1585.0f, -44.4f))
+                .SetChildOrder("Type", "Name", "Class", "Damage", "Ammo", "Fuel", "Role", "Status", "Area", "Port", "Cost", "Crew", "Tonnage", "Date", "Speed", "Weapons", "CrewAction", "Sold");
+
+            UiM.ModifyUi(fleetHeader, "Damage").ReplaceLayoutDimensions(60f, -1.0f);
+
+            UiM.ModifyUi(fleetHeader, "Ammo").ReplaceLayoutDimensions(60f, -1.0f);
+
+            UiM.ModifyUi(fleetHeader, "Fuel").ReplaceLayoutDimensions(60f, -1.0f);
+
+            UiM.ModifyUi(fleetHeader, "Name").ReplaceLayoutDimensions(275f, -1.0f);
+
+            UiM.ModifyUi(fleetHeader, "Status").ReplaceLayoutDimensions(100f, -1.0f);
+
+            UiM.ModifyUi(fleetHeader, "Port").ReplaceLayoutDimensions(110f, -1.0f);
+
+            UiM.ModifyUi(fleetHeader, "Class").ReplaceLayoutDimensions(275f, -1.0f);
+
+            UiM.ModifyUi(fleetHeader, "Speed").SetActive(false, false);
+
+            UiM.ModifyUi(fleetHeader, "Weapons").SetActive(false, false);
+
+            UiM.ModifyUi(fleetHeader, "CrewAction").SetActive(false, false);
+
+            UiM.ModifyUi(fleetHeader, "Sold").SetActive(false, false);
+        }
+
+        private static GameObject bailoutEvent;
+        private static TMP_Text bailoutEventWindowBodyText;
+        private static TMP_Text bailoutEventWindowYesText;
+        private static Player bailoutPlayer;
+
+        public static void CreateBailoutPopup()
+        {
+            // Global/Ui/UiMain/Popup/Generic
+
+            // Global/Ui/UiMain/Popup/Bailout Event/Window/TextScrollView/Viewport/Content/Text
+
+            bailoutEvent = GameObject.Instantiate(ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/Generic"));
+            bailoutEvent.transform.SetParent(ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/PopWindows"));
+            bailoutEvent.name = "Bailout Event";
+            bailoutEvent.transform.SetScale(1, 1, 1);
+            bailoutEvent.transform.localPosition = Vector3.zero;
+            RectTransform bailoutEventTransform = bailoutEvent.GetComponent<RectTransform>();
+            bailoutEventTransform.offsetMin = Vector3.zero;
+            bailoutEventTransform.offsetMax = Vector3.zero;
+            bailoutEvent.GetChild("BgScreen").TryDestroy();
+
+            GameObject bailoutEventWindow = bailoutEvent.GetChild("Window");
+            bailoutEventWindow.GetChild("Image").TryDestroy();
+            bailoutEventWindow.GetChild("TextScrollView").TryDestroy();
+            bailoutEventWindow.GetChild("Bg").GetComponent<Image>().color = new Color(0, 0, 0, 0.9f);
+            ModUtils.GetChildAtPath("Buttons/Ok", bailoutEventWindow).TryDestroy();
+            ModUtils.GetChildAtPath("Buttons/No", bailoutEventWindow).TryDestroy();
+
+            GameObject bailoutEventWindowYes = ModUtils.GetChildAtPath("Buttons/Yes", bailoutEventWindow);
+            bailoutEventWindowYes.transform.SetScale(1.2f, 1.2f, 1.2f);
+            GameObject bailoutEventWindowYesTextObj = bailoutEventWindowYes.GetChild("Text (TMP)");
+            bailoutEventWindowYesTextObj.TryDestroyComponent<LocalizeText>();
+            bailoutEventWindowYesText = bailoutEventWindowYesTextObj.GetComponent<TMP_Text>();
+            Button bailoutEventWindowYesBtn = bailoutEventWindowYes.GetComponent<Button>();
+            bailoutEventWindowYesBtn.onClick.RemoveAllListeners();
+            bailoutEventWindowYesBtn.onClick.AddListener(new System.Action(() =>
+            {
+                if (bailoutPlayer == null)
+                {
+                    bailoutEvent.SetActive(false);
+                    Melon<TweaksAndFixes>.Logger.Error($"Error: Invalid player for bailout event!");
+                    return;
+                }
+
+                int bailoutEventNumber = Config.Param("taf_bailout_event_number", 81);
+
+                EventData prompt = G.GameData.events[$"{bailoutEventNumber}"];
+                EventData response = G.GameData.events[$"{bailoutEventNumber}_a"];
+
+                EventX ev = new EventX();
+                ev.date = CampaignController.Instance.CurrentDate;
+                ev.showEventToMainPlayer = true;
+                ev.data = prompt;
+                ev.player = bailoutPlayer;
+                ev.Init();
+
+                Melon<TweaksAndFixes>.Logger.Msg($"Bailout accepted!");
+
+                CampaignController.Instance.AnswerEvent(ev, response);
+
+                bailoutEvent.SetActive(false);
+            }));
+
+            GameObject bailoutEventWindowHeader = bailoutEventWindow.GetChild("Header");
+            bailoutEventWindowHeader.GetComponent<TMP_Text>().text = "Government Bailout"; // TODO: Localize
+
+            GameObject bailoutEventWindowBody = bailoutEventWindow.GetChild("TextOld");
+            bailoutEventWindowBody.name = "Text";
+            bailoutEventWindowBody.SetActive(true);
+            bailoutEventWindowBodyText = bailoutEventWindowBody.GetComponent<TMP_Text>();
+        }
+
+        public static void ShowBailoutPopupForPlayer(Player player)
+        {
+            int bailoutEventNumber = Config.Param("taf_bailout_event_number", 81);
+
+            EventData prompt = G.GameData.events[$"{bailoutEventNumber}"];
+            EventData response = G.GameData.events[$"{bailoutEventNumber}_a"];
+
+            bailoutPlayer = player;
+
+            // TODO: Localize
+            string promptStr = LocalizeManager.Localize(prompt.text);
+            promptStr += $"\n\n{ModUtils.ColorNumber(response.money, "", "%", false, true)} Naval Funds ({ModUtils.ColorNumber(player.Budget() * response.money / 100, "$", "", false, true)})";
+            promptStr += $"\n{ModUtils.ColorNumber(response.budget, "", "%")} Naval Budget";
+            promptStr += $"\n{ModUtils.ColorNumber(response.wealth, "", "%")} GDP";
+            promptStr += $"\n{ModUtils.ColorNumber(response.reputation)} Naval Prestige";
+            promptStr += $"\n{ModUtils.ColorNumber(response.respect, "", "", true)} Unrest";
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"cash:                      {bailoutPlayer.cash}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"inflation:                 {bailoutPlayer.inflation}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"wealth:                    {bailoutPlayer.wealth}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowth:              {bailoutPlayer.wealthGrowth}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowthMul:           {bailoutPlayer.wealthGrowthMul}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowthEffectivePrev: {bailoutPlayer.wealthGrowthEffectivePrev}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"nationBaseIncomeGrowth:    {bailoutPlayer.nationBaseIncomeGrowth}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"budgetMod:                 {bailoutPlayer.budgetMod}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"unrest:                    {bailoutPlayer.unrest}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"reputation:                {bailoutPlayer.reputation}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowthEff:           {bailoutPlayer.WealthGrowthEffective()}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowthHit:           {(response.wealth / 100 + 1) * (bailoutPlayer.WealthGrowthEffective() + 1) - 1}");
+            // 
+            // bailoutPlayer.cash += player.Budget() * response.money / 100;
+            // bailoutPlayer.wealthGrowth = -0.5f;//(response.wealth / 100 + 1) * (bailoutPlayer.WealthGrowthEffective() + 1) - 1;
+            // bailoutPlayer.budgetMod += response.budget;
+            // bailoutPlayer.reputation += response.reputation;
+            // bailoutPlayer.AddUnrest(-response.respect);
+
+            bailoutEventWindowBodyText.text = promptStr;
+            bailoutEventWindowYesText.text = LocalizeManager.Localize(response.text);
+
+            bailoutEvent.SetActive(true);
+        }
+
+        public static void CreateHidePopupsButton()
+        {
+            GameObject popupSaveWindow = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/SaveWindow");
+            GameObject regularPopupsRoot = ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/PopWindows");
+            var regularPopups = regularPopupsRoot.GetChildren();
+            GameObject basePopupsRoot = ModUtils.GetChildAtPath("Ui/UiMain", G.container);
+
+            bool showPopups = true;
+
+            GameObject nextTurnButton = ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/Windows/Map Window/Next Turn Panel/Next Turn Button");
+            GameObject hidePopupsButton = GameObject.Instantiate(nextTurnButton);
+            hidePopupsButton.transform.SetParent(ModUtils.GetChildAtPath("Ui/UiMain", G.container));
+            hidePopupsButton.name = "Hide Popups";
+            hidePopupsButton.transform.SetScale(1, 1, 1);
+            hidePopupsButton.transform.position = new Vector3(3490, 110, 0); // -125 40
+            RectTransform hidePopupsButtonRect = hidePopupsButton.GetComponent<RectTransform>();
+            hidePopupsButtonRect.anchoredPosition = new Vector2(-125, 40);
+            hidePopupsButtonRect.anchorMin = new Vector2(1, 0);
+            hidePopupsButtonRect.anchorMax = new Vector2(1, 0);
+            hidePopupsButton.SetActive(false);
+            GameObject hidePopupsText = hidePopupsButton.GetChild("Text (TMP)");
+            hidePopupsText.TryDestroyComponent<LocalizeText>();
+            TMP_Text hidePopupsTextComp = hidePopupsText.GetComponent<TMP_Text>();
+            hidePopupsTextComp.text = "Hide Popups";
+            Button hidePopupsButtonComp = hidePopupsButton.GetComponent<Button>();
+            hidePopupsButtonComp.onClick.RemoveAllListeners();
+            hidePopupsButtonComp.onClick.AddListener(new System.Action(() => {
+                showPopups = !showPopups;
+                if (showPopups)
+                {
+                    hidePopupsTextComp.text = "Hide Popups";
+                }
+                else
+                {
+                    hidePopupsTextComp.text = "Show Popups";
+                }
+            }));
+
+            ModifyUi(basePopupsRoot).SetOnUpdate(new System.Action<GameObject>((GameObject ui) => {
+                bool hasPopups = false;
+
+                // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"Update popup tracker:");
+
+                if (!GameManager.IsWorld)
+                {
+                    hasPopups = false;
+                    showPopups = true;
+                    // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"  Not in world");
+                    return;
+                }
+
+                // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"  Checking premade popups...");
+
+                foreach (GameObject child in regularPopups)
+                {
+                    if (child.name != "Event Window" && child.name != "Battle Window" && child.name != "WarReparationWindowUI") continue;
+
+                    if (child.active)
+                    {
+                        // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"    Found popup {child.name}!");
+                        hasPopups = true;
+                        break;
+                    }
+                }
+
+                regularPopupsRoot.SetActive(showPopups);
+
+                if (basePopupsRoot.GetChild("MessageBox(Clone)", true) != null)
+                {
+                    bool isFirst = true;
+
+                    var children = basePopupsRoot.GetChildren();
+
+                    // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"  Checking generic popups...");
+
+                    foreach (GameObject child in children)
+                    {
+                        if (child.name != "MessageBox(Clone)") continue;
+
+                        // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"    Parsing popup...");
+
+                        if (!isFirst)
+                        {
+                            child.TryDestroyComponent<Image>();
+                        }
+
+                        isFirst = false;
+
+                        hasPopups = true;
+
+                        child.SetActive(showPopups);
+                    }
+
+                    hidePopupsButton.transform.SetSiblingIndex(children.Count - 1);
+                }
+
+                // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"  Has popups: {hasPopups} | !Show popups {!showPopups} | !Loading Screen {!GameManager.IsLoadingScreenActive} | World Map {GameManager.IsWorldMap} | !Save Menu {!popupSaveWindow.active}");
+
+                hidePopupsButton.SetActive((hasPopups || !showPopups) && (!GameManager.IsLoadingScreenActive && GameManager.IsWorldMap && !popupSaveWindow.active));
+            }));
+        }
+
+        // ========== DOCKYARD ========== //
+
+        public static void ApplyDockyardModifications()
+        {
             ApplyShipTypeButtonsModifications();
 
-            // Global/Ui/UiMain/Loading/LayoutDesc/Desc/DescText
+            ApplyInputYearModifications();
 
             // Global/Ui/UiMain/Constructor/Left/Scroll View/
 
@@ -551,8 +1179,119 @@ namespace TweaksAndFixes
 
             ModifyUi(ConstructorLeftPannel).SetChildOrder("Scrollbar Vertical", "Scrollbar Horizontal", "Viewport");
 
-            // uiRangesCont -> Child -> RangeCanvas
+            ModifyUi(ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor")).SetOnUpdate(new System.Action<GameObject>((GameObject ui) => {
+                if (Config.Param("taf_dockyard_remove_per_design_copy_delete_buttons", 1) == 1)
+                {
+                    RemoveConstructorDesignSmallCopyDelete();
+                }
 
+                if (Config.Param("taf_dockyard_remove_hotkey_buttons", 1) == 1)
+                {
+                    RemoveConstructorKeyButtons();
+                }
+            }));
+        }
+
+        public static void ApplyShipTypeButtonsModifications()
+        {
+            // MAX -265 -50
+            // MIN 780 0
+
+            UiM.ModifyUi(G.ui.conUpperRight).ReplaceOffsets(new Vector2(780, 0), new Vector2(-265, -50));
+        }
+
+        public static void DisableKeyButton(Button button, System.Action before = null, System.Action after = null)
+        {
+            if (button.onClick.PrepareInvoke().Count == 1)
+            {
+                var baseCall = button.onClick.PrepareInvoke()[0];
+                button.onClick.RemoveAllListeners();
+                button.onClick.AddListener(new System.Action(() =>
+                {
+                    if (!Input.anyKey && !Input.anyKeyDown)
+                    {
+                        before?.Invoke();
+                        baseCall.Invoke(new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(System.Array.Empty<Il2CppSystem.Object>()));
+                        after?.Invoke();
+                    }
+                }));
+                button.onClick.AddListener(new System.Action(() => { }));
+            }
+
+            ModUtils.DestroyChild(button.GetChild("HkBox(Clone)", true));
+        }
+
+        public static void RemoveConstructorKeyButtons()
+        {
+            Ui ui = G.ui;
+
+            var Parts = ui.constructorUi.GetChild("Parts").GetChild("ScrollRect").GetChild("Viewport").GetChild("Content").GetChildren();
+            foreach (GameObject child in Parts)
+            {
+                if (child.name == "Part(Clone)")
+                {
+                    Button button = child.GetChild("Button").GetComponent<Button>();
+                    if (button != null)
+                    {
+                        DisableKeyButton(button);
+                    }
+                }
+                else if (child.name == "Back")
+                {
+                    Button button = child.GetComponent<Button>();
+                    if (button != null)
+                    {
+                        DisableKeyButton(button, null, new System.Action(() => {
+                            if (Patch_Ship.LastCreatedShip.shipType.name != "bb" && Patch_Ship.LastCreatedShip.shipType.name != "bc" && Patch_Ship.LastCreatedShip.shipType.name != "ca")
+                                child.SetActive(false);
+                            if (Patch_Ship.LastCreatedShip.shipType.name == "ca" && Patch_Ship.LastCreatedShip.hull.data.maxAllowedCaliber != -1 && Patch_Ship.LastCreatedShip.hull.data.maxAllowedCaliber < 9)
+                                child.SetActive(false);
+                            if (Patch_Ui.PartCategory.name != "gun_main")
+                                child.SetActive(false);
+                        }));
+                    }
+                }
+            }
+
+            var PartCatagories = ui.constructorUi.GetChild("PartCategories").GetChildren();
+            foreach (GameObject child in PartCatagories)
+            {
+                if (child.name == "PartCategory(Clone)")
+                {
+                    Button button = child.GetChild("Button").GetComponent<Button>();
+                    if (button != null)
+                    {
+                        DisableKeyButton(button);
+                    }
+                }
+            }
+        }
+
+        public static void RemoveConstructorDesignSmallCopyDelete()
+        {
+            Ui ui = G.ui;
+
+            var ShipOptions = ui.conShipTabs.GetChild("Cont").GetChildren();
+            foreach (GameObject child in ShipOptions)
+            {
+                if (child.name == "Ship(Clone)")
+                {
+                    Button button = child.GetChild("Button").GetComponent<Button>();
+                    if (button != null)
+                    {
+                        DisableKeyButton(button);
+                        ModUtils.DestroyChild(button.GetChild("CloneShip", true), false);
+                        ModUtils.DestroyChild(button.GetChild("DeleteShip", true), false);
+                    }
+                }
+            }
+        }
+
+        public static InputField InputChooseYearEditField;
+        public static Text InputChooseYearStaticText;
+
+        public static void ApplyInputYearModifications()
+        {
             // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/NationAndYearSelection/ChooseYear
 
             // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/ShipName
@@ -641,607 +1380,9 @@ namespace TweaksAndFixes
                     InputChooseYearStaticText.text = value;
                 }
             }));
-
-            GameObject popupSaveWindow = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/SaveWindow");
-            GameObject regularPopupsRoot = ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/PopWindows");
-            var regularPopups = regularPopupsRoot.GetChildren();
-            GameObject basePopupsRoot = ModUtils.GetChildAtPath("Ui/UiMain", G.container);
-
-            bool showPopups = true;
-
-            GameObject nextTurnButton = ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/Windows/Map Window/Next Turn Panel/Next Turn Button");
-            GameObject hidePopupsButton = GameObject.Instantiate(nextTurnButton);
-            hidePopupsButton.transform.SetParent(ModUtils.GetChildAtPath("Ui/UiMain", G.container));
-            hidePopupsButton.name = "Hide Popups";
-            hidePopupsButton.transform.SetScale(1,1,1);
-            hidePopupsButton.transform.position = new Vector3(3490, 110, 0); // -125 40
-            RectTransform hidePopupsButtonRect = hidePopupsButton.GetComponent<RectTransform>();
-            hidePopupsButtonRect.anchoredPosition = new Vector2(-125, 40);
-            hidePopupsButtonRect.anchorMin = new Vector2(1, 0);
-            hidePopupsButtonRect.anchorMax = new Vector2(1, 0);
-            hidePopupsButton.SetActive(false);
-            GameObject hidePopupsText = hidePopupsButton.GetChild("Text (TMP)");
-            hidePopupsText.TryDestroyComponent<LocalizeText>();
-            TMP_Text hidePopupsTextComp = hidePopupsText.GetComponent<TMP_Text>();
-            hidePopupsTextComp.text = "Hide Popups";
-            Button hidePopupsButtonComp = hidePopupsButton.GetComponent<Button>();
-            hidePopupsButtonComp.onClick.RemoveAllListeners();
-            hidePopupsButtonComp.onClick.AddListener(new System.Action(() => {
-                showPopups = !showPopups;
-                if (showPopups)
-                {
-                    hidePopupsTextComp.text = "Hide Popups";
-                }
-                else
-                {
-                    hidePopupsTextComp.text = "Show Popups";
-                }
-            }));
-
-            ModifyUi(basePopupsRoot).SetOnUpdate(new System.Action<GameObject>((GameObject ui) => {
-                bool hasPopups = false;
-
-                // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"Update popup tracker:");
-
-                if (!GameManager.IsWorld)
-                {
-                    hasPopups = false;
-                    showPopups = true;
-                    // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"  Not in world");
-                    return;
-                }
-
-                // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"  Checking premade popups...");
-
-                foreach (GameObject child in regularPopups)
-                {
-                    if (child.name != "Event Window" && child.name != "Battle Window" && child.name != "WarReparationWindowUI") continue;
-
-                    if (child.active)
-                    {
-                        // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"    Found popup {child.name}!");
-                        hasPopups = true;
-                        break;
-                    }
-                }
-
-                regularPopupsRoot.SetActive(showPopups);
-
-                if (basePopupsRoot.GetChild("MessageBox(Clone)", true) != null)
-                {
-                    bool isFirst = true;
-
-                    var children = basePopupsRoot.GetChildren();
-
-                    // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"  Checking generic popups...");
-
-                    foreach (GameObject child in children)
-                    {
-                        if (child.name != "MessageBox(Clone)") continue;
-
-                        // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"    Parsing popup...");
-
-                        if (!isFirst)
-                        {
-                            child.TryDestroyComponent<Image>();
-                        }
-
-                        isFirst = false;
-
-                        hasPopups = true;
-            
-                        child.SetActive(showPopups);
-                    }
-
-                    hidePopupsButton.transform.SetSiblingIndex(children.Count - 1);
-                }
-
-                // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"  Has popups: {hasPopups} | !Show popups {!showPopups} | !Loading Screen {!GameManager.IsLoadingScreenActive} | World Map {GameManager.IsWorldMap} | !Save Menu {!popupSaveWindow.active}");
-
-                hidePopupsButton.SetActive((hasPopups || !showPopups) && (!GameManager.IsLoadingScreenActive && GameManager.IsWorldMap && !popupSaveWindow.active));
-            }));
-
-
-            // Global/Ui/UiMain/WorldEx/Windows/Map Window/Next Turn Panel/Next Turn Button
-
-            // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/(Beam/Draught)/Slider
-
-            // GameObject beamSetting = GameObject.Instantiate(ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Beam"));
-            // beamSetting.transform.SetParent(ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings"));
-            // beamSetting.transform.SetScale(1, 1, 1);
-            // beamSetting.name = "TAF Beam";
-            // beamSliderComp = beamSetting.GetChild("Slider").GetComponent<Slider>();
-            // beamSliderComp.onValueChanged.RemoveAllListeners();
-            // // ModifyUi(beamSetting).SetOnUpdate(new System.Action<GameObject>((GameObject obj) =>
-            // // {
-            // //     Ship ship = ShipM.GetActiveShip();
-            // // 
-            // //     if (ship == null) return;
-            // // 
-            // //     // ship.hull.data.paramx
-            // // 
-            // //     // beamSliderComp.maxValue;
-            // // }));
-            // beamSliderComp.onValueChanged.AddListener(new System.Action<float>((float value) =>
-            // {
-            //     Ship ship = ShipM.GetActiveShip();
-            // 
-            //     if (ship == null) return;
-            //     
-            //     Melon<TweaksAndFixes>.Logger.Msg($"{value}");
-            // 
-            //     ship.SetBeam(value / 10);
-            // }));
-            // GameObject beamOld = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Beam");
-            // beamOld.SetActive(false);
-
-            // GameObject draughtSlider = (ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Draught/Slider"));
-            // draughtSlider.transform.SetParent(ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Draught"));
-            // draughtSlider.transform.SetScale(1, 1, 1);
-            // draughtSlider.TryDestroyComponent<Slider>();
-            // draughtSlider.AddComponent<Slider>();
-            // draughtSlider.TryDestroyComponent<EventTrigger>();
-            // Slider draughtSliderComp = draughtSlider.GetComponent<Slider>();
-            // draughtSliderComp.onValueChanged.RemoveAllListeners();
-            // draughtSliderComp.onValueChanged.AddListener(new System.Action<float>((float value) =>
-            // {
-            //     Ship ship = ShipM.GetActiveShip();
-            // 
-            //     if (ship == null) return;
-            // 
-            //     ship.SetDraught(value - 5);
-            // }));
-            // GameObject draughtSliderOld = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Draught/Slider");
-            // draughtSliderOld.SetActive(false);
         }
 
-        public static void ApplyShipTypeButtonsModifications()
-        {
-            // MAX -265 -50
-            // MIN 780 0
-
-            UiM.ModifyUi(G.ui.conUpperRight).ReplaceOffsets(new Vector2(780, 0), new Vector2(-265, -50));
-        }
-
-        private static Slider beamSliderComp;
-
-        public static void OnConstructorShipChanged()
-        {
-            Ship ship = ShipM.GetActiveShip();
-
-            Melon<TweaksAndFixes>.Logger.Msg($"OnConstructorShipChanged");
-
-            if (ship == null) return;
-
-            Melon<TweaksAndFixes>.Logger.Msg($"{ship.hull.data.beamMin} ~ {ship.hull.data.beamMax}");
-
-            beamSliderComp.minValue = ship.hull.data.beamMin * 10;
-            beamSliderComp.maxValue = ship.hull.data.beamMax * 10;
-            beamSliderComp.value = ship.beam * 10;
-        }
-
-        private static GameObject bailoutEvent;
-        private static TMP_Text bailoutEventWindowBodyText;
-        private static TMP_Text bailoutEventWindowYesText;
-        private static Player bailoutPlayer;
-
-        public static void CreateBailoutPopup()
-        {
-            // Global/Ui/UiMain/Popup/Generic
-
-            // Global/Ui/UiMain/Popup/Bailout Event/Window/TextScrollView/Viewport/Content/Text
-
-            bailoutEvent = GameObject.Instantiate(ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/Generic"));
-            bailoutEvent.transform.SetParent(ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/PopWindows"));
-            bailoutEvent.name = "Bailout Event";
-            bailoutEvent.transform.SetScale(1, 1, 1);
-            bailoutEvent.transform.localPosition = Vector3.zero;
-            RectTransform bailoutEventTransform = bailoutEvent.GetComponent<RectTransform>();
-            bailoutEventTransform.offsetMin = Vector3.zero;
-            bailoutEventTransform.offsetMax = Vector3.zero;
-            bailoutEvent.GetChild("BgScreen").TryDestroy();
-
-            GameObject bailoutEventWindow = bailoutEvent.GetChild("Window");
-            bailoutEventWindow.GetChild("Image").TryDestroy();
-            bailoutEventWindow.GetChild("TextScrollView").TryDestroy();
-            bailoutEventWindow.GetChild("Bg").GetComponent<Image>().color = new Color(0,0,0,0.9f);
-            ModUtils.GetChildAtPath("Buttons/Ok", bailoutEventWindow).TryDestroy();
-            ModUtils.GetChildAtPath("Buttons/No", bailoutEventWindow).TryDestroy();
-
-            GameObject bailoutEventWindowYes = ModUtils.GetChildAtPath("Buttons/Yes", bailoutEventWindow);
-            bailoutEventWindowYes.transform.SetScale(1.2f, 1.2f, 1.2f);
-            GameObject bailoutEventWindowYesTextObj = bailoutEventWindowYes.GetChild("Text (TMP)");
-            bailoutEventWindowYesTextObj.TryDestroyComponent<LocalizeText>();
-            bailoutEventWindowYesText = bailoutEventWindowYesTextObj.GetComponent<TMP_Text>();
-            Button bailoutEventWindowYesBtn = bailoutEventWindowYes.GetComponent<Button>();
-            bailoutEventWindowYesBtn.onClick.RemoveAllListeners();
-            bailoutEventWindowYesBtn.onClick.AddListener(new System.Action(() =>
-            {
-                if (bailoutPlayer == null)
-                {
-                    bailoutEvent.SetActive(false);
-                    Melon<TweaksAndFixes>.Logger.Error($"Error: Invalid player for bailout event!");
-                    return;
-                }
-
-                int bailoutEventNumber = Config.Param("taf_bailout_event_number", 81);
-
-                EventData prompt = G.GameData.events[$"{bailoutEventNumber}"];
-                EventData response = G.GameData.events[$"{bailoutEventNumber}_a"];
-
-                EventX ev = new EventX();
-                ev.date = CampaignController.Instance.CurrentDate;
-                ev.showEventToMainPlayer = true;
-                ev.data = prompt;
-                ev.player = bailoutPlayer;
-                ev.Init();
-
-                Melon<TweaksAndFixes>.Logger.Msg($"Bailout accepted!");
-
-                CampaignController.Instance.AnswerEvent(ev, response);
-
-                bailoutEvent.SetActive(false);
-            }));
-
-            GameObject bailoutEventWindowHeader = bailoutEventWindow.GetChild("Header");
-            bailoutEventWindowHeader.GetComponent<TMP_Text>().text = "Government Bailout"; // TODO: Localize
-
-            GameObject bailoutEventWindowBody = bailoutEventWindow.GetChild("TextOld");
-            bailoutEventWindowBody.name = "Text";
-            bailoutEventWindowBody.SetActive(true);
-            bailoutEventWindowBodyText = bailoutEventWindowBody.GetComponent<TMP_Text>();
-        }
-        
-        public static void ShowBailoutPopupForPlayer(Player player)
-        {
-            int bailoutEventNumber = Config.Param("taf_bailout_event_number", 81);
-
-            EventData prompt = G.GameData.events[$"{bailoutEventNumber}"];
-            EventData response = G.GameData.events[$"{bailoutEventNumber}_a"];
-
-            bailoutPlayer = player;
-
-            // TODO: Localize
-            string promptStr = LocalizeManager.Localize(prompt.text);
-            promptStr += $"\n\n{ModUtils.ColorNumber(response.money, "", "%", false, true)} Naval Funds ({ModUtils.ColorNumber(player.Budget() * response.money / 100, "$", "", false, true)})";
-            promptStr += $"\n{ModUtils.ColorNumber(response.budget, "", "%")} Naval Budget";
-            promptStr += $"\n{ModUtils.ColorNumber(response.wealth, "", "%")} GDP";
-            promptStr += $"\n{ModUtils.ColorNumber(response.reputation)} Naval Prestige";
-            promptStr += $"\n{ModUtils.ColorNumber(response.respect, "", "", true)} Unrest";
-
-            // Melon<TweaksAndFixes>.Logger.Msg($"cash:                      {bailoutPlayer.cash}");
-            // Melon<TweaksAndFixes>.Logger.Msg($"inflation:                 {bailoutPlayer.inflation}");
-            // Melon<TweaksAndFixes>.Logger.Msg($"wealth:                    {bailoutPlayer.wealth}");
-            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowth:              {bailoutPlayer.wealthGrowth}");
-            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowthMul:           {bailoutPlayer.wealthGrowthMul}");
-            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowthEffectivePrev: {bailoutPlayer.wealthGrowthEffectivePrev}");
-            // Melon<TweaksAndFixes>.Logger.Msg($"nationBaseIncomeGrowth:    {bailoutPlayer.nationBaseIncomeGrowth}");
-            // Melon<TweaksAndFixes>.Logger.Msg($"budgetMod:                 {bailoutPlayer.budgetMod}");
-            // Melon<TweaksAndFixes>.Logger.Msg($"unrest:                    {bailoutPlayer.unrest}");
-            // Melon<TweaksAndFixes>.Logger.Msg($"reputation:                {bailoutPlayer.reputation}");
-            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowthEff:           {bailoutPlayer.WealthGrowthEffective()}");
-            // Melon<TweaksAndFixes>.Logger.Msg($"wealthGrowthHit:           {(response.wealth / 100 + 1) * (bailoutPlayer.WealthGrowthEffective() + 1) - 1}");
-            // 
-            // bailoutPlayer.cash += player.Budget() * response.money / 100;
-            // bailoutPlayer.wealthGrowth = -0.5f;//(response.wealth / 100 + 1) * (bailoutPlayer.WealthGrowthEffective() + 1) - 1;
-            // bailoutPlayer.budgetMod += response.budget;
-            // bailoutPlayer.reputation += response.reputation;
-            // bailoutPlayer.AddUnrest(-response.respect);
-            
-            bailoutEventWindowBodyText.text = promptStr;
-            bailoutEventWindowYesText.text = LocalizeManager.Localize(response.text);
-
-            bailoutEvent.SetActive(true);
-        }
-
-        private static void ApplyCampaginDesignTabModifications()
-        {
-            // DESIGNS
-
-            GameObject capacityBar = G.ui.FleetWindow.Root.GetChild("Root").GetChild("Shipbuilding Capacity Header");
-
-            // UiM.ModifyUi(capacityBar).MultiplyOffsets(Vector2.one, new Vector2(0.9f, 1.0f));
-
-            // MIN: -837.9719 -601.6474 -> -1200 -700
-            // MAX: -7.8599 -44.3526 -> 0 -44.3526
-
-            GameObject shipDesigns = G.ui.FleetWindow.Root.GetChild("Root").GetChild("Design Ships");
-
-            UiM.ModifyUi(shipDesigns).MultiplyOffsets(new Vector2(1200f / 837.9719f, -700f / -601.6474f), Vector2.one);
-
-            UiM.ModifyUi(shipDesigns.GetChild("Scrollbar Vertical")).MultiplyOffsets(new Vector2(1.0f, 0.0f), Vector2.one);//.ReplaceAnchoredPosition(new Vector2(-10, 0));
-
-            // MIN: -837.9719 -44.3531 -> -1200 -44.3531
-            // MAX: -8.1926 -14.1529 -> -20 -14.1529
-
-            GameObject designHeader = G.ui.FleetWindow.DesignHeader.gameObject;
-
-            UiM.ModifyUi(designHeader).MultiplyOffsets(new Vector2(1200f / 837.9719f, 1.0f), Vector2.one);//new Vector2(-20f / -8.1926f, 1.0f));
-
-            // Design Ship Info / ShipIsoImage / ShipIsometrImage
-            // MIN -0 -314.4801 -> 0 -332.5008
-            // MAX 314.48 -0.0001 -> 350 17.4992
-
-            GameObject shipIsoImage = G.ui.FleetWindow.DesignShipInfoRoot.GetChild("ShipIsoImage").GetChild("ShipIsometrImage");
-
-            UiM.ModifyUi(shipIsoImage).MultiplyOffsets(new Vector2(1.0f, -332.5f / -314.4801f), new Vector2(350f / 314.48f, 1.0f));
-
-            // Design Ship Info / Text / ShipTextInfo
-            // MIN 0 -271.12 -> -20 -470
-            // MAX 314.48 0 -> 350 0
-
-            GameObject shipTextInfo = G.ui.FleetWindow.DesignShipInfoRoot.GetChild("Text").GetChild("ShipTextInfo");
-
-            UiM.ModifyUi(shipTextInfo).MultiplyOffsets(new Vector2(1.0f, -470f / -271.12f), new Vector2(350f / 314.48f, 1.0f));
-
-            GameObject designHeaderName = G.ui.FleetWindow.DesignHeader.GetChild("Name");
-
-            UiM.ModifyUi(designHeaderName).MultiplyLayoutDimensions(500f / 200f, 1.0f);
-
-            GameObject designTemplateName = G.ui.FleetWindow.DesignTemplate.Name.gameObject;
-
-            UiM.ModifyUi(designTemplateName).MultiplyLayoutDimensions(500f / 200f, 1.0f);
-
-            // Design Buttons
-            // -1042.223 31.1152
-
-            GameObject designButtons = G.ui.FleetWindow.DesignButtonsRoot;
-
-            UiM.ModifyUi(designButtons).MultiplyOffsets(new Vector2(-1200f / -1042.223f, 1.0f), Vector2.one);
-
-        }
-
-        private static void ApplyCampaignFleetTabModifications()
-        {
-            // Fleet Buttons
-
-            FleetWindow_ShipElementUI fleetTemplate = G.ui.FleetWindow.FleetTemplate;
-
-            GameObject fleetButtons = G.ui.FleetWindow.FleetButtonsRoot;
-
-            UiM.ModifyUi(fleetButtons).MultiplyOffsets(new Vector2(-1585f / -1271.83f, 1f), Vector2.one);
-
-            fleetTemplate.gameObject.GetComponent<Button>().onClick.RemoveAllListeners();
-
-            GameObject setRole = GameObject.Instantiate(fleetButtons.GetChild("View"));
-            setRole.transform.localPosition = new Vector3();
-            setRole.transform.SetParent(fleetButtons.GetComponent<LayoutGroup>().transform);
-            setRole.transform.SetScale(1.2114f, 1.2114f, 1.2114f);
-            setRole.name = "Set Role";
-            GameObject setRoleText = setRole.gameObject.GetChildren()[0];
-            setRoleText.GetComponent<TMP_Text>().text = "Set Role";
-            setRoleText.TryDestroyComponent<LocalizeText>();
-            Button setRoleButton = setRole.GetComponent<Button>();
-            setRoleButton.onClick.RemoveAllListeners();
-            setRoleButton.onClick.AddListener(new System.Action(() =>
-            {
-                if (G.ui.FleetWindow.selectedElements.Count > 0)
-                {
-                    G.ui.FleetWindow.selectedElements[^1].RoleSelectionButton.onClick.Invoke();
-                }
-            }));
-
-            GameObject setCrew = GameObject.Instantiate(fleetButtons.GetChild("View"));
-            setCrew.transform.localPosition = new Vector3();
-            setCrew.transform.SetParent(fleetButtons.GetComponent<LayoutGroup>().transform);
-            setCrew.transform.SetScale(1.2114f, 1.2114f, 1.2114f);
-            setCrew.name = "Set Crew";
-            GameObject setCrewText = setCrew.gameObject.GetChildren()[0];
-            setCrewText.GetComponent<TMP_Text>().text = "Set Crew";
-            setCrewText.TryDestroyComponent<LocalizeText>();
-            Button setCrewButton = setCrew.GetComponent<Button>();
-            setCrewButton.onClick.RemoveAllListeners();
-            setCrewButton.onClick.AddListener(new System.Action(() =>
-            {
-                if (G.ui.FleetWindow.selectedElements.Count == 1)
-                {
-                    G.ui.FleetWindow.selectedElements[0].CrewAction.onClick.Invoke();
-
-                    GameObject popup = G.ui.gameObject.GetChild("MessageBox(Clone)", true);
-
-                    if (popup != null)
-                    {
-                        Slider slider = popup.GetChild("Root").GetChild("Campaign Slider").GetComponent<Slider>();
-
-                        // slider.Set(G.ui.FleetWindow.selectedElements[0].CurrentShip.GetTotalCrew());
-                    }
-                }
-            }));
-
-            GameObject viewOnMap = GameObject.Instantiate(fleetButtons.GetChild("View"));
-            viewOnMap.transform.localPosition = new Vector3();
-            viewOnMap.transform.SetParent(fleetButtons.GetComponent<LayoutGroup>().transform);
-            viewOnMap.transform.SetScale(1.2114f, 1.2114f, 1.2114f);
-            viewOnMap.name = "View On Map";
-            GameObject viewOnMapText = viewOnMap.gameObject.GetChildren()[0];
-            viewOnMapText.GetComponent<TMP_Text>().text = "View On Map";
-            viewOnMapText.TryDestroyComponent<LocalizeText>();
-            Button viewOnMapButton = viewOnMap.GetComponent<Button>();
-            viewOnMapButton.onClick.RemoveAllListeners();
-            viewOnMapButton.onClick.AddListener(new System.Action(() =>
-            {
-                if (G.ui.FleetWindow.selectedElements.Count == 1)
-                {
-                    G.ui.FleetWindow.selectedElements[0].AreaButton.onClick.Invoke();
-                    G.ui.FleetWindow.selectedElements[0].AreaButton.onClick.Invoke();
-                }
-            }));
-
-            UiM.ModifyUi(fleetButtons.GetChild("Mothballed")).SetActive(false, false);
-
-            UiM.ModifyUi(fleetButtons.GetChild("View")).SetActive(false, false);
-
-            UiM.ModifyUi(fleetButtons).SetChildOrder("AddCrewToggle", "Set Role", "View On Map", "ChangePort", "Set Crew", "Suspend", "Scrap", "Cancel Sale");
-
-
-
-
-            // Fleet Ships
-
-            UiM.ModifyUi(G.ui.FleetWindow.Root.GetChild("Root").GetChild("Fleet Ships")).MultiplyOffsets(new Vector2(-1585f / -1271.83f, -700f / -601.6475f), Vector2.one);
-
-
-
-
-            // Fleet Template
-
-            var templateGroup = fleetTemplate.GetComponent<LayoutGroup>();
-            templateGroup.padding.left = 10;
-            templateGroup.padding.right = 10;
-
-            fleetTemplate.gameObject.GetChild("Crew").name = "CrewAction";
-
-            GameObject roleText = GameObject.Instantiate(fleetTemplate.RoleSelectionButton.gameObject.GetChildren()[0]);
-            roleText.SetParent(fleetTemplate.RoleSelectionButton.gameObject.GetParent());
-            roleText.transform.SetScale(1, 1, 1);
-            roleText.transform.localPosition = new Vector3();
-            roleText.name = "RoleText";
-            roleText.GetComponent<TMP_Text>().text = "ERROR";
-            roleText.GetComponent<TMP_Text>().fontSize = 11;
-            roleText.GetComponent<TMP_Text>().fontSizeMin = 11;
-            roleText.GetComponent<TMP_Text>().fontSizeMax = 11;
-
-            // fleetTemplate.Area.GetComponent<TMP_Text>().fontSizeMax = 11;
-
-            UiM.ModifyUi(fleetTemplate.gameObject)
-                .SetChildOrder(
-                "Selected", "Type", "Name", "NameInputField", "Class", "Damage", "Ammo", "Fuel", "Role",
-                "Status", "Area", "Port", "Port Selection", "Cost", "Crew", "Tonnage", "Date", "Speed", "Weapons", "Sold"
-            ); // , "CrewAction"
-
-            UiM.ModifyUi(fleetTemplate.Type.gameObject).MultiplyLayoutDimensions(60f / 40f, 1.0f);
-
-            UiM.ModifyUi(fleetTemplate.Name.gameObject).MultiplyLayoutDimensions(275f / 200f, 1.0f);
-
-            UiM.ModifyUi(fleetTemplate.NameInputField.gameObject).MultiplyLayoutDimensions(275f / 160f, 1.0f);
-
-            fleetTemplate.NameInputField.gameObject.GetComponent<TMP_InputField>().onValidateInput = null;
-
-            // GameObject conNameInput = ModUtils.GetChildAtPath("Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/ShipName/EditName/Edit");
-
-            // fleetTemplate.NameInputField.gameObject.name = "Area (old)";
-
-            // GameObject go = TMP_DefaultControls.CreateInputField(GetStandardResources());
-
-            // GameObject nameInputField = GameObject.Instantiate(conNameInput);
-            // nameInputField.SetParent(fleetTemplate.gameObject);
-            // nameInputField.transform.SetScale(1, 1, 1);
-            // nameInputField.name = "NameInputFieldTest";
-            // LayoutElement nameInputElement = nameInputField.GetOrAddComponent<LayoutElement>();
-            // nameInputElement.preferredWidth = 225f;
-            // nameInputElement.preferredHeight = 225f;
-            // InputField field = nameInputField.GetComponent<InputField>();
-            // field.text = "TESTING 123";
-            // field.onEndEdit.RemoveAllListeners();
-            // field.onValueChange.RemoveAllListeners();
-            // field.onValueChanged.RemoveAllListeners();
-            // 
-            // var action = new System.Action<string>((string str) =>
-            // {
-            //     Melon<TweaksAndFixes>.Logger.Msg($"Input {str}");
-            // });
-            // 
-            // field.onEndEdit.AddListener(action);
-
-            UiM.ModifyUi(fleetTemplate.Class.gameObject).MultiplyLayoutDimensions(275f / 110f, 1.0f);
-
-            UiM.ModifyUi(fleetTemplate.Damage.gameObject).MultiplyLayoutDimensions(60f / 90f, 1.0f);
-
-            UiM.ModifyUi(fleetTemplate.Ammo.gameObject).MultiplyLayoutDimensions(60f / 75f, 1.0f);
-
-            UiM.ModifyUi(fleetTemplate.Fuel.gameObject).MultiplyLayoutDimensions(60f / 75f, 1.0f);
-
-            GameObject hidenElements = new GameObject();
-            hidenElements.SetParent(fleetTemplate.gameObject);
-            hidenElements.name = "HidenElements";
-            hidenElements.SetActive(false);
-
-            UiM.ModifyUi(fleetTemplate.Speed.gameObject).SetActive(false, false);
-            // fleetTemplate.Speed.gameObject.SetParent(hidenElements);
-
-            UiM.ModifyUi(fleetTemplate.Weapons.gameObject).SetActive(false, false);
-            // fleetTemplate.Weapons.gameObject.SetParent(hidenElements);
-
-            UiM.ModifyUi(fleetTemplate.RoleSelectionButton.gameObject).SetActive(false, false);
-            // fleetTemplate.RoleSelectionButton.gameObject.SetParent(hidenElements);
-
-            UiM.ModifyUi(fleetTemplate.CrewAction.gameObject.GetParent()).SetActive(false, false);
-            // fleetTemplate.CrewAction.gameObject.GetParent().SetParent(hidenElements);
-
-            UiM.ModifyUi(fleetTemplate.Sold.gameObject).SetActive(false, false);
-            // fleetTemplate.Sold.gameObject.SetParent(hidenElements);
-
-            // UiM.ModifyUi(fleetTemplate.Area.gameObject).SetActive(false, false);
-
-            fleetTemplate.Area.gameObject.name = "Area (old)";
-            
-            GameObject areaText = GameObject.Instantiate(fleetTemplate.Area.gameObject);
-            areaText.SetParent(fleetTemplate.gameObject);
-            areaText.transform.SetScale(1, 1, 1);
-            // areaText.transform.localPosition = new Vector3();
-            areaText.name = "Area";
-            areaText.TryDestroyComponent<LocalizeFont>();
-            areaText.TryDestroyComponent<Button>();
-            areaText.GetComponent<TMP_Text>().text = "ERROR";
-            areaText.GetComponent<TMP_Text>().fontSize = 11;
-            areaText.GetComponent<TMP_Text>().fontSizeMin = 11;
-            areaText.GetComponent<TMP_Text>().fontSizeMax = 11;
-
-            fleetTemplate.Area.gameObject.SetParent(hidenElements);
-
-            // UiM.ModifyUi(fleetTemplate.Port.gameObject).SetActive(false, false);
-
-            fleetTemplate.Port.gameObject.name = "Port (old)";
-            
-            GameObject portText = GameObject.Instantiate(fleetTemplate.Port.gameObject);
-            portText.SetParent(fleetTemplate.gameObject);
-            portText.transform.SetScale(1, 1, 1);
-            // portText.transform.localPosition = new Vector3();
-            portText.name = "Port";
-            portText.TryDestroyComponent<LocalizeFont>();
-            portText.TryDestroyComponent<Button>();
-            portText.GetComponent<TMP_Text>().text = "ERROR";
-            portText.GetComponent<TMP_Text>().fontSize = 13;
-            portText.GetComponent<TMP_Text>().fontSizeMin = 13;
-            portText.GetComponent<TMP_Text>().fontSizeMax = 13;
-
-            fleetTemplate.Port.gameObject.SetParent(hidenElements);
-
-
-            // Fleet Header
-
-            GameObject fleetHeader = G.ui.FleetWindow.FleetHeader;
-
-            var headerGroup = fleetHeader.GetComponent<LayoutGroup>();
-            headerGroup.padding.left = 0;
-            headerGroup.padding.right = 0;
-
-            UiM.ModifyUi(fleetHeader)
-                .MultiplyOffsets(new Vector2(-1585f / -1271.83f, 1f), Vector2.one)
-                .SetChildOrder("Type", "Name", "Class", "Damage", "Ammo", "Fuel", "Role", "Status", "Area", "Port", "Cost", "Crew", "Tonnage", "Date", "Speed", "Weapons", "CrewAction", "Sold");
-
-            UiM.ModifyUi(fleetHeader.GetChild("Damage")).MultiplyLayoutDimensions(60f / 85f, 1.0f);
-
-            UiM.ModifyUi(fleetHeader.GetChild("Ammo")).MultiplyLayoutDimensions(60f / 75f, 1.0f);
-
-            UiM.ModifyUi(fleetHeader.GetChild("Fuel")).MultiplyLayoutDimensions(60f / 70f, 1.0f);
-
-            UiM.ModifyUi(fleetHeader.GetChild("Name")).MultiplyLayoutDimensions(275f / 160f, 1.0f);
-
-            UiM.ModifyUi(fleetHeader.GetChild("Status")).MultiplyLayoutDimensions(100f / 110f, 1.0f);
-
-            UiM.ModifyUi(fleetHeader.GetChild("Port")).MultiplyLayoutDimensions(110f / 90f, 1.0f);
-
-            UiM.ModifyUi(fleetHeader.GetChild("Class")).MultiplyLayoutDimensions(275f / 100f, 1.0f);
-
-            UiM.ModifyUi(fleetHeader.GetChild("Speed")).SetActive(false, false);
-
-            UiM.ModifyUi(fleetHeader.GetChild("Weapons")).SetActive(false, false);
-
-            UiM.ModifyUi(fleetHeader.GetChild("CrewAction")).SetActive(false, false);
-
-            UiM.ModifyUi(fleetHeader.GetChild("Sold")).SetActive(false, false);
-        }
+        // ========== SETTINGS ========== //
 
         private static void ApplySettingsMenuModifications()
         {
@@ -1253,7 +1394,9 @@ namespace TweaksAndFixes
 
             GameObject GraphicsOptionsContent = ModUtils.GetChildAtPath("RightSide/Graphic Options/Viewport/Content", SettingsRoot);
 
-            ModifyUi(GraphicsOptionsContent).SetChildOrder("Quality", "Resolution", "UI Scale", "Fullscreen Mode", "VSync", "Post Effects", "Shadow Details", "Anti Aliasing", "FXAA", "Anisotropic", "FPS", "Textures");
+            ModifyUi(GraphicsOptionsContent).SetChildOrder(
+                "Quality", "Resolution", "UI Scale", "Fullscreen Mode", "VSync", "Post Effects", "Shadow Details", "Anti Aliasing", "FXAA", "Anisotropic", "FPS", "Textures"
+            );
 
             GameObject uiScaleSlider = GameObject.Instantiate(ModUtils.GetChildAtPath("RightSide/Sound/Viewport/Content/General Volume", SettingsRoot));
             uiScaleSlider.transform.localPosition = new Vector3();
@@ -1332,7 +1475,7 @@ namespace TweaksAndFixes
                 try
                 {
                     TAF_Settings.settings = Serializer.JSON.LoadJsonFile<TAF_Settings>(SavePath.path);
-                
+
                     if (TAF_Settings.settings == null)
                     {
                         Melon<TweaksAndFixes>.Logger.Msg($"  Settings file corrupted, resetting file.");
@@ -1494,5 +1637,24 @@ namespace TweaksAndFixes
                 }
             }
         }
+
+
+        // private static Slider beamSliderComp;
+        // 
+        // public static void OnConstructorShipChanged()
+        // {
+        //     Ship ship = ShipM.GetActiveShip();
+        // 
+        //     Melon<TweaksAndFixes>.Logger.Msg($"OnConstructorShipChanged");
+        // 
+        //     if (ship == null) return;
+        // 
+        //     Melon<TweaksAndFixes>.Logger.Msg($"{ship.hull.data.beamMin} ~ {ship.hull.data.beamMax}");
+        // 
+        //     beamSliderComp.minValue = ship.hull.data.beamMin * 10;
+        //     beamSliderComp.maxValue = ship.hull.data.beamMax * 10;
+        //     beamSliderComp.value = ship.beam * 10;
+        // }
+
     }
 }
