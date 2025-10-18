@@ -1565,67 +1565,90 @@ namespace TweaksAndFixes
             }));
         }
 
-        public static GameObject RotationButton;
+        public static GameObject RotationIncramentControl;
+        public static Button RotationIncramentControlButton;
+        public static Text RotationIncramentControlText;
+        public static float RotationIncramentControlTextLastValue = 0;
 
         public static void CreateTopBarRotationButton()
         {
             Ui ui = G.ui;
 
             GameObject template = ui.conUpperButtons.GetChild("Layout").GetChild("Undo");
-            RotationButton = GameObject.Instantiate(template);
+            RotationIncramentControl = GameObject.Instantiate(template);
             HorizontalLayoutGroup group = ui.conUpperButtons.GetChild("Layout").GetComponent<HorizontalLayoutGroup>();
-            RotationButton.transform.SetParent(group.transform, false);//ui.conUpperButtons.GetChild("Layout"));
-            RotationButton.transform.SetSiblingIndex(ui.conUpperButtons.GetChild("Layout").GetChildren().Count - 4);
-            RotationButton.name = "TAF_Rotation_Button";
-            // UiExt.SetTooltip(RotationButton.GetComponent<Button>(), "TAF_Rotation_Button_TT", new System.Func<string>(() => { return "Test"; }));
-            Text text = RotationButton.GetChild("Text").GetComponent<Text>();
-            Button button = RotationButton.GetComponent<Button>();
-            button.onClick.RemoveAllListeners();
-            button.onClick.AddListener(new System.Action(() =>
+            RotationIncramentControl.transform.SetParent(group.transform, false);//ui.conUpperButtons.GetChild("Layout"));
+            RotationIncramentControl.transform.SetSiblingIndex(ui.conUpperButtons.GetChild("Layout").GetChildren().Count - 4);
+            RotationIncramentControl.name = "TAF_Rotation_Increment_Control";
+            AddTooltip(RotationIncramentControl, "$TAF_tooltip_rotation_increment_control");
+            RotationIncramentControlText = RotationIncramentControl.GetChild("Text").GetComponent<Text>();
+            RotationIncramentControl.GetChild("Text").TryDestroyComponent<LocalizeText>();
+            RotationIncramentControlButton = RotationIncramentControl.GetComponent<Button>();
+            RotationIncramentControlButton.onClick.RemoveAllListeners();
+            RotationIncramentControlButton.onClick.AddListener(new System.Action(() =>
             {
                 Patch_Ui.UpdateRotationIncrament();
             }));
-            LayoutElement layout = RotationButton.GetComponent<LayoutElement>();
+            LayoutElement layout = RotationIncramentControl.GetComponent<LayoutElement>();
             layout.preferredWidth = 145;
         }
 
         public static void UpdateTopBarRotationButton()
         {
-            // if (FixedRotationValue) RotationButton.GetComponent<Button>().SetActive(false);
-            // else RotationButton.GetComponent<Button>().SetActive(true);
-            RotationButton.GetChild("Text").GetComponent<Text>().text = String.Format(LocalizeManager.Localize("$TAF_Ui_Dockyard_TopBar_RotationIncrementControl"), Patch_Ui.RotationValue) + "\u00B0";
-            if (Patch_Ui.FixedRotationValue) RotationButton.GetComponent<Button>().Interactable(false);
-            else RotationButton.GetComponent<Button>().Interactable(true);
+            if (RotationIncramentControlButton.interactable && Patch_Ui.FixedRotationValue) RotationIncramentControlButton.Interactable(false);
+            else if(!RotationIncramentControlButton.interactable && !Patch_Ui.FixedRotationValue) RotationIncramentControlButton.Interactable(true);
+
+            if (RotationIncramentControlTextLastValue == Patch_Ui.RotationValue) return;
+
+            RotationIncramentControlTextLastValue = Patch_Ui.RotationValue;
+            
+            RotationIncramentControlText.text = String.Format(LocalizeManager.Localize("$TAF_Ui_Dockyard_TopBar_RotationIncrementControl"), Patch_Ui.RotationValue) + "\u00B0";
         }
 
-        public static GameObject RotationText;
+        public static GameObject RotationValueControl;
+        public static Button RotationValueControlButton;
+        public static Text RotationValueControlText;
+        public static float RotationValueControlTextLastValue = 1e10f;
+        public static bool RotationValueControlTextLastWasMounted = false;
 
         public static void CreateTopBarRotationText()
         {
             Ui ui = G.ui;
 
             GameObject template = ui.conUpperButtons.GetChild("Layout").GetChild("Undo");
-            RotationText = GameObject.Instantiate(template);
+            RotationValueControl = GameObject.Instantiate(template);
             HorizontalLayoutGroup group = ui.conUpperButtons.GetChild("Layout").GetComponent<HorizontalLayoutGroup>();
-            RotationText.transform.SetParent(group.transform, false);//ui.conUpperButtons.GetChild("Layout"));
-            RotationText.transform.SetSiblingIndex(ui.conUpperButtons.GetChild("Layout").GetChildren().Count - 4);
-            RotationText.name = "TAF_Rotation_Text";
-            // UiExt.SetTooltip(RotationButton.GetComponent<Button>(), "TAF_Rotation_Button_TT", new System.Func<string>(() => { return "Test"; }));
-            Button button = RotationText.GetComponent<Button>();
-            button.onClick.RemoveAllListeners();
-            button.onClick.AddListener(new System.Action(() =>
+            RotationValueControl.transform.SetParent(group.transform, false);
+            RotationValueControl.transform.SetSiblingIndex(ui.conUpperButtons.GetChild("Layout").GetChildren().Count - 4);
+            RotationValueControl.name = "TAF_Rotation_Value_Control";
+            AddTooltip(RotationValueControl, "$TAF_tooltip_rotation_value_control");
+            RotationValueControlButton = RotationValueControl.GetComponent<Button>();
+            RotationValueControlButton.onClick.RemoveAllListeners();
+            RotationValueControlButton.onClick.AddListener(new System.Action(() =>
             {
                 Patch_Ui.AutoOrient();
             }));
-            LayoutElement layout = RotationText.GetComponent<LayoutElement>();
+            LayoutElement layout = RotationValueControl.GetComponent<LayoutElement>();
             layout.preferredWidth = 145;
-
-            // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(ui.constructorUi));
+            RotationValueControlText = RotationValueControl.GetChild("Text").GetComponent<Text>();
+            RotationValueControl.GetChild("Text").TryDestroyComponent<LocalizeText>();
         }
 
         public static void UpdateTopBarRotationText()
         {
+            if (RotationValueControlButton.interactable && (Patch_Ui.SelectedPart == null || Patch_Ui.FixedRotationValue)) RotationValueControlButton.Interactable(false);
+            else if(!RotationValueControlButton.interactable && !(Patch_Ui.SelectedPart == null || Patch_Ui.FixedRotationValue)) RotationValueControlButton.Interactable(true);
+
             string RotationValue;
+
+            float hash = Patch_Ui.MountedPartRotation * 1000000 + Patch_Ui.DefaultRotation * 1000 + Patch_Ui.PartRotation;
+
+            if (RotationValueControlTextLastValue == hash && RotationValueControlTextLastWasMounted == Patch_Ui.Mounted) return;
+
+            Melon<TweaksAndFixes>.Logger.Msg($"HASH: {RotationValueControlTextLastValue}/{RotationValueControlTextLastWasMounted} -> {hash}/{Patch_Ui.Mounted}");
+
+            RotationValueControlTextLastValue = hash;
+            RotationValueControlTextLastWasMounted = Patch_Ui.Mounted;
 
             if (Patch_Ui.Mounted)
             {
@@ -1650,14 +1673,11 @@ namespace TweaksAndFixes
                 }
             }
 
-            RotationText.GetChild("Text").GetComponent<Text>().text = String.Format(LocalizeManager.Localize("$TAF_Ui_Dockyard_TopBar_RotationValueControl"), RotationValue);
-
-
-            if (Patch_Ui.SelectedPart == null || Patch_Ui.FixedRotationValue) RotationText.GetComponent<Button>().Interactable(false);
-            else RotationText.GetComponent<Button>().Interactable(true);
+            RotationValueControlText.text = String.Format(LocalizeManager.Localize("$TAF_Ui_Dockyard_TopBar_RotationValueControl"), RotationValue);
         }
 
         public static GameObject ArmorQualityButton;
+        public static float ArmourQuality;
 
         public static void CreateArmorQualityButton()
         {
@@ -1666,34 +1686,38 @@ namespace TweaksAndFixes
             GameObject template = ui.conUpperButtons.GetChild("Layout").GetChild("Undo");
             ArmorQualityButton = GameObject.Instantiate(template);
             GameObject parent = ui.constructorUi.GetChild("Left").GetChild("Scroll View").GetChild("Viewport").GetChild("Cont").GetChild("FoldArmor").GetChild("Armor");
-            // HorizontalLayoutGroup group = new HorizontalLayoutGroup();//ui.GetChild("Left").GetChild("Scroll View").GetChild("Viewport").GetChild("Cont").GetChild("FoldArmor").GetComponent<HorizontalLayoutGroup>();
-            // group.SetParent(parent);
-            ArmorQualityButton.transform.SetParent(parent.transform, false);//ui.conUpperButtons.GetChild("Layout"));
-            ArmorQualityButton.transform.SetSiblingIndex(2);//ui.conUpperButtons.GetChild("Layout").GetChildren().Count - 2);
+            ArmorQualityButton.transform.SetParent(parent.transform, false);
+            ArmorQualityButton.transform.SetSiblingIndex(2);
             ArmorQualityButton.name = "TAF_Armour_Quality_Button";
-            // UiExt.SetTooltip(RotationButton.GetComponent<Button>(), "TAF_Rotation_Button_TT", new System.Func<string>(() => { return "Test"; }));
+            AddTooltip(ArmorQualityButton, "$TAF_tooltip_update_armor_quality_setting");
             Button button = ArmorQualityButton.GetComponent<Button>();
             button.onClick.RemoveAllListeners();
             LayoutElement layout = ArmorQualityButton.GetComponent<LayoutElement>();
             layout.preferredWidth = 100;
             layout.preferredHeight = 15;
 
-            ArmorQualityButton.GetChild("Text").TryDestroyComponent<LocalizeText>();
-            ArmorQualityButton.GetChild("Text").GetComponent<Text>().text = LocalizeManager.Localize("$TAF_Ui_Dockyard_ArmorTab_UpdateArmorQualitySetting");
+            SetLocalizedTextTag(ArmorQualityButton.GetChild("Text"), "$TAF_Ui_Dockyard_ArmorTab_UpdateArmorQualitySetting");
 
-            // Melon<TweaksAndFixes>.Logger.Msg("\n" + ModUtils.DumpHierarchy(ui.constructorUi));
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(new System.Action(() =>
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Updating armor preview value to {ArmourQuality}.");
+                GameObject OptionsMenu = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/Options Window");
+                GameObject ArmorQualitySlider = ModUtils.GetChildAtPath("Root/RightSide/General/Viewport/Content/ArmorQualityInPenetrationData/ArmorQualityInPenetrationDataSlider", OptionsMenu);
+                Slider ArmorQualitySliderContent = ArmorQualitySlider.GetComponent<Slider>();
+                ArmorQualitySliderContent.value = ArmourQuality;
+                G.settings.Save();
+            }));
         }
 
         public static void UpdateArmorQualityButton()
         {
-            float ArmourQuality = 0;
-
             if (Patch_Ship.LastCreatedShip != null)
             {
+                ArmourQuality = 0;
+
                 foreach (TechnologyData tech in Patch_Ship.LastCreatedShip.techsActual)
                 {
-                    // if (tech.type != "armor_quality") continue;
-
                     if (tech.effects.ContainsKey("armor_str"))
                     {
                         string newStrength = tech.effects["armor_str"][0][0];
@@ -1717,22 +1741,7 @@ namespace TweaksAndFixes
             }
             else
             {
-                Button button = ArmorQualityButton.GetComponent<Button>();
-                button.onClick.RemoveAllListeners();
-                button.onClick.AddListener(new System.Action(() =>
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Updating armor preview value to {ArmourQuality}.");
-                    // G.settings.armorQualityInPen = ArmourQuality;
-                    GameObject OptionsMenu = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/Options Window");
-                    // G.ui.SettingsMenu.Show();
-                    // G.ui.SettingsMenu.SelectTab(G.ui.SettingsMenu.Settings[0]);
-                    GameObject ArmorQualitySlider = ModUtils.GetChildAtPath("Root/RightSide/General/Viewport/Content/ArmorQualityInPenetrationData/ArmorQualityInPenetrationDataSlider", OptionsMenu);
-                    Slider ArmorQualitySliderContent = ArmorQualitySlider.GetComponent<Slider>();
-                    ArmorQualitySliderContent.value = ArmourQuality;
-                    // ArmorQualitySliderContent.onValueChanged.Invoke(ArmourQuality);
-                    G.settings.Save();
-                }));
-                button.SetActive(true);
+                ArmorQualityButton.GetComponent<Button>().SetActive(true);
             }
 
         }
