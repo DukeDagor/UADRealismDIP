@@ -1756,10 +1756,18 @@ namespace TweaksAndFixes
 
             GameObject SettingsRoot = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/Options Window/Root");
 
+            SettingsRoot.GetParent().transform.SetSiblingIndex(0);
+
             GameObject GraphicsOptionsContent = ModUtils.GetChildAtPath("RightSide/Graphic Options/Viewport/Content", SettingsRoot);
 
             ModifyUi(GraphicsOptionsContent).SetChildOrder(
                 "Quality", "Resolution", "UI Scale", "Fullscreen Mode", "VSync", "Post Effects", "Shadow Details", "Anti Aliasing", "FXAA", "Anisotropic", "FPS", "Textures"
+            );
+
+            // Global/Ui/UiMain/Popup/Options Window/Root/Reset
+            AddConfirmPopupToButton(
+                ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/Options Window/Root/Reset").GetComponent<Button>(),
+                "$TAF_Ui_Settings_Confirm_Reset"
             );
 
             GameObject uiScaleSlider = GameObject.Instantiate(ModUtils.GetChildAtPath("RightSide/Sound/Viewport/Content/General Volume", SettingsRoot));
