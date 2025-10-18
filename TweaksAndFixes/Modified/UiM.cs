@@ -421,15 +421,41 @@ namespace TweaksAndFixes
                 return;
             }
 
-            TextMeshProUGUI textElement = localize.LocalizedElements[0].TextMeshPro;
+            TextMeshProUGUI TMPElement = localize.LocalizedElements[0].TextMeshPro;
+
+            if (TMPElement == null)
+            {
+                TMPElement = ui.GetComponent<TextMeshProUGUI>();
+            }
+
+            Text textElement = localize.LocalizedElements[0].Text;
 
             if (textElement == null)
             {
-                Melon<TweaksAndFixes>.Logger.Error($"Failed to get TextMeshProUGUI component from {ui.name}.LocalizeText.LocalizedElements");
+                textElement = ui.GetComponent<Text>();
+            }
+
+            if (TMPElement == null && textElement == null)
+            {
+                Melon<TweaksAndFixes>.Logger.Error(
+                    $"Failed to get TextMeshProUGUI/Text component from {ui.GetParent().name}.{ui.name}.LocalizeText.LocalizedElements and failed to fetch component from object."
+                );
                 return;
             }
 
             localize.LocalizedElements[0] = new LocalizeText.LocalizedElement();
+            localize.LocalizedElements[0].Tag = tag;
+            localize.LocalizedElements[0].DefaultText = "";
+            localize.LocalizedElements[0].TextMeshPro = TMPElement;
+            localize.LocalizedElements[0].Text = textElement;
+        }
+
+        public static void CreateLocalizedTextTag(GameObject ui, TextMeshProUGUI textElement, string tag)
+        {
+            LocalizeText localize = ui.AddComponent<LocalizeText>();
+
+            localize.LocalizedElements.AddItem(new LocalizeText.LocalizedElement());
+
             localize.LocalizedElements[0].Tag = tag;
             localize.LocalizedElements[0].DefaultText = "";
             localize.LocalizedElements[0].TextMeshPro = textElement;
@@ -446,15 +472,20 @@ namespace TweaksAndFixes
         {
             OnEnter onEnter = ui.AddComponent<OnEnter>();
             onEnter.action = new System.Action(() => {
-                if (!ui.active) return;
+                if (!ui.active || !ui.GetComponent<Button>().interactable)
+                {
+                    Melon<TweaksAndFixes>.Logger.Error(
+                        $"UI inactive, hiding tool tip!"
+                    );
+                    G.ui.HideTooltip();
+                    return;
+                }
 
                 G.ui.ShowTooltip(LocalizeManager.Localize(content), ui);
             });
 
             OnLeave onLeave = ui.AddComponent<OnLeave>();
             onLeave.action = new System.Action(() => {
-                if (!ui.active) return;
-
                 G.ui.HideTooltip();
             });
         }
