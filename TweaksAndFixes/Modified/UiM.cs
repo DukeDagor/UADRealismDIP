@@ -582,6 +582,12 @@ namespace TweaksAndFixes
             ApplyCampaignWindowModifications();
             ApplyDockyardModifications();
 
+            G.GameData.tooltips["file_converter"] = new TooltipData();
+
+            G.GameData.tooltips["file_converter"].name = "file_converter";
+            // G.GameData.tooltips["file_converter"].title = "";
+            G.GameData.tooltips["file_converter"].text = "$toolltip_file_converter";
+
             // Global/Ui/UiMain/Loading/LayoutDesc/Desc/DescText
 
             // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/(Beam/Draught)/Slider
