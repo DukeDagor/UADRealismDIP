@@ -1775,9 +1775,7 @@ namespace TweaksAndFixes
             uiScaleSlider.transform.SetParent(GraphicsOptionsContent.GetComponent<LayoutGroup>().transform);
             uiScaleSlider.transform.SetScale(1, 1, 1);
             uiScaleSlider.name = "UI Scale";
-            GameObject uiScaleSliderText = uiScaleSlider.GetChild("Label");
-            uiScaleSliderText.GetComponent<TMP_Text>().text = "UI Scale (BETA)";
-            uiScaleSliderText.TryDestroyComponent<LocalizeText>();
+            SetLocalizedTextTag(uiScaleSlider.GetChild("Label"), "$TAF_Ui_Popup_OptionsWindow_UI_Scale");
             Slider uiScaleSliderControl = uiScaleSlider.GetChild("Campaign Slider").GetComponent<Slider>();
             uiScaleSliderControl.onValueChanged.RemoveAllListeners();
 
