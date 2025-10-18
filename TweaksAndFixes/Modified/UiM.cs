@@ -1336,6 +1336,10 @@ namespace TweaksAndFixes
 
             GameObject bugReporter = G.ui.commonUi.GetChild("Options").GetChild("BugReport");
 
+            GameObject CloneShip  = G.ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip");
+            GameObject DeleteShip = G.ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip");
+            GameObject Undo = G.ui.conUpperButtons.GetChild("Layout").GetChild("Undo");
+
             ModifyUi(ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor")).SetOnUpdate(new System.Action<GameObject>((GameObject ui) => {
                 if (Config.Param("taf_dockyard_remove_per_design_copy_delete_buttons", 1) == 1)
                 {
@@ -1354,12 +1358,11 @@ namespace TweaksAndFixes
                     UpdateTopBarRotationText();
                     UpdateArmorQualityButton();
 
-                    G.ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip").SetActive(true);
+                    if (!CloneShip.active) CloneShip.SetActive(true);
 
-                    G.ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").SetActive(!G.ui.isConstructorRefitMode);
-                    G.ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").GetComponent<Button>().interactable = true;
+                    if (DeleteShip.active != !G.ui.isConstructorRefitMode) DeleteShip.SetActive(!G.ui.isConstructorRefitMode);
 
-                    G.ui.conUpperButtons.GetChild("Layout").GetChild("Undo").SetActive(false);
+                    if (Undo.active) Undo.SetActive(false);
                 }
 
 
