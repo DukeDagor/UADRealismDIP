@@ -102,6 +102,32 @@ namespace TweaksAndFixes
 
 
 
+        // ########## MAIN MENU ########## //
+
+        // public static bool hasLoadedPredefsAsync = false;
+        // 
+        // [HarmonyPatch(nameof(Ui.HideLoadingScreen))]
+        // [HarmonyPostfix]
+        // internal static void Postfix_HideLoadingScreen(Ui __instance)
+        // {
+        //     if (hasLoadedPredefsAsync) return;
+        // 
+        //     Melon<TweaksAndFixes>.Logger.Msg($"Attempting to load predefs asynchronusly...");
+        // 
+        //     // PredefinedDesignsDataAsync.BinToBinTaf();
+        // 
+        //     // Melon<TweaksAndFixes>.Logger.Msg($"To Store");
+        // 
+        //     // PredefinedDesignsData.BinTafToStore();
+        // 
+        //     // Melon<TweaksAndFixes>.Logger.Msg($"Done");
+        // 
+        //     // PredefinedDesignsDataAsync.LoadData();
+        //     // PredefinedDesignsDataAsync.LoadPredefSetsAsync();
+        //     hasLoadedPredefsAsync = true;
+        // }
+
+
 
 
         // ########## CUSTOM DOCKYARD LOGIC ########## //
@@ -326,7 +352,7 @@ namespace TweaksAndFixes
             Patch_GameManager.Update();
             CampaignControllerM.Update();
 
-            var activeShips = ShipM.GetActiveShips();
+            // PredefinedDesignsDataAsync.UpdatePredefLoading();
 
             // New UI elements
             // if (Config.Param("taf_dockyard_new_logic", 1) == 1)
