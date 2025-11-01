@@ -412,6 +412,7 @@ namespace TweaksAndFixes
 
         private static void LoadData()
         {
+            Melon<TweaksAndFixes>.Logger.Msg($"Loadeding map data...");
             bool success = true;
             success &= Load<PortElementDTO, PortElement>("ports", CampaignMap.Instance.Ports.Ports);
             success &= Load<ProvinceDTO, Province>("provinces", CampaignMap.Instance.Provinces.Provinces);

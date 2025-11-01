@@ -23,7 +23,7 @@ namespace TweaksAndFixes
         
             if (!__instance.shipsPerType.ContainsKey(shipType.name))
             {
-                Melon<TweaksAndFixes>.Logger.Error($"{player.Name(false)} has no valid predefined designs of type {shipType}! Either fill the predef file with this shiptype or enable `taf_force_no_predef_designs`.");
+                Melon<TweaksAndFixes>.Logger.Error($"{player.Name(false)} has no valid predefined designs of type {shipType.nameUi}! Either fill the predef file with this shiptype or enable `taf_force_no_predef_designs`.");
                 return false;
             }
 

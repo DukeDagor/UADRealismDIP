@@ -112,8 +112,15 @@ namespace TweaksAndFixes
 
             if (totalTonnage < targetTonnage + hystAdd)
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"--->Tonnage {totalTonnage:N0} but target {targetTonnage:N0} and with hysteresis {(targetTonnage+hystAdd):N0}, so aborting");
+                Melon<TweaksAndFixes>.Logger.Msg($"--->Tonnage {totalTonnage:N0} less than target {targetTonnage:N0} with hysteresis {(targetTonnage+hystAdd):N0}, so aborting");
                 return;
+            }
+
+            Melon<TweaksAndFixes>.Logger.Msg($"--->Tonnage {totalTonnage:N0} surpassed target {targetTonnage:N0} with hysteresis {(targetTonnage + hystAdd):N0}, so continuing");
+
+            foreach (var c in scrapCandidates)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"------> Candidate {c.ship.Name(false, false).PadLeft(32)} : {c.score}");
             }
 
             float toScrap = totalTonnage - targetTonnage;
