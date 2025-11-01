@@ -44,6 +44,7 @@ $TAF_Ui_Dockyard_Confirm_Action_Exit;Are you sure you want to leave the Dockyard
 $TAF_Ui_Dockyard_Confirm_Action_RandomShipSimpleRefit;Are you sure you want to refit ship components automatically?
 $TAF_Ui_Dockyard_Confirm_Action_RefitShip;Are you sure you want to enter Refit Mode?
 $TAF_Ui_Dockyard_Confirm_Action_SwitchPlayerType;Are you sure you want to switch player type?
+$TAF_Ui_Dockyard_YearInput_PlaceHolderText;Input Year
 $TAF_Ui_Settings_Confirm_Reset;Are you sure you want to reset all settings and configurations?
 $TAF_Ui_Dockyard_TopBar_RotationIncrementControl;Increment\n{0}
 $TAF_tooltip_rotation_increment_control;Curent part rotation increment. Click or press [G] to change incrament.

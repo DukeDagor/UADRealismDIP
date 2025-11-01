@@ -1479,6 +1479,8 @@ namespace TweaksAndFixes
 
             // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/ShipName
 
+            // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/NationAndYearSelection/InputChooseYear/EditName/Edit/Placeholder
+
             GameObject ChooseNationYearYearSelector = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/NationAndYearSelection/ChooseYear");
             ModifyUi(ChooseNationYearYearSelector).SetEnabled(false);
 
@@ -1520,6 +1522,11 @@ namespace TweaksAndFixes
             spacer.TryDestroyComponent<CanvasGroup>();
             spacer.TryDestroyComponent<Outline>();
 
+            // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/NationAndYearSelection/InputChooseYear/EditName/Edit/Placeholder
+
+            GameObject placeholder = ModUtils.GetChildAtPath("InputChooseYear/EditName/Edit/Placeholder", ChooseNationYear);
+            Text placeholderText = placeholder.GetComponent<Text>();
+
             Button btn = InputChooseYear.GetChild("EditName").AddComponent<Button>();
             btn.onClick.AddListener(new System.Action(() =>
             {
@@ -1527,6 +1534,7 @@ namespace TweaksAndFixes
                 InputChooseYearEdit.SetActive(true);
                 InputChooseYearEditField.ActivateInputField();
                 InputChooseYearStatic.SetActive(false);
+                placeholderText.text = LocalizeManager.Localize("$TAF_Ui_Dockyard_YearInput_PlaceHolderText");
             }));
             InputChooseYearEditField.onValidateInput = null;
             InputChooseYearEditField.onValueChange.AddListener(new System.Action<string>((string value) =>
