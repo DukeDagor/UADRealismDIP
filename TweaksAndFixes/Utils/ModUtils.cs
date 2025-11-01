@@ -11,6 +11,7 @@ using UnityEngine.UI;
 using Il2CppTMPro;
 using System.Text;
 using System.Reflection.Metadata.Ecma335;
+using System.IO.Compression;
 
 #pragma warning disable CS8601
 #pragma warning disable CS8602
@@ -80,6 +81,86 @@ namespace TweaksAndFixes
                     UnityEngine.Object.DestroyImmediate(tex);
             }
 
+        }
+
+        // Source: https://gist.github.com/corvus-mt/400ff945a5fb4f3bace20804cab8454a
+        public static async Task<byte[]> CompressAsync(string source)
+        {
+            var bytes = Encoding.UTF8.GetBytes(source);
+
+            await using var input = new MemoryStream(bytes);
+            await using var output = new MemoryStream();
+            await using var brotliStream = new BrotliStream(output, CompressionLevel.Fastest);
+
+            await input.CopyToAsync(brotliStream);
+            await brotliStream.FlushAsync();
+
+            return output.ToArray();
+        }
+
+        public static async Task<string> DecompressAsync(byte[] compressed)
+        {
+            await using var input = new MemoryStream(compressed);
+            await using var brotliStream = new BrotliStream(input, CompressionMode.Decompress);
+
+            await using var output = new MemoryStream();
+
+            await brotliStream.CopyToAsync(output);
+            await brotliStream.FlushAsync();
+
+            return Encoding.UTF8.GetString(output.ToArray());
+        }
+
+        public static byte[] CompressStr(string source)
+        {
+            var bytes = Encoding.UTF8.GetBytes(source);
+
+            using var input = new MemoryStream(bytes);
+            using var output = new MemoryStream();
+            using var brotliStream = new BrotliStream(output, CompressionLevel.Fastest);
+
+            input.CopyTo(brotliStream);
+            brotliStream.Flush();
+
+            return output.ToArray();
+        }
+
+        public static byte[] Compress(byte[] source)
+        {
+            using var input = new MemoryStream(source);
+            using var output = new MemoryStream();
+            using var brotliStream = new BrotliStream(output, CompressionLevel.Fastest);
+
+            input.CopyTo(brotliStream);
+            brotliStream.Flush();
+
+            return output.ToArray();
+        }
+
+        public static string DecompressStr(byte[] compressed)
+        {
+            using var input = new MemoryStream(compressed);
+            using var brotliStream = new BrotliStream(input, CompressionMode.Decompress);
+
+            using var output = new MemoryStream();
+
+            brotliStream.CopyTo(output);
+            brotliStream.Flush();
+
+            return Encoding.UTF8.GetString(output.ToArray());
+        }
+
+        public static byte[] Decompress(byte[] compressed)
+        {
+            using var input = new MemoryStream(compressed);
+            using var brotliStream = new BrotliStream(input, CompressionMode.Decompress);
+
+            using var output = new MemoryStream();
+
+            brotliStream.CopyTo(output);
+            brotliStream.Flush();
+
+            return output.ToArray();
         }
 
         public static readonly CultureInfo _InvariantCulture = CultureInfo.InvariantCulture;
