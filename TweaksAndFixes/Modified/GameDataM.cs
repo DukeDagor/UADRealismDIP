@@ -116,7 +116,7 @@ namespace TweaksAndFixes
         {
             if (UnityEngine.Input.GetKeyUp(KeyCode.F9))
             {
-                Melon<TweaksAndFixes>.Logger.Msg("Performing minimal hot-reloading. Note that no items may be added or removed or this will break!");
+                Melon<TweaksAndFixes>.Logger.Msg("Performing minimal hot-reloading. Note that no items may be added or removed from [parts, components, randParts, randPartsRefit, or technologies] or this will break! For [mounts and accuraciesExInfo], reload the battle/hull to see effects.");
                 var text = GameDataM.GetText("parts");
                 if (text != null)
                 {
@@ -139,12 +139,12 @@ namespace TweaksAndFixes
 
                 MountOverrideData.LoadData();
 
-                Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
-
-                if (Patch_Ship.LastCreatedShip != null)
-                {
-                    MountOverrideData.ApplyMountOverridesToShip(Patch_Ship.LastCreatedShip, true);
-                }
+                // Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
+                // 
+                // if (Patch_Ship.LastCreatedShip != null)
+                // {
+                //     MountOverrideData.ApplyMountOverridesToShip(Patch_Ship.LastCreatedShip, true);
+                // }
 
                 text = GameDataM.GetText("randParts");
                 if (text != null)
