@@ -354,20 +354,13 @@ namespace TweaksAndFixes
 
             // PredefinedDesignsDataAsync.UpdatePredefLoading();
 
-            // New UI elements
-            // if (Config.Param("taf_dockyard_new_logic", 1) == 1)
+            // if (PredefinedDesignsData.Instance.CheckLoadPredefSetsAsync())
             // {
-            //     UpdateTopBarRotationButton(__instance);
-            //     UpdateTopBarRotationText(__instance);
-            //     UpdateArmorQualityButton(__instance);
-            // 
-            //     G.ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip").SetActive(true);
-            // 
-            //     G.ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").SetActive(!G.ui.isConstructorRefitMode);
-            //     G.ui.conUpperButtons.GetChild("Layout").GetChild("DeleteShip").GetComponent<Button>().interactable = true;
-            // 
-            //     G.ui.conUpperButtons.GetChild("Layout").GetChild("Undo").SetActive(false);
+            //     Melon<TweaksAndFixes>.Logger.Msg($"All predef sets are loaded!");
+            //     PredefinedDesignsData.Instance.ParseAsyncPredefSets();
             // }
+
+            // var activeShips = ShipM.GetActiveShips();
 
             // if (MountOverrideData.canary == null)
             // {
@@ -1732,6 +1725,14 @@ namespace TweaksAndFixes
                     CurrentRotation.y = (Mounted ? MountedPartRotation : PartRotation) + DefaultRotation;
                     SelectedPart.transform.eulerAngles = CurrentRotation;
 
+                    // if (Input.GetKey(KeyCode.C))
+                    // {
+                    //     var tran = Patch_Ship.LastCreatedShip.FindDeckAtPoint(SelectedPart.transform.position);
+                    //     if (Input.GetKeyDown(KeyCode.C)) Melon<TweaksAndFixes>.Logger.Msg($"Deck height: ../{tran.gameObject.GetParent().GetParent().name}/{tran.gameObject.GetParent().name}/{tran.gameObject.name} : " + (tran.transform.position.y + tran.transform.localScale.y / 2));
+                    // 
+                    //     if (tran != null) SelectedPart.transform.SetY(tran.transform.position.y + tran.transform.localScale.y / 2 - 0.05f);
+                    // }
+
                     if (Input.GetKey(KeyCode.LeftControl) && !SideGun && SelectedPart.mount == null)
                     {
                         if (G.ui.fireSectorObj != null) G.ui.fireSectorObj.transform.SetX(0);
@@ -1951,12 +1952,6 @@ namespace TweaksAndFixes
 
             if (!PartPreviewCache.ContainsKey(LastPartPreviewGuid))
             {
-                if (Config.Param("taf_part_previews_half_resolution", 0) == 1)
-                {
-                    // Melon<TweaksAndFixes>.Logger.Msg("Cashed new part preview: Half resolution");
-                    __result = Resize(__result, __result.width / 2, __result.height / 2);
-                }
-
                 // Melon<TweaksAndFixes>.Logger.Msg("Cashed new part preview: " + LastPartPreviewGuid + " | " + downscale.height + " : " + downscale.width + " | Cashe Size: " + PartPreviewCache.Count);
                 PartPreviewCache[LastPartPreviewGuid] = __result;
             }
