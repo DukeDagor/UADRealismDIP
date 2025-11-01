@@ -285,15 +285,9 @@ namespace TweaksAndFixes
             }
         }
 
-        // AimAndShoot
-
-        public static List<Il2CppSystem.Collections.Generic.KeyValuePair<PartData, Il2CppSystem.Collections.Generic.Dictionary<GunsPlace, Il2CppSystem.Collections.Generic.List<Part>>>> ignoreAimAndShoot = new();
-
-        // private static Il2CppSystem.Collections.Generic.KeyValuePair<PartData, Il2CppSystem.Collections.Generic.Dictionary<GunsPlace, Il2CppSystem.Collections.Generic.List<Part>>> emptyPair = new();
-
-        [HarmonyPrefix]
-        [HarmonyPatch(nameof(Ship.AimAndShoot))]
-        internal static void Prefix_AimAndShoot(Ship __instance)
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Ship.FindEnemyForBowSternGuns))]
+        internal static void Postfix_FindEnemyForBowSternGuns(Ship __instance, ref Ship __result, PartData gunGroup, Dictionary<PartData, Aim> tempEnemies, List<Part> gunsOnNeededSide, ref Aim aim, ref Ship enemy)
         {
             if (__instance.torpedoMode == ShootMode.Aggressive) return;
 
@@ -301,48 +295,53 @@ namespace TweaksAndFixes
 
             PartData torpData = __instance.torpedoesAll[0].data;
 
-            Ship enemy = __instance.GetEnemy(torpData);
+            if (gunGroup.name != torpData.name) return;
 
-            if (enemy == null) return;
+            if (__result == null) return;
 
             if (!__instance.weaponRangesCache.ContainsKey(torpData)) return;
 
-            float rangeToEnemy = __instance.transform.position.GetDistanceXZ(enemy.transform.position);
+            float rangeToEnemy = __instance.transform.position.GetDistanceXZ(__result.transform.position);
 
             // Melon<TweaksAndFixes>.Logger.Msg($"  {__instance.Name(false, false)} : {rangeToEnemy} > {__instance.weaponRangesCache[torpData]}");
 
             if (rangeToEnemy > __instance.weaponRangesCache[torpData] * Config.Param("taf_torpedo_max_launch_range_percent", 0.8f))
             {
-                // Ugly but it works...
+                // Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name(false, false)} : {rangeToEnemy} > {__instance.weaponRangesCache[torpData] * Config.Param("taf_torpedo_max_launch_range_percent", 0.8f)} : {__result.Name(false, false)} : {enemy?.Name(false, false) ?? "NULL"}");
 
-                foreach (var part in __instance.gunGroupsBySideAndData)
-                {
-                    if (part.Key == torpData)
-                    {
-                        ignoreAimAndShoot.Add(part);
-                    }
-                }
-
-                foreach (var part in ignoreAimAndShoot)
-                {
-                    __instance.gunGroupsBySideAndData.Remove(part.Key);
-                }
-
+                aim.target = null;
+                __result = null;
+                enemy = null;
             }
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch(nameof(Ship.AimAndShoot))]
-        internal static void Postfix_AimAndShoot(Ship __instance)
+        [HarmonyPatch(nameof(Ship.FindEnemyForOtherGuns))]
+        internal static void Postfix_FindEnemyForOtherGuns(Ship __instance, ref Ship __result, PartData gunGroup, Dictionary<PartData, Aim> tempEnemies, List<Part> gunsOnNeededSide, ref Aim aim, ref Ship enemy)
         {
-            if (ignoreAimAndShoot.Count > 0)
-            {
-                foreach (var part in ignoreAimAndShoot)
-                {
-                    __instance.gunGroupsBySideAndData.Add(part.Key, part.Value);
-                }
+            if (__instance.torpedoMode == ShootMode.Aggressive) return;
 
-                ignoreAimAndShoot.Clear();
+            if (__instance.torpedoesAll.Count == 0) return;
+
+            PartData torpData = __instance.torpedoesAll[0].data;
+
+            if (gunGroup.name != torpData.name) return;
+
+            if (__result == null) return;
+
+            if (!__instance.weaponRangesCache.ContainsKey(torpData)) return;
+
+            float rangeToEnemy = __instance.transform.position.GetDistanceXZ(__result.transform.position);
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"  {__instance.Name(false, false)} : {rangeToEnemy} > {__instance.weaponRangesCache[torpData]}");
+
+            if (rangeToEnemy > __instance.weaponRangesCache[torpData] * Config.Param("taf_torpedo_max_launch_range_percent", 0.9f))
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name(false, false)} : {rangeToEnemy} > {__instance.weaponRangesCache[torpData] * Config.Param("taf_torpedo_max_launch_range_percent", 0.8f)} : {__result.Name(false, false)} : {enemy?.Name(false, false) ?? "NULL"}");
+
+                aim.target = null;
+                __result = null;
+                enemy = null;
             }
         }
 
