@@ -216,6 +216,29 @@ namespace TweaksAndFixes
             }
         }
 
+
+
+
+
+
+        // ########## Fixes by Crux10086 ########## //
+
+        // Fix for broken deck hits
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(Ship.GetSectionFromPositions))]
+        internal static void Fix(Ship __instance, ref Vector3 tempPos)
+        {
+            Bounds hullSize = __instance.hullSize;
+            float y = hullSize.min.y;
+            tempPos.y -= y;
+        }
+
+
+
+
+
+
         public static HashSet<string> rangeNameSet = new HashSet<string>();
 
         [HarmonyPostfix]
