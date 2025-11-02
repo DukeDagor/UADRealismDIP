@@ -130,6 +130,50 @@ namespace TweaksAndFixes
 
 
 
+
+
+        // ########## Fixes by Crux10086 ########## //
+
+        // Fix for missing compact millions (1,640k -> 1.64M )
+
+        [HarmonyPatch(nameof(Ui.Money))]
+        [HarmonyPrefix]
+        public static bool Money(float money, bool writeDollar, bool delta, bool compactK, bool compactM, ref string __result)
+        {
+            if (!LocalizeManager.Instance.Language.Data.ContainsKey("$Ui_World_compactM"))
+            {
+                return true;
+            }
+
+            string sign = (delta ? Util.Sign(money) : ((money < 0f) ? "-" : string.Empty));
+            string prefix = (writeDollar ? "$" : string.Empty);
+
+            if (compactM)
+            {
+                float value = Math.Abs(money / 1000000f);
+                string name = LocalizeManager.Localize("$Ui_World_compactM");
+                __result = $"{sign}{prefix}{value:#,##0.#}{name}";
+            }
+            else if (compactK)
+            {
+                float value = Math.Abs(money / 1000f);
+                string name = LocalizeManager.Localize("$Ui_World_compactK");
+                __result = $"{sign}{prefix}{value:N0}{name}";
+            }
+            else
+            {
+                float value = Math.Abs(money);
+                __result = $"{sign}{prefix}{value:N0}";
+            }
+
+            return false;
+        }
+
+
+
+
+
+
         // ########## CUSTOM DOCKYARD LOGIC ########## //
 
         // TODO: Mirror pickup and putdown for child parts
