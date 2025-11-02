@@ -31,18 +31,29 @@ namespace TweaksAndFixes
             return true;
         }
 
-        [HarmonyPatch(nameof(CampaignController.CheckMinorNationThreat))]
-        [HarmonyPrefix]
-        internal static bool Prefix_CheckMinorNationThreat()
+
+
+
+
+
+        // ########## Fixes by Crux10086 ########## //
+
+        // Direct fix for moving ships freeze
+
+        [HarmonyPatch(nameof(CampaignController.__c._CheckMinorNationThreat_b__138_1))]
+        [HarmonyPostfix]
+        public static void CheckMinorNationThreat_b__138_1(Player p, ref bool __result)
         {
-            // Check params
-            if (Config.Param("taf_disable_minor_and_medium_nation_land_invasions", 1) == 1)
+            if (__result && p.data.name == "neutral")
             {
-                Melon<TweaksAndFixes>.Logger.Msg("Skipped attempt to generate minor nation revolt.");
-                return false;
+                __result = false;
             }
-            return true;
         }
+
+
+
+
+
 
         [HarmonyPatch(nameof(CampaignController.FinishCampaign))]
         [HarmonyPrefix]
