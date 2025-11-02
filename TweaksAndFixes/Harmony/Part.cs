@@ -197,7 +197,66 @@ namespace TweaksAndFixes
         //     return false;
         // }
 
-        // Refresh
+
+
+
+
+        // ########## Fixes by Crux10086 ########## //
+
+        [HarmonyPatch(nameof(Part.UpdatePartScale))]
+        [HarmonyPrefix]
+        public static void Prefix_UpdatePartScale(Part __instance, Ship ship)
+        {
+            if (ship == null || ship.shipGunCaliber == null || !__instance.data.isGun || __instance.model == null)
+            {
+                return;
+            }
+
+            if (__instance.barrelModels != null && __instance.barrelModels.Count != 0)
+            {
+                bool flag = false;
+                var barrelModels = __instance.barrelModels;
+                foreach (var barrelModel in barrelModels)
+                {
+                    if (barrelModel == null)
+                    {
+                        flag = true;
+                        break;
+                    }
+                }
+                if (!flag)
+                {
+                    return;
+                }
+            }
+            
+            __instance.barrelModels = new Il2CppSystem.Collections.Generic.List<MeshRenderer>();
+            Transform child = __instance.model.transform.GetChild(0);
+            int childCount = child.GetChildCount();
+            
+            for (int i = 0; i < childCount; i++)
+            {
+                var subChildren = child.GetChild(i).GetChildren();
+                foreach (var subChild in subChildren)
+                {
+                    if (subChild.transform.name.Contains("barrel"))
+                    {
+                        __instance.barrelModels.Add(subChild.gameObject.GetComponent<MeshRenderer>());
+                    }
+                }
+            }
+            
+            if (__instance.barrelModels.Count == 0)
+            {
+                __instance.barrelModels.Add(child.GetChild(0).gameObject.GetComponent<MeshRenderer>());
+            }
+        }
+
+
+
+
+
+        // ########## Fire Angle Overrides ########## //
 
         private static void OverrideFiringAngle(Part __instance, ref Part.FireSectorInfo fireSector)
         {
