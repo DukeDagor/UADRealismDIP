@@ -62,3 +62,5 @@ $TAF_tooltip_set_crew;Set the crew level or mothball one or more ships.
 $TAF_tooltip_view_on_map;Center camera on the map location of the selected ship.
 $toolltip_file_converter;*File Converter*\nTool for converting save files between BIN and JSON. Also used for managing shared designs and creating predefined designs files.
 $TAF_Ui_Popup_OptionsWindow_UI_Scale;UI Scale
+$Ui_World_compactM;M
+$Ui_World_PopWindows_Port;Port
