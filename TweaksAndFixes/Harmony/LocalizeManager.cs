@@ -5,6 +5,7 @@ using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
 using System.Diagnostics;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
 
 namespace TweaksAndFixes
 {
@@ -72,6 +73,24 @@ namespace TweaksAndFixes
 
             if (LoadLocFromFile(__result, Config._LocFile, false) < 0)
                 Melon<TweaksAndFixes>.Logger.Error($"Unable to find base TAF loc file {Config._LocFile} in {Config._DataDir}");
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(LocalizeManager))]
+        [HarmonyPatch("Localize", new Type[]
+        {
+            typeof(string),
+            typeof(Il2CppReferenceArray<Il2CppSystem.Object>)
+        })]
+        internal static void FixLocalize(ref string tag, Il2CppReferenceArray<Il2CppSystem.Object> p)
+        {
+            if (GameManager.Instance != null && GameManager.IsConstructor && 
+                (p == null || ((Il2CppArrayBase<Il2CppSystem.Object>)(object)p).Length <= 0) && 
+                !(tag != "$Ui_World_PopWindows_Port") && LocalizeManager.Instance.Language.Data.ContainsKey("$Ui_Constr_Port")
+            )
+            {
+                tag = "$Ui_Constr_Port";
+            }
         }
     }
 }
