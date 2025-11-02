@@ -40,8 +40,9 @@ namespace TweaksAndFixes
 
         // Direct fix for moving ships freeze
 
-        [HarmonyPatch(nameof(CampaignController.__c._CheckMinorNationThreat_b__138_1))]
         [HarmonyPostfix]
+        [HarmonyPatch(typeof(CampaignController.__c))]
+        [HarmonyPatch("_CheckMinorNationThreat_b__138_1")]
         public static void CheckMinorNationThreat_b__138_1(Player p, ref bool __result)
         {
             if (__result && p.data.name == "neutral")
