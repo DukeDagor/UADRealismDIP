@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Reflection;
+﻿using System.Reflection;
 using Il2Cpp;
 using MelonLoader;
-using static TweaksAndFixes.Config;
 
 #pragma warning disable CS8601
 #pragma warning disable CS8604

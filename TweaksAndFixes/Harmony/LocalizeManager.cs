@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using MelonLoader;
+﻿using MelonLoader;
 using HarmonyLib;
-using UnityEngine;
 using Il2Cpp;
-using System.Diagnostics;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 
 namespace TweaksAndFixes

@@ -4,10 +4,7 @@ using UnityEngine;
 using Il2Cpp;
 using Il2CppSystem.Linq;
 using UnityEngine.UI;
-using Il2CppCoffee.UIExtensions;
 using Il2CppTMPro;
-using Il2CppUiExt;
-using static TweaksAndFixes.Config;
 
 namespace TweaksAndFixes.Harmony
 {

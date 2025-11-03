@@ -1,8 +1,4 @@
-﻿using MelonLoader;
-using HarmonyLib;
-using UnityEngine;
-using Il2Cpp;
-using System.Collections.Generic;
+﻿using Il2Cpp;
 
 #pragma warning disable CS8603
 

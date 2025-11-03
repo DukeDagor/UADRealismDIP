@@ -1,15 +1,6 @@
-﻿//#define LOGHULLSTATS
-//#define LOGHULLSCALES
-//#define LOGPARTSTATS
-//#define LOGGUNSTATS
-
-using System;
-using System.Collections.Generic;
-using MelonLoader;
-using HarmonyLib;
+﻿using MelonLoader;
 using UnityEngine;
 using Il2Cpp;
-using TweaksAndFixes;
 using TweaksAndFixes.Data;
 
 #pragma warning disable CS8600

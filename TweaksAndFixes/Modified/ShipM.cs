@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using MelonLoader;
-using HarmonyLib;
+﻿using MelonLoader;
 using UnityEngine;
 using Il2Cpp;
 using Il2CppSystem.Linq;
 using System.Globalization;
-using System.Text.Json.Serialization;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8601

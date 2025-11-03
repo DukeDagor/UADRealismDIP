@@ -3,14 +3,8 @@
 //#define LOGPARTSTATS
 //#define LOGGUNSTATS
 
-using System;
-using System.Collections.Generic;
 using MelonLoader;
-using HarmonyLib;
-using UnityEngine;
 using Il2Cpp;
-using Il2CppInterop.Runtime.Attributes;
-using Il2CppSystem.Runtime.Remoting.Messaging;
 
 #pragma warning disable CS0649
 #pragma warning disable CS8600

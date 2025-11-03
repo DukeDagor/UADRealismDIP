@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using MelonLoader;
-using HarmonyLib;
-using UnityEngine;
+﻿using HarmonyLib;
 using Il2Cpp;
 
 #pragma warning disable CS8625

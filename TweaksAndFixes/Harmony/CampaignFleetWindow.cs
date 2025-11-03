@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using MelonLoader;
-using HarmonyLib;
+﻿using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
-using System.Transactions;
 using Il2CppTMPro;
 using UnityEngine.UI;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
 
 namespace TweaksAndFixes.Harmony
 {

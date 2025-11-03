@@ -4,9 +4,7 @@ using UnityEngine;
 using Il2Cpp;
 using UnityEngine.UI;
 using static TweaksAndFixes.ModUtils;
-using Il2CppUiExt;
 using System.Text;
-using System.Xml.Linq;
 using TweaksAndFixes.Data;
 
 #pragma warning disable CS8604

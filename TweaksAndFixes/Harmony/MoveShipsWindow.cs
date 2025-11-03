@@ -1,14 +1,6 @@
-﻿using MelonLoader;
-using HarmonyLib;
-using UnityEngine;
+﻿using HarmonyLib;
 using Il2Cpp;
-using Il2CppSystem.Linq;
 using UnityEngine.UI;
-using Il2CppCoffee.UIExtensions;
-using Il2CppTMPro;
-using Il2CppUiExt;
-using static TweaksAndFixes.Config;
-using static MelonLoader.MelonLogger;
 
 namespace TweaksAndFixes
 {

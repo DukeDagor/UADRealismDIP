@@ -2,16 +2,10 @@
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
-using System.Collections.Generic;
 using System.Reflection;
-using MelonLoader.CoreClrUtils;
 using TweaksAndFixes.Data;
-using Il2CppSystem.Linq;
 using static Il2Cpp.Ship;
-using System.Drawing;
-using MelonLoader.TinyJSON;
 using UnityEngine.UI;
-using MelonLoader.ICSharpCode.SharpZipLib.Zip;
 
 #pragma warning disable CS8625
 

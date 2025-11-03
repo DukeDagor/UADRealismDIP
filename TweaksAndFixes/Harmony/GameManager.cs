@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using MelonLoader;
+﻿using MelonLoader;
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
 using UnityEngine.UI;
-using static Il2Cpp.GameManager;
-using Il2CppSystem.Globalization;
-using Il2CppTMPro;
-using UnityEngine.SceneManagement;
 
 namespace TweaksAndFixes
 {

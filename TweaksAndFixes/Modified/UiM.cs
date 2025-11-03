@@ -5,8 +5,6 @@ using Il2Cpp;
 using UnityEngine.UI;
 using Il2CppTMPro;
 using Il2CppUiExt;
-using System.Diagnostics.Metrics;
-using static MelonLoader.MelonLogger;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8603

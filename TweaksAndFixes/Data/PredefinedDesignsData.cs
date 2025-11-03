@@ -3,18 +3,11 @@
 //#define LOGPARTSTATS
 //#define LOGGUNSTATS
 
-using System;
-using System.Collections.Generic;
 using MelonLoader;
-using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
-using Il2CppInterop.Runtime.Attributes;
 using UnityEngine.UI;
 using Il2CppTMPro;
-using System.ComponentModel.Design;
-using UnityEngine.Windows.Speech;
-using MelonLoader.TinyJSON;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8602

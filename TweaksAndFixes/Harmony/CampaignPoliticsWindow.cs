@@ -2,17 +2,9 @@
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
-using System.Collections.Generic;
 using Il2CppSystem.Linq;
-using UnityEngine.UI;
-using Il2CppCoffee.UIExtensions;
 using Il2CppTMPro;
-using System.Collections;
 using Il2CppUiExt;
-using static System.Net.Mime.MediaTypeNames;
-using static MelonLoader.MelonLogger;
-using static TweaksAndFixes.Config;
-using Il2CppSystem.Diagnostics.Tracing;
 
 namespace TweaksAndFixes.Harmony
 {

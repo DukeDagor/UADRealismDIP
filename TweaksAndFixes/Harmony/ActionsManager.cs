@@ -1,11 +1,7 @@
 ﻿using MelonLoader;
 using HarmonyLib;
-using UnityEngine;
 using Il2Cpp;
-using System.Collections.Generic;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using static Il2Cpp.ActionsManager;
-using System.Runtime.InteropServices;
 
 namespace TweaksAndFixes
 {

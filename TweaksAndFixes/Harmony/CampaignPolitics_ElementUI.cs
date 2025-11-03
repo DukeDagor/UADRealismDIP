@@ -1,15 +1,6 @@
-﻿using MelonLoader;
-using HarmonyLib;
-using UnityEngine;
+﻿using HarmonyLib;
 using Il2Cpp;
-using Il2CppSystem.Collections.Generic;
-using Il2CppSystem.Reflection;
-using Il2CppSystem.Runtime;
-using UnityEngine.UI;
 using TweaksAndFixes.Harmony;
-using static MelonLoader.MelonLogger;
-using Il2CppSystem.Linq;
-using System.Xml.Linq;
 
 namespace TweaksAndFixes
 {

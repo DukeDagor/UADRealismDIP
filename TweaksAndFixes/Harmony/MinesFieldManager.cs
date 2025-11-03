@@ -1,8 +1,5 @@
-﻿using MelonLoader;
-using HarmonyLib;
-using UnityEngine;
+﻿using HarmonyLib;
 using Il2Cpp;
-using System.Collections.Generic;
 
 namespace TweaksAndFixes
 {

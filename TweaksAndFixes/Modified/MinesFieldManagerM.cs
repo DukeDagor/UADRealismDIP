@@ -1,9 +1,5 @@
-﻿using MelonLoader;
-using HarmonyLib;
-using UnityEngine;
+﻿using UnityEngine;
 using Il2Cpp;
-using System.Collections.Generic;
-using System.Security;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8603

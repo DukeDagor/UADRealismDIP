@@ -1,15 +1,8 @@
 ﻿using MelonLoader;
 using HarmonyLib;
-using UnityEngine;
 using Il2Cpp;
-using System.Collections.Generic;
 using Il2CppSystem.Linq;
-using UnityEngine.UI;
-using Il2CppCoffee.UIExtensions;
-using Il2CppTMPro;
-using System.Collections;
 using static Il2Cpp.CampaignController;
-using Il2CppLitJson;
 
 #pragma warning disable CS8602
 #pragma warning disable CS8604

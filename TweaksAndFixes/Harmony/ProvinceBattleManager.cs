@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using MelonLoader;
+﻿using MelonLoader;
 using HarmonyLib;
-using UnityEngine;
 using Il2Cpp;
 using Il2CppSystem.Linq;
 

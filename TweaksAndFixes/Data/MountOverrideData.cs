@@ -1,13 +1,8 @@
 ﻿using MelonLoader;
-using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
 using Il2CppSystem.Linq;
 using System.Text;
-using static Il2Cpp.Ship;
-using static MelonLoader.MelonLogger;
-using System.Drawing;
-using System.Reflection;
 
 namespace TweaksAndFixes
 {
