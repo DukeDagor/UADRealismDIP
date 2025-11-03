@@ -97,7 +97,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="copy /Y &quot;$(TargetDir)TweaksAndFixes.dll&quot; &quot;G:\Games\Steam\steamapps\common\Ultimate Admiral Dreadnoughts\Mods\TweaksAndFixes.dll&quot;&#xD;&#xA;rd /Q /S &quot;G:\Games\Steam\steamapps\common\Ultimate Admiral Dreadnoughts\Mods\TAFData&quot;&#xD;&#xA;xcopy /Y /S &quot;$(ProjectDir)\Assets\*&quot; &quot;G:\Games\Steam\steamapps\common\Ultimate Admiral Dreadnoughts\Mods\&quot;" />
+    <Exec Command="copy /Y &quot;$(TargetDir)TweaksAndFixes.dll&quot; &quot;G:\Games\Steam\steamapps\common\Ultimate Admiral Dreadnoughts\Mods\TweaksAndFixes.dll&quot;&#xD;&#xA;copy /Y &quot;$(TargetDir)TweaksAndFixes.dll&quot; &quot;$(ProjectDir)\TAF_Nightly\TweaksAndFixes.dll&quot;&#xD;&#xA;rd /Q /S &quot;G:\Games\Steam\steamapps\common\Ultimate Admiral Dreadnoughts\Mods\TAFData&quot;&#xD;&#xA;xcopy /Y /S &quot;$(ProjectDir)\Assets\*&quot; &quot;G:\Games\Steam\steamapps\common\Ultimate Admiral Dreadnoughts\Mods\&quot;" />
   </Target>
 
 </Project>
