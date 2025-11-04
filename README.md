@@ -24,5 +24,5 @@ I have no plans for UAD Realism, as extending TAF will be more than enough work 
 Go to the [TweaksAndFixes/TAF_Nightly](https://github.com/DukeDagor/UADRealismDIP/tree/main/TweaksAndFixes/TAF_Nightly) folder for the nightly/beta releases of TAF. These are unstable versions may have game-breaking bugs. ***Do not report bugs found in nightly versions in the GitHub issue tracker***. All nightly bug reports need to be made through the discord server.
 
 ## Default Files
-* Default TAF csv files can be found in the latest [TweaksAndFixes release](https://github.com/DukeDagor/UADRealismDIP/releases/latest) for all versions after `3.20.0`. See the [mod file page](https://github.com/DukeDagor/UADRealismDIP/wiki/Mod-Files) of the Wiki for more info.
+* Default TAF csv files can be found in the latest [TweaksAndFixes release](https://github.com/DukeDagor/UADRealismDIP/releases/latest) for all versions after `3.20.1`. See the [mod file page](https://github.com/DukeDagor/UADRealismDIP/wiki/Mod-Files) of the Wiki for more info.
 * See [here](https://github.com/DukeDagor/UADRealismDIP/wiki/Resources) for info on the default game assets.
