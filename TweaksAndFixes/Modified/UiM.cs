@@ -472,9 +472,6 @@ namespace TweaksAndFixes
             onEnter.action = new System.Action(() => {
                 if (!ui.active || !ui.GetComponent<Button>().interactable)
                 {
-                    Melon<TweaksAndFixes>.Logger.Error(
-                        $"UI inactive, hiding tool tip!"
-                    );
                     G.ui.HideTooltip();
                     return;
                 }
@@ -1650,8 +1647,6 @@ namespace TweaksAndFixes
             float hash = Patch_Ui.MountedPartRotation * 1000000 + Patch_Ui.DefaultRotation * 1000 + Patch_Ui.PartRotation;
 
             if (RotationValueControlTextLastValue == hash && RotationValueControlTextLastWasMounted == Patch_Ui.Mounted) return;
-
-            Melon<TweaksAndFixes>.Logger.Msg($"HASH: {RotationValueControlTextLastValue}/{RotationValueControlTextLastWasMounted} -> {hash}/{Patch_Ui.Mounted}");
 
             RotationValueControlTextLastValue = hash;
             RotationValueControlTextLastWasMounted = Patch_Ui.Mounted;
