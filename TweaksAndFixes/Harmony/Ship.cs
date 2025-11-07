@@ -6,6 +6,7 @@ using System.Reflection;
 using TweaksAndFixes.Data;
 using static Il2Cpp.Ship;
 using UnityEngine.UI;
+using TweaksAndFixes.Harmony;
 
 #pragma warning disable CS8625
 
@@ -219,15 +220,80 @@ namespace TweaksAndFixes
 
         // Fix for broken deck hits
 
+        // public static float percentDeck = 0.1f;
+
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Ship.GetSectionFromPositions))]
         internal static void Fix(Ship __instance, ref Vector3 tempPos)
         {
+            if (Patch_Shell.updating == null)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Error: Updating shell is null!");
+                return;
+            }
+
+            Vector3 startPos = Patch_Shell.shellTargetData[Patch_Shell.updating];
+            Vector3 endPos = Patch_Shell.updating.transform.position;
+
+            float distance = ModUtils.distance(startPos, endPos);
+
+            // Should be impossible, but you never know
+            if (distance <= 0)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Error: Invalid shell distance!");
+                return;
+            }
+
+            float range = Patch_Shell.updating.from.ship.weaponRangesCache.GetValueOrDefault(Patch_Shell.updating.from.data);
+
+            // Should be impossible, but you never know
+            if (range <= 0)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Error: Invalid shell range!");
+                return;
+            }
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"{startPos} -> {endPos} = {distance} / {range} [AP = {Patch_Shell.updating.from.ship.weaponRangesAPCache.GetValueOrDefault(Patch_Shell.updating.from.data)}, HE = {Patch_Shell.updating.from.ship.weaponRangesHECache.GetValueOrDefault(Patch_Shell.updating.from.data)}");
+
+            float percentDeckModifier = distance / range;
+
+            Melon<TweaksAndFixes>.Logger.Msg($"{distance/1000:N2}km / {range/1000:N2}km = {percentDeckModifier * 100:N2}% deck width -> {(percentDeckModifier * percentDeckModifier) / 3.0f * 100:N2}% deck hit chance.");
+
+            int mark = Patch_Shell.updating.from.ship.TechGunGrade(Patch_Shell.updating.from.data);
+
+            float min = Config.Param("taf_shell_deck_hit_percent_min", 0);
+            float max = Config.Param("taf_shell_deck_hit_percent_max", 1.2f);
+
             Bounds hullSize = __instance.hullSize;
-            float y = hullSize.min.y;
+            float y = hullSize.min.y * ((max - min) * (percentDeckModifier * (mark / Config.MaxGunGrade))) + min;
             tempPos.y -= y;
         }
 
+        // public static int total = 0;
+        // public static int totalDeckHits = 0;
+        // public static int totalBeltHits = 0;
+        // public static int totalOtherHits = 0;
+        // 
+        // [HarmonyPrefix]
+        // [HarmonyPatch(nameof(Ship.Report))]
+        // internal static void Prefix_Report(Ship __instance, Ui.RImportance importance, string text, string tooltip, Ship otherShip)
+        // {
+        //     if (text.ToLower().Contains("deck"))
+        //     {
+        //         ++totalDeckHits;
+        //         total++;
+        //     }
+        //     else if (text.ToLower().Contains("belt"))
+        //     {
+        //         ++totalBeltHits;
+        //         total++;
+        //     }
+        //     else if (text.ToLower().Contains("hit"))
+        //     {
+        //         ++totalOtherHits;
+        //         total++;
+        //     }
+        // }
 
 
 

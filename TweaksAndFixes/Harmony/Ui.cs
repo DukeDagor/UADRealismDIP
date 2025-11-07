@@ -457,7 +457,7 @@ namespace TweaksAndFixes
                     }
                 }
 
-                else if (false && Input.GetKeyDown(KeyCode.L))
+                else if (Input.GetKeyDown(KeyCode.L))
                 {
                     // string finalCount = "";
 
@@ -590,7 +590,7 @@ namespace TweaksAndFixes
                             }
                             else if (isTower)
                             {
-                                if (obj.name.StartsWith("Mount:tower_main") || obj.name.StartsWith("Mount:si_barbette"))
+                                if (obj.name.StartsWith("Mount:tower_main") || obj.name.StartsWith("Mount:tower_sec") || obj.name.StartsWith("Mount:si_barbette"))
                                 {
                                     continue;
                                 }
@@ -616,7 +616,7 @@ namespace TweaksAndFixes
                     File.WriteAllText(Config._BasePath + "\\mounts.txt", finalCount.ToString());
                 }
 
-                else if (Input.GetKeyDown(KeyCode.L))
+                else if (false && Input.GetKeyDown(KeyCode.L))
                 {
                     // string finalCount = "";
 
@@ -1246,6 +1246,36 @@ namespace TweaksAndFixes
                 //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.conComponentsChoice));
                 //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.conDetails));
             }
+
+            // if (Input.GetKeyDown(KeyCode.PageUp))
+            // {
+            //     Patch_Ship.percentDeck += 0.1f;
+            //     Melon<TweaksAndFixes>.Logger.Msg($"{Patch_Ship.percentDeck}");
+            // }
+            // 
+            // if (Input.GetKeyDown(KeyCode.PageDown))
+            // {
+            //     Patch_Ship.percentDeck -= 0.1f;
+            //     Melon<TweaksAndFixes>.Logger.Msg($"{Patch_Ship.percentDeck}");
+            // }
+            // 
+            // if (Input.GetKeyDown(KeyCode.Home))
+            // {
+            //     Melon<TweaksAndFixes>.Logger.Msg($"Deck %: {Patch_Ship.percentDeck}");
+            //     Melon<TweaksAndFixes>.Logger.Msg($"  Deck hit  {Patch_Ship.totalDeckHits} / {Patch_Ship.total} = {1.0f * Patch_Ship.totalDeckHits / Patch_Ship.total}");
+            //     Melon<TweaksAndFixes>.Logger.Msg($"  Belt hit  {Patch_Ship.totalBeltHits} / {Patch_Ship.total} = {1.0f * Patch_Ship.totalBeltHits / Patch_Ship.total}");
+            //     Melon<TweaksAndFixes>.Logger.Msg($"  Other hit {Patch_Ship.totalOtherHits} / {Patch_Ship.total} = {1.0f * Patch_Ship.totalOtherHits / Patch_Ship.total}");
+            // }
+            // 
+            // if (Input.GetKeyDown(KeyCode.End))
+            // {
+            //     Patch_Ship.totalDeckHits = 0;
+            //     Patch_Ship.totalBeltHits = 0;
+            //     Patch_Ship.totalOtherHits = 0;
+            //     Patch_Ship.total = 0;
+            // }
+
+
 
             if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.S))
             {
