@@ -218,6 +218,15 @@ namespace TweaksAndFixes
             return value;
         }
 
+        public static float distance(Vector3 a, Vector3 b)
+        {
+            return (float)Math.Sqrt(
+                (a.x - b.x) * (a.x - b.x) +
+                (a.y - b.y) * (a.y - b.y) +
+                (a.z - b.z) * (a.z - b.z)
+            );
+        }
+
         public static bool NearlyEqual(float a, float b)
         {
             return Math.Abs(a - b) < 0.01f;
