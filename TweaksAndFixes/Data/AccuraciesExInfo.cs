@@ -1,4 +1,5 @@
-﻿using MelonLoader;
+﻿using Il2Cpp;
+using MelonLoader;
 
 namespace TweaksAndFixes.Data
 {
@@ -101,13 +102,13 @@ namespace TweaksAndFixes.Data
             // If a name override exists
             if (_Data[key].name_override.Length != 0)
             {
-                name = _Data[key].name_override;
+                name = LocalizeManager.Localize(_Data[key].name_override);
             }
 
             // If a sub-name override exists
             if (_Data[key].subname_override.Length != 0)
             {
-                subname = _Data[key].subname_override;
+                subname = LocalizeManager.Localize(_Data[key].subname_override);
             }
 
             return true;
