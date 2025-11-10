@@ -794,7 +794,7 @@ namespace TweaksAndFixes
             fleetTemplate.gameObject.GetComponent<Button>().onClick.RemoveAllListeners();
 
             GameObject setRole = InstanciateUI(fleetButtons.GetChild("View"), fleetButtons, "Set Role", Vector3.zero, new Vector3(1.2114f, 1.2114f, 1.2114f));
-            SetLocalizedTextTag(setRole.gameObject.GetChildren()[0], "$Ui_World_FleetDesign_SetRole");
+            SetLocalizedTextTag(setRole.gameObject.GetChildren()[0], "$TAF_Ui_World_FleetDesign_SetRole");
             AddTooltip(setRole, $"$TAF_tooltip_set_role");
             SetButtonOnClick(setRole, new System.Action(() =>
             {
@@ -943,7 +943,7 @@ namespace TweaksAndFixes
             }));
 
             GameObject viewOnMap = InstanciateUI(fleetButtons.GetChild("View"), fleetButtons, "View On Map", Vector3.zero, new Vector3(1.2114f, 1.2114f, 1.2114f));
-            SetLocalizedTextTag(viewOnMap.gameObject.GetChildren()[0], "$Ui_World_FleetDesign_ViewOnMap");
+            SetLocalizedTextTag(viewOnMap.gameObject.GetChildren()[0], "$TAF_Ui_World_FleetDesign_ViewOnMap");
             AddTooltip(viewOnMap, $"$TAF_tooltip_view_on_map");
             SetButtonOnClick(viewOnMap, new System.Action(() =>
             {

@@ -138,7 +138,7 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         public static bool Money(float money, bool writeDollar, bool delta, bool compactK, bool compactM, ref string __result)
         {
-            if (!LocalizeManager.Instance.Language.Data.ContainsKey("$Ui_World_compactM"))
+            if (!LocalizeManager.Instance.Language.Data.ContainsKey("$TAF_Ui_World_compactM"))
             {
                 return true;
             }
@@ -149,7 +149,7 @@ namespace TweaksAndFixes
             if (compactM)
             {
                 float value = Math.Abs(money / 1000000f);
-                string name = LocalizeManager.Localize("$Ui_World_compactM");
+                string name = LocalizeManager.Localize("$TAF_Ui_World_compactM");
                 __result = $"{sign}{prefix}{value:#,##0.#}{name}";
             }
             else if (compactK)

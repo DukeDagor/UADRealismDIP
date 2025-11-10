@@ -3,6 +3,7 @@ using UnityEngine;
 using Il2Cpp;
 using Il2CppTMPro;
 using UnityEngine.UI;
+using MelonLoader;
 
 namespace TweaksAndFixes.Harmony
 {
@@ -86,22 +87,15 @@ namespace TweaksAndFixes.Harmony
 
                         FleetWindow_ShipElementUI entry = ui.GetComponent<FleetWindow_ShipElementUI>();
 
-                        if (!entry.Status.text.Contains('\n') && (entry.Status.text.Contains("Building") || entry.Status.text.Contains("Refit") || entry.Status.text.Contains("Suspended")))
-                        {
-                            var split = entry.Status.text.Split(' ');
-
-                            entry.Status.text = $"{split[0]}\n{split[1]} {split[2]}";
-                        }
-
                         TMP_Text roleText = entry.RoleSelectionButton.gameObject.GetParent().GetChild("RoleText").GetComponent<TMP_Text>();
                         TMP_Text trueRoleText = entry.RoleSelectionButton.gameObject.GetChildren()[0].GetComponent<TMP_Text>();
 
-                        if (entry.Sold.text.Length > 1)
+                        if (entry.Sold.text.Length > 1 && !roleText.text.Contains(entry.Sold.text))
                         {
-                            roleText.text = "Sold To:\n" + entry.Sold.text;
+                            roleText.text = String.Format(LocalizeManager.Localize("$TAF_Ui_World_FleetDesign_SoldTo"), entry.Sold.text);
                             roleText.fontSizeMax = 8;
                         }
-                        else if (roleText.text != trueRoleText.text)
+                        else if (entry.Sold.text.Length == 0 && roleText.text != trueRoleText.text)
                         {
                             roleText.text = trueRoleText.text;
                             roleText.fontSizeMax = 12;

@@ -82,10 +82,10 @@ namespace TweaksAndFixes
         {
             if (GameManager.Instance != null && GameManager.IsConstructor && 
                 (p == null || ((Il2CppArrayBase<Il2CppSystem.Object>)(object)p).Length <= 0) && 
-                !(tag != "$Ui_World_PopWindows_Port") && LocalizeManager.Instance.Language.Data.ContainsKey("$Ui_Constr_Port")
+                !(tag != "$Ui_World_PopWindows_Port") && LocalizeManager.Instance.Language.Data.ContainsKey("$TAF_Ui_Constr_Port")
             )
             {
-                tag = "$Ui_Constr_Port";
+                tag = "$TAF_Ui_Constr_Port";
             }
         }
     }
