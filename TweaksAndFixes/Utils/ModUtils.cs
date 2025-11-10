@@ -889,6 +889,16 @@ namespace TweaksAndFixes
             return dump;
         }
 
+        public static string LocalizeF(string tag)
+        {
+            return LocalizeManager.Localize(tag);
+        }
+
+        public static string LocalizeF(string tag, params string[] arg0)
+        {
+            return String.Format(LocalizeManager.Localize(tag), arg0);
+        }
+
         private struct ObjectStack
         {
             public GameObject obj;

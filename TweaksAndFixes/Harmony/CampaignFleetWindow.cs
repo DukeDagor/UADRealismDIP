@@ -138,13 +138,21 @@ namespace TweaksAndFixes.Harmony
                         GameObject setRoleObj = G.ui.FleetWindow.FleetButtonsRoot.GetChild("Set Role");
                         GameObject viewOnMapObj = G.ui.FleetWindow.FleetButtonsRoot.GetChild("View On Map");
 
-                        var lastSelection = G.ui.FleetWindow.selectedElements[^1];
+                        bool isUnavailible = false;
+                        bool isBeingBuilt = false;
+                        bool isOurs = true;
 
-                        bool isActive = lastSelection.Status.text.Contains("Normal") || lastSelection.Status.text.Contains("Mothballed") || lastSelection.Status.text.Contains("Low Crew") || lastSelection.Status.text.Contains("At Sea");
-                        bool isBeingBuilt = lastSelection.Status.text.Contains("Building");
-                        bool isOurs = element.Value.Sold.text.Length == 0;
+                        foreach (var selection in G.ui.FleetWindow.selectedElements)
+                        {
+                            isUnavailible |= selection.CurrentShip.IsInSea;
+                            isBeingBuilt |=
+                                selection.CurrentShip.isBuilding ||
+                                selection.CurrentShip.isRefit ||
+                                selection.CurrentShip.isCommissioning;
+                            isOurs &= selection.Sold.text.Length == 0;
+                        }
 
-                        if (selectedCount == 0 || !isActive || !isOurs)
+                        if (selectedCount == 0 || isUnavailible || !isOurs)
                         {
                             setCrewObj.GetComponent<Button>().interactable = false;
                         }
