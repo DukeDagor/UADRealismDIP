@@ -257,15 +257,19 @@ namespace TweaksAndFixes
 
             float percentDeckModifier = distance / range;
 
-            Melon<TweaksAndFixes>.Logger.Msg($"{distance/1000:N2}km / {range/1000:N2}km = {percentDeckModifier * 100:N2}% deck width -> {(percentDeckModifier * percentDeckModifier) / 3.0f * 100:N2}% deck hit chance.");
-
             int mark = Patch_Shell.updating.from.ship.TechGunGrade(Patch_Shell.updating.from.data);
 
             float min = Config.Param("taf_shell_deck_hit_percent_min", 0);
             float max = Config.Param("taf_shell_deck_hit_percent_max", 1.2f);
 
+            float deckPercent = ((max - min) * (percentDeckModifier * ((float)mark / (float)Config.MaxGunGrade))) + min;
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"{distance/1000:N2}km / {range/1000:N2}km = {percentDeckModifier * 100:N2}% | {mark} / {Config.MaxGunGrade} | deck width -> {deckPercent * 100:N2}% | {(deckPercent * deckPercent) / 3 * 100} deck hit chance.");
+
+            // predictedDeckHits += (deckPercent * deckPercent) / 3;
+
             Bounds hullSize = __instance.hullSize;
-            float y = hullSize.min.y * ((max - min) * (percentDeckModifier * (mark / Config.MaxGunGrade))) + min;
+            float y = hullSize.min.y * deckPercent;
             tempPos.y -= y;
         }
 
@@ -273,6 +277,7 @@ namespace TweaksAndFixes
         // public static int totalDeckHits = 0;
         // public static int totalBeltHits = 0;
         // public static int totalOtherHits = 0;
+        // public static float predictedDeckHits = 0;
         // 
         // [HarmonyPrefix]
         // [HarmonyPatch(nameof(Ship.Report))]

@@ -1261,10 +1261,10 @@ namespace TweaksAndFixes
             // 
             // if (Input.GetKeyDown(KeyCode.Home))
             // {
-            //     Melon<TweaksAndFixes>.Logger.Msg($"Deck %: {Patch_Ship.percentDeck}");
-            //     Melon<TweaksAndFixes>.Logger.Msg($"  Deck hit  {Patch_Ship.totalDeckHits} / {Patch_Ship.total} = {1.0f * Patch_Ship.totalDeckHits / Patch_Ship.total}");
-            //     Melon<TweaksAndFixes>.Logger.Msg($"  Belt hit  {Patch_Ship.totalBeltHits} / {Patch_Ship.total} = {1.0f * Patch_Ship.totalBeltHits / Patch_Ship.total}");
-            //     Melon<TweaksAndFixes>.Logger.Msg($"  Other hit {Patch_Ship.totalOtherHits} / {Patch_Ship.total} = {1.0f * Patch_Ship.totalOtherHits / Patch_Ship.total}");
+            //     //Melon<TweaksAndFixes>.Logger.Msg($"Deck %: {Patch_Ship.percentDeck}");
+            //     Melon<TweaksAndFixes>.Logger.Msg($"Deck hit  {Patch_Ship.totalDeckHits} (Predicted {Patch_Ship.predictedDeckHits}) / {Patch_Ship.total} = {1.0f * Patch_Ship.totalDeckHits / Patch_Ship.total * 100:N2}%");
+            //     Melon<TweaksAndFixes>.Logger.Msg($"Belt hit  {Patch_Ship.totalBeltHits} / {Patch_Ship.total} = {1.0f * Patch_Ship.totalBeltHits / Patch_Ship.total * 100:N2}%");
+            //     Melon<TweaksAndFixes>.Logger.Msg($"Other hit {Patch_Ship.totalOtherHits} / {Patch_Ship.total} = {1.0f * Patch_Ship.totalOtherHits / Patch_Ship.total * 100:N2}%");
             // }
             // 
             // if (Input.GetKeyDown(KeyCode.End))

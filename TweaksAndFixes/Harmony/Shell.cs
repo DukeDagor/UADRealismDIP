@@ -33,7 +33,7 @@ namespace TweaksAndFixes.Harmony
 
             if (__instance.timer.isDone)
             {
-                if (__instance.willHitTarget) Melon<TweaksAndFixes>.Logger.Msg($"Shell hit! {shellTargetData.Count}");
+                // if (__instance.willHitTarget) Melon<TweaksAndFixes>.Logger.Msg($"Shell hit! {shellTargetData.Count}");
 
                 if (shellTargetData.ContainsKey(__instance)) shellTargetData.Remove(__instance);
             }
