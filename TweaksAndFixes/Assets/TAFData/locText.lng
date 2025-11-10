@@ -65,3 +65,19 @@ $toolltip_file_converter;*File Converter*\nTool for converting save files betwee
 $TAF_Ui_Popup_OptionsWindow_UI_Scale;UI Scale
 $TAF_Ui_World_compactM;M
 $TAF_Ui_Constr_Port;Port
+$TAF_Ui_BatchShipGenerator_Batch;Batch #{0}
+$TAF_Ui_BatchShipGenerator_Progress;Progress {0}
+$TAF_Ui_BatchShipGenerator_Completed;Completed: {0}
+$TAF_Ui_BatchShipGenerator_Requested;Requested: {0}
+$TAF_Ui_BatchShipGenerator_Performance;Performance {0}
+$TAF_Ui_BatchShipGenerator_Total_Tries;Total Tries: {0}
+$TAF_Ui_BatchShipGenerator_Total_Time;Total Time: {0}
+$TAF_Ui_BatchShipGenerator_Batch_Time;Batch Time: {0}
+$TAF_Ui_BatchShipGenerator_Total_Batches;Total Batches: {0}
+$TAF_Ui_BatchShipGenerator_Stop_At_Batch_End;Press [ESC] to stop the generator at the end of the batch.
+$TAF_Ui_BatchShipGenerator_Stoping_At_Batch_End;Will stop at the end of this batch!
+$TAF_Ui_BatchShipGenerator_Finished;Finished Batch Ship Generation:
+$TAF_Ui_BatchShipGenerator_See_Log;See log for more details!
+$TAF_Ui_BatchShipGenerator_Count_Tries_Time;Count = {0} | Tries = {1} | Time = {2}
+$TAF_Ui_BatchShipGenerator_Failed;Failed
+$TAF_Ui_BatchShipGenerator_Succeeded;Succeeded

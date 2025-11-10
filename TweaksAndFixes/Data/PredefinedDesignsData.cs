@@ -8,6 +8,8 @@ using UnityEngine;
 using Il2Cpp;
 using UnityEngine.UI;
 using Il2CppTMPro;
+using TweaksAndFixes.Harmony;
+using static Il2Cpp.Ship;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8602
@@ -56,7 +58,7 @@ namespace TweaksAndFixes
 
         private const string _StockAssetName = "<stock predefined designs>";
         private const string _StockAssetFilenameProxy = "--";
-        private static GameObject? _BatchGenUI = null;
+        public static GameObject? _BatchGenUI = null;
 
         private bool _loaded = false;
         private bool _noFile = true;
@@ -548,8 +550,31 @@ namespace TweaksAndFixes
             return null;
         }
 
+        public class BatchShipGeneratorConfig
+        {
+            [Serializer.Field] public string name;
+            [Serializer.Field] public string value;
+        }
+
+        private static readonly Dictionary<string, BatchShipGeneratorConfig> BatchShipGeneratorConfigData = new();
+        private static bool hasBSGConfig = false;
+
         public static void AddUIforBSG()
         {
+            if (Config._BatchShipGeneratorConfigDataFile.Exists)
+            {
+                string text = File.ReadAllText(Config._BatchShipGeneratorConfigDataFile.path);
+                List<BatchShipGeneratorConfig> list = new();
+                Serializer.CSV.Read<List<BatchShipGeneratorConfig>, BatchShipGeneratorConfig>(text, list);
+
+                foreach (var val in list)
+                {
+                    BatchShipGeneratorConfigData[val.name] = val;
+                }
+
+                hasBSGConfig = true;
+            }
+
             if (_BatchGenUI != null)
             {
                 GameObject.DestroyImmediate(_BatchGenUI);
@@ -587,11 +612,16 @@ namespace TweaksAndFixes
 
             var buttons = root.transform.Find("Buttons");
             var start = buttons.transform.Find("Close").GetComponent<Button>();
+            start.name = "Start";
             start.onClick.RemoveAllListeners();
             var yearsO = buttons.transform.Find("Convert").GetComponent<Button>();
+            yearsO.name = "OpenYears";
             yearsO.onClick.RemoveAllListeners();
+            yearsO.SetActive(false);
             var yearsC = buttons.transform.Find("Delete").GetComponent<Button>();
+            yearsC.name = "CloseYears";
             yearsC.onClick.RemoveAllListeners();
+            yearsC.SetActive(false);
 
             var upperRow = root.transform.Find("UpperButtons").gameObject;
             upperRow.DestroyAllChilds();
@@ -667,6 +697,89 @@ namespace TweaksAndFixes
             nationDropObj.transform.Find("Label").GetComponent<TextMeshProUGUI>().text = LocalizeManager.Localize("$TAF_Ui_BatchShipGenerator_Nations");
             typeDropObj.transform.Find("Label").GetComponent<TextMeshProUGUI>().text = LocalizeManager.Localize("$TAF_Ui_BatchShipGenerator_Types");
             numInputObj.FindDeepChild("Placeholder").GetComponent<TextMeshProUGUI>().text = LocalizeManager.Localize("$TAF_Ui_BatchShipGenerator_NumShips");
+
+            if (hasBSGConfig)
+            {
+                List<int> years = new();
+
+                if (BatchShipGeneratorConfigData["show_years"].value == "1")
+                {
+                    bsg.yearsButton.onClick.Invoke();
+
+                    int min = int.MaxValue;
+                    int max = int.MinValue;
+
+                    if (BatchShipGeneratorConfigData["year_min"].value.Length != 0 && !int.TryParse(BatchShipGeneratorConfigData["year_min"].value, out min))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"BatchShipGeneratorConfigData Error: `year_min` must be a valid integer `{BatchShipGeneratorConfigData["year_min"].value}`");
+                    }
+
+                    if (BatchShipGeneratorConfigData["year_max"].value.Length != 0 && !int.TryParse(BatchShipGeneratorConfigData["year_max"].value, out max))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"BatchShipGeneratorConfigData Error: `year_max` must be a valid integer `{BatchShipGeneratorConfigData["year_max"].value}`");
+                    }
+
+                    List<int> select = new();
+
+                    if (BatchShipGeneratorConfigData["year_list"].value.Length != 0)
+                    {
+                        foreach (var val in BatchShipGeneratorConfigData["year_list"].value.Replace(" ", "").Split(","))
+                        {
+                            int parse = 0;
+
+                            if (!int.TryParse(val, out parse))
+                            {
+                                Melon<TweaksAndFixes>.Logger.Error($"BatchShipGeneratorConfigData Error: `year_list` values must be a valid integers `{val}`");
+                                continue;
+                            }
+
+                            select.Add(parse);
+                        }
+                    }
+
+                    foreach (var child in bsg.yearToggleParent.GetChildren())
+                    {
+                        string text = child.GetChild("Label").GetComponent<TextMeshProUGUI>().text;
+
+                        if (text == "Fullscreen Mode") continue;
+
+                        int year = 0;
+
+                        if (!int.TryParse(text, out year))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Error($"Failed to parse `{text}`");
+                            continue;
+                        }
+
+                        if ((year < min || year > max) && (select.Count == 0 || !select.Contains(year))) continue;
+
+                        years.Add(year);
+                    }
+                }
+
+                string nation = "all";
+
+                if (BatchShipGeneratorConfigData["nation"].value.Length != 0)
+                {
+                    nation = BatchShipGeneratorConfigData["nation"].value;
+                }
+
+                string type = "all";
+
+                if (BatchShipGeneratorConfigData["ship_type"].value.Length != 0)
+                {
+                    type = BatchShipGeneratorConfigData["ship_type"].value;
+                }
+
+                int count = 10;
+
+                if (BatchShipGeneratorConfigData["generate_count"].value.Length != 0 && !int.TryParse(BatchShipGeneratorConfigData["generate_count"].value, out count))
+                {
+                    Melon<TweaksAndFixes>.Logger.Error($"BatchShipGeneratorConfigData Error: `generate_count` must be a valid integer `{BatchShipGeneratorConfigData["generate_count"].value}`");
+                }
+
+                Patch_BatchShipGenerator.ConfigureBSG(bsg, nation, type, years, count);
+            }
         }
     }
 
