@@ -12,6 +12,8 @@ using Il2CppTMPro;
 using System.Text;
 using System.Reflection.Metadata.Ecma335;
 using System.IO.Compression;
+using System.Data;
+using static Il2CppSystem.Linq.Expressions.Interpreter.CastInstruction.CastInstructionNoT;
 
 #pragma warning disable CS8601
 #pragma warning disable CS8602
@@ -196,6 +198,19 @@ namespace TweaksAndFixes
             return a + (b - a) * t;
         }
 
+        public static float Lerp(float a, float b, float t, bool clamp = true)
+        {
+            if (clamp)
+            {
+                if (t <= 0)
+                    return a;
+                if (t >= 1)
+                    return b;
+            }
+
+            return a + (b - a) * t;
+        }
+
         public static double InverseLerp(double a, double b, double value, bool clamp = true)
         {
             if (clamp)
@@ -225,6 +240,11 @@ namespace TweaksAndFixes
                 (a.y - b.y) * (a.y - b.y) +
                 (a.z - b.z) * (a.z - b.z)
             );
+        }
+
+        public static int toInt(float x)
+        {
+            return (int)(x + 0.05f);
         }
 
         public static bool NearlyEqual(float a, float b)
@@ -897,6 +917,12 @@ namespace TweaksAndFixes
         public static string LocalizeF(string tag, params string[] arg0)
         {
             return String.Format(LocalizeManager.Localize(tag), arg0);
+        }
+
+        public static string StringOrSubstring(string s, int len)
+        {
+            if (s.Length < len || len == 0) return s;
+            else return s.Substring(0, len) + "...";
         }
 
         private struct ObjectStack
