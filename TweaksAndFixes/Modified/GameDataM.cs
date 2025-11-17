@@ -127,6 +127,12 @@ namespace TweaksAndFixes
                     Serializer.CSV.ProcessCSV<TechnologyData>(text, false, G.GameData.technologies);
                 }
 
+                text = GameDataM.GetText("partModels");
+                if (text != null)
+                {
+                    Serializer.CSV.ProcessCSV<PartModelData>(text, false, G.GameData.partModels);
+                }
+
                 ConstructorM.ReloadModels();
 
                 AccuraciesExInfo.LoadData();
