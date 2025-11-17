@@ -2404,6 +2404,9 @@ namespace TweaksAndFixes
     [HarmonyPatch(typeof(Cam))]
     internal class Patch_Cam
     {
+        public static bool overrideCamBounds = false;
+        public static Vector3 camBounds = Vector3.zero;
+
         [HarmonyPatch(nameof(Cam.Update))]
         [HarmonyPostfix]
         internal static void Postfix_CameraController(Cam __instance)
@@ -2420,6 +2423,23 @@ namespace TweaksAndFixes
             // Only works for the map, no clue why the other two use a different system
             __instance.CampaignZoomSpeed = 30;
             __instance.BattleZoomSpeed = 1;
+
+            __instance.rotationSensitivityKeyMod = 10;
+            __instance.panSensitivityX = 50;
+            __instance.panSensitivityY = 50;
+
+            __instance.distanceMin = 1;
+            __instance.limitMaxRotationX = 89.95f;
+
+            if (overrideCamBounds)
+            {
+                __instance.plane.center = new Vector3(0,1,0);
+                __instance.plane.extents = camBounds;
+                __instance.plane.size = camBounds;
+                __instance.distanceMax = 2000;
+
+                __instance.limitMinRotationX = 0;
+            }
         }
     }
 }
