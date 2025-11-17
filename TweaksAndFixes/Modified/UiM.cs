@@ -585,6 +585,11 @@ namespace TweaksAndFixes
 
             // Global/Ui/UiMain/Loading/LayoutDesc/Desc/DescText
 
+            // UiM.ModifyUi(ModUtils.GetChildAtPath("Global/Ui/UiMain/Loading/LayoutDesc/Desc/DescText"));
+
+            var loadingScreenText = ModUtils.GetChildAtPath("Global/Ui/UiMain/Loading/LayoutDesc/Desc/DescText").GetComponent<TMP_Text>();
+            loadingScreenText.alignment = TextAlignmentOptions.Center;
+
             // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/(Beam/Draught)/Slider
 
             // GameObject beamSetting = GameObject.Instantiate(ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Beam"));
