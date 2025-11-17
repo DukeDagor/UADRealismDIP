@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using static TweaksAndFixes.ModUtils;
 using System.Text;
 using TweaksAndFixes.Data;
+using TweaksAndFixes.Modified;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -393,6 +394,7 @@ namespace TweaksAndFixes
             UiM.UpdateModifications();
             Patch_GameManager.Update();
             CampaignControllerM.Update();
+            ConstructorM.Update();
 
             // PredefinedDesignsDataAsync.UpdatePredefLoading();
 
@@ -1239,6 +1241,13 @@ namespace TweaksAndFixes
                             Melon<TweaksAndFixes>.Logger.Msg($"\n{DumpHullData(Patch_Ship.LastCreatedShip)}");
                         }
                     }
+                }
+
+                else if (Input.GetKeyDown(KeyCode.C))
+                {
+
+                    ConstructorM.Init();
+
                 }
 
                 //Melon<TweaksAndFixes>.Logger.Msg("\n\n\n" + ModUtils.DumpHierarchy(ui.conUpperRight));
