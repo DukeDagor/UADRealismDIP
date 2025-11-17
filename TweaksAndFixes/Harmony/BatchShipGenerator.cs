@@ -33,64 +33,89 @@ namespace TweaksAndFixes.Harmony
             }
         }
 
-        private static readonly List<ShipGenEntry> failed = new();
-        private static readonly List<ShipGenEntry> succeeded = new();
-        private static readonly HashSet<string> checkedStrings = new();
-        private static ShipGenEntry retryEntry;
-
-        private static int designsRequested = -1;
-        private static int designsCompleted = 0;
-        private static int designsAttempted = 0;
-        private static int batchCount = 1;
-
-        private static readonly Stopwatch totalTime = new();
-        private static readonly Stopwatch batchTime = new();
-
-        private static string lastDisplayText = "";
-
         // Format: 00h 00m 00s
         private static readonly string timeFormat = "hh'h 'mm'm 'ss's'";
 
+        // Input tracking
+        private static List<string> nations = new();
+        private static List<string> types = new();
+        private static List<string> years = new();
+
+        // Entry tracking
+        private static readonly List<string> failedOrder = new();
+        private static readonly Dictionary<string, ShipGenEntry> failed = new();
+        private static readonly Dictionary<string, ShipGenEntry> succeeded = new();
+        private static readonly HashSet<string> checkedStrings = new();
+        private static ShipGenEntry retryEntry;
+
+        // Count tracking
+        private static int designsRequested = -1;
+        private static int designsAttempted = 0;
+        private static int designsCompleted = 0;
+        private static int designsFailed = 0;
+        private static int batchCount = 1;
+
+        // Time tracking
+        private static readonly Stopwatch totalTime = new();
+        private static readonly Stopwatch batchTime = new();
+
+        // UI tracking
+        private static string lastDisplayText = "";
+        private static bool updateLog = true;
+
+        // State machine
         private static bool stopOnBatchEnd = false;
-        private static bool stopImmediate = false;
-        private static bool isStopping = false;
 
-        private static void AddEntry(List<ShipGenEntry> list, string player, string type, int year, int count, int tries, float time)
+        private static string EntryKey(ShipGenEntry entry)
         {
-            bool found = false;
+            return $"{entry.type}/{entry.player}/{entry.year}";
+        }
 
-            foreach (var entry in list)
+        private static string EntryKey(string player, string type, int year)
+        {
+            return $"{type}/{player}/{year}";
+        }
+
+        private static string EntryKey(string player, string type, string year)
+        {
+            return $"{type}/{player}/{year}";
+        }
+
+        private static void AddEntry(Dictionary<string, ShipGenEntry> list, string player, string type, int year, int count, int tries, float time, bool addToFailedOrder = false)
+        {
+            string key = EntryKey(player, type, year);
+
+            if (list.ContainsKey(key))
             {
-                if (entry.player != player) continue;
-                if (entry.type != type) continue;
-                if (entry.year != year) continue;
-
-                found = true;
-
-                entry.count += count;
-                entry.time += time;
-                entry.tries += tries;
+                list[key].count += count;
+                list[key].time += time;
+                list[key].tries += tries;
             }
 
-            if (!found)
+            else
             {
-                list.Add(new ShipGenEntry(player, type, year, tries, time));
+                if (addToFailedOrder)
+                {
+                    failedOrder.Add(key);
+                }
+
+                list.Add(key, new ShipGenEntry(player, type, year, tries, time));
             }
         }
 
-        private static ShipGenEntry? FindEntry(List<ShipGenEntry> list, ShipGenEntry key)
+        private static ShipGenEntry? FindEntry(Dictionary<string, ShipGenEntry> list, ShipGenEntry entry)
         {
-            foreach (var entry in list)
-            {
-                if (entry.player != key.player) continue;
-                if (entry.type != key.type) continue;
-                if (entry.year != key.year) continue;
+            string key = EntryKey(entry);
 
-                return entry;
+            if (list.ContainsKey(key))
+            {
+                return list[key];
             }
 
             return null;
         }
+
+        private static readonly List<string> batchLogList = new();
 
         [HarmonyPatch(nameof(BatchShipGenerator.Start))]
         [HarmonyPostfix]
@@ -102,22 +127,54 @@ namespace TweaksAndFixes.Harmony
 
                 if (designsRequested == -1)
                 {
-                    string nation = __instance.nationDropdown.options[__instance.nationDropdown.value].text;
-                    string type = __instance.shipTypeDropdown.options[__instance.shipTypeDropdown.value].text;
+                    string nation = __instance.nationDropdown.options[__instance.nationDropdown.value].text.ToLower();
+
+                    if (__instance.nationDropdown.value == 0)
+                    {
+                        foreach (var option in __instance.nationDropdown.options)
+                        {
+                            if (__instance.nationDropdown.options.IndexOf(option) == 0) continue;
+
+                            nations.Add(option.text);
+                        }
+                    }
+                    else
+                    {
+                        nations.Add(nation);
+                    }
+
+                    string type = __instance.shipTypeDropdown.options[__instance.shipTypeDropdown.value].text.ToLower();
+
+                    if (__instance.shipTypeDropdown.value == 0)
+                    {
+                        foreach (var option in __instance.shipTypeDropdown.options)
+                        {
+                            if (__instance.shipTypeDropdown.options.IndexOf(option) == 0) continue;
+
+                            types.Add(option.text);
+                        }
+                    }
+                    else
+                    {
+                        types.Add(type);
+                    }
+
                     int yearCount = 0;
 
                     foreach (var year in __instance.yearsSelected)
                     {
-                        if (year.isOn) yearCount++;
+                        if (year.isOn)
+                        {
+                            yearCount++;
+                            years.Add(year.GetChild("Label").GetComponent<TextMeshProUGUI>().text);
+                        }
                     }
-
-                    if (yearCount == 0) yearCount = __instance.yearsSelected.Count;
 
                     int count = int.Parse(__instance.shipsAmount.text);
 
                     designsRequested =
-                        (nation == "all" ? __instance.nationDropdown.options.Count : 1) *
-                        (type == "all" ? __instance.shipTypeDropdown.options.Count : 1) *
+                        (__instance.nationDropdown.value == 0 ? __instance.nationDropdown.options.Count : 1) *
+                        (__instance.shipTypeDropdown.value == 0 ? __instance.shipTypeDropdown.options.Count : 1) *
                         yearCount * count;
                 }
             }));
@@ -125,16 +182,15 @@ namespace TweaksAndFixes.Harmony
 
         [HarmonyPatch(nameof(BatchShipGenerator.Update))]
         [HarmonyPrefix]
-        internal static bool Prefix_Update(BatchShipGenerator __instance)
+        internal static void Prefix_Update(BatchShipGenerator __instance)
         {
             if (Input.GetKeyDown(KeyCode.Escape))
             {
-                // if (Input.GetKey(KeyCode.LeftShift))
-                // {
-                //     stopImmediate = true;
-                //     isStopping = true;
-                // }
-                // else
+                if (Input.GetKey(KeyCode.LeftShift))
+                {
+                    GameManager.Quit();
+                }
+                else
                 {
                     Melon<TweaksAndFixes>.Logger.Msg($"");
                     Melon<TweaksAndFixes>.Logger.Msg($"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Stoping_At_Batch_End")}");
@@ -154,105 +210,108 @@ namespace TweaksAndFixes.Harmony
             {
                 __instance.progress.gameObject.transform.localPosition = Vector3.zero;
 
-                if (__instance.progress.text.StartsWith("DONE") || isStopping)
+                // ===== Check Errors ===== //
+
+                foreach (var error in __instance.errors)
                 {
-                    foreach (var info in __instance.info)
+                    updateLog = true;
+
+                    var split = error.Split(", ");
+
+                    string player = split[0].Substring(8);
+                    string type = split[1].Substring(6);
+                    string yearStr = split[3].Substring(6);
+
+                    if (!int.TryParse(yearStr, out int year))
                     {
-                        if (!checkedStrings.Contains(info))
-                        {
-                            checkedStrings.Add(info);
-                            designsCompleted++;
-                        }
+                        Melon<TweaksAndFixes>.Logger.Error($"Failed to parse `year` for failed ship gen: {error}");
+                        continue;
                     }
 
+                    string triesStr = split[4].Substring(7);
+
+                    if (!int.TryParse(triesStr, out int tries))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"Failed to parse `tries` for failed ship gen: {error}");
+                        continue;
+                    }
+
+                    string timeStr = split[5].Substring(6, split[5].Length - 8);
+
+                    if (!int.TryParse(timeStr, out int time))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"Failed to parse `time` for failed ship gen: {error}");
+                        continue;
+                    }
+
+                    float timeSec = (float)time / 1000f;
+
+                    Melon<TweaksAndFixes>.Logger.Msg($"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Failed"),-10}: {player,-10} | {type} | {year} | {tries,-2} | {timeSec}s");
+
+                    designsAttempted += tries;
+                    designsFailed++;
+
+                    AddEntry(failed, player, type, year, 1, tries, timeSec, true);
+                }
+
+                __instance.errors.Clear();
+
+                // ===== Check Successes ===== //
+
+                foreach (var info in __instance.info)
+                {
+                    updateLog = true;
+
+                    var split = info.Split(", ");
+
+                    string player = split[0].Substring(8);
+                    string type = split[1].Substring(6);
+                    string yearStr = split[3].Substring(6);
+
+                    if (!int.TryParse(yearStr, out int year))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"Failed to parse `year` for created ship gen: {info}");
+                        continue;
+                    }
+
+                    string triesStr = split[4].Substring(7);
+
+                    if (!int.TryParse(triesStr, out int tries))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"Failed to parse `tries` for created ship gen: {info}");
+                        continue;
+                    }
+
+                    string timeStr = split[5].Substring(6, split[5].Length - 8);
+
+                    if (!int.TryParse(timeStr, out int time))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"Failed to parse `time` for created ship gen: {info}");
+                        continue;
+                    }
+
+                    float timeSec = (float)time / 1000f;
+
+                    Melon<TweaksAndFixes>.Logger.Msg($"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Succeeded"),-10}: {player,-10} | {type} | {year} | {tries,-2} | {timeSec}s");
+
+                    designsAttempted += tries;
+                    designsCompleted++;
+
+                    AddEntry(succeeded, player, type, year, 1, tries, timeSec);
+                }
+
+                __instance.info.Clear();
+
+                // ===== Check Batch End ===== //
+
+                if (__instance.progress.text.StartsWith("DONE"))
+                {
                     Melon<TweaksAndFixes>.Logger.Msg($"");
                     Melon<TweaksAndFixes>.Logger.Msg($"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Batch", $"{batchCount}")}");
                     Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Requested", $"{designsRequested}")}");
                     Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Completed", $"{designsCompleted}")}");
                     Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Batch_Time", batchTime.Elapsed.ToString(timeFormat))}");
                     Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Time", totalTime.Elapsed.ToString(timeFormat))}");
-
-                    foreach (var error in __instance.errors)
-                    {
-                        var split = error.Split(", ");
-
-                        string player = split[0].Substring(8);
-                        string type = split[1].Substring(6);
-                        string yearStr = split[3].Substring(6);
-
-                        if (!int.TryParse(yearStr, out int year))
-                        {
-                            Melon<TweaksAndFixes>.Logger.Error($"    Failed to parse `year` for failed ship gen: {error}");
-                            continue;
-                        }
-
-                        string triesStr = split[4].Substring(7);
-
-                        if (!int.TryParse(triesStr, out int tries))
-                        {
-                            Melon<TweaksAndFixes>.Logger.Error($"    Failed to parse `tries` for failed ship gen: {error}");
-                            continue;
-                        }
-
-                        string timeStr = split[5].Substring(6, split[5].Length - 8);
-
-                        if (!int.TryParse(timeStr, out int time))
-                        {
-                            Melon<TweaksAndFixes>.Logger.Error($"    Failed to parse `time` for failed ship gen: {error}");
-                            continue;
-                        }
-
-                        float timeSec = (float)time / 1000f;
-
-                        Melon<TweaksAndFixes>.Logger.Msg($"    Failure: {player,-15} | {type} | {year} | {tries,-2} | {timeSec}s");
-
-                        designsAttempted += tries;
-
-                        AddEntry(failed, player, type, year, 1, tries, timeSec);
-                    }
-
-                    __instance.errors.Clear();
-
-                    foreach (var info in __instance.info)
-                    {
-                        var split = info.Split(", ");
-
-                        string player = split[0].Substring(8);
-                        string type = split[1].Substring(6);
-                        string yearStr = split[3].Substring(6);
-
-                        if (!int.TryParse(yearStr, out int year))
-                        {
-                            Melon<TweaksAndFixes>.Logger.Error($"    Failed to parse `year` for created ship gen: {info}");
-                            continue;
-                        }
-
-                        string triesStr = split[4].Substring(7);
-
-                        if (!int.TryParse(triesStr, out int tries))
-                        {
-                            Melon<TweaksAndFixes>.Logger.Error($"    Failed to parse `tries` for created ship gen: {info}");
-                            continue;
-                        }
-
-                        string timeStr = split[5].Substring(6, split[5].Length - 8);
-
-                        if (!int.TryParse(timeStr, out int time))
-                        {
-                            Melon<TweaksAndFixes>.Logger.Error($"    Failed to parse `time` for created ship gen: {info}");
-                            continue;
-                        }
-
-                        float timeSec = (float)time / 1000f;
-
-                        Melon<TweaksAndFixes>.Logger.Msg($"    Success: {player,-15} | {type} | {year} | {tries,-2} | {timeSec}s");
-
-                        designsAttempted += tries;
-
-                        AddEntry(succeeded, player, type, year, 1, tries, timeSec);
-                    }
-
-                    __instance.info.Clear();
 
                     if (retryEntry != null)
                     {
@@ -268,7 +327,10 @@ namespace TweaksAndFixes.Harmony
                             // If no more counts remain, remove the fail entry.
                             if (retryEntry.count == 0)
                             {
-                                failed.Remove(retryEntry);
+                                string retryKey = EntryKey(retryEntry);
+
+                                failed.Remove(retryKey);
+                                failedOrder.Remove(retryKey);
                             }
 
                             // If it still has counts left, reset the failed entry try count and time to 0 for next batch
@@ -280,15 +342,16 @@ namespace TweaksAndFixes.Harmony
                         }
                     }
 
-                    if (failed.Count > 0 && !stopOnBatchEnd && !isStopping)
+                    if (failed.Count > 0 && !stopOnBatchEnd)
                     {
                         Melon<TweaksAndFixes>.Logger.Msg($"");
 
                         // Fetch next batch & relocate selected failiure to end of list
-                        retryEntry = failed.First();
-                        failed.Remove(retryEntry);
-                        failed.Add(retryEntry);
-                        
+                        string failedKey = failedOrder.First();
+                        retryEntry = failed[failedKey];
+                        failedOrder.Remove(failedKey);
+                        failedOrder.Add(failedKey);
+
                         // Configuire the BSG variables
                         List<int> yearList = new();
                         yearList.Add(retryEntry.year);
@@ -302,10 +365,9 @@ namespace TweaksAndFixes.Harmony
                         batchTime.Restart();
                         __instance.startButton.onClick.Invoke();
                     }
+
                     else
                     {
-                        isStopping = false;
-
                         __instance.progress.text = 
                             $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Finished")}\n" +
                             $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Requested", $"{designsRequested}")}\n" +
@@ -332,9 +394,9 @@ namespace TweaksAndFixes.Harmony
 
                             foreach (var failure in failed)
                             {
-                                failedMap.ValueOrNew(failure.player).ValueOrNew(failure.type).Add(failure.year, failure);
+                                failedMap.ValueOrNew(failure.Value.player).ValueOrNew(failure.Value.type).Add(failure.Value.year, failure.Value);
                             }
-
+ 
                             foreach (var player in failedMap)
                             {
                                 Melon<TweaksAndFixes>.Logger.Msg($"    {player.Key}:");
@@ -361,12 +423,12 @@ namespace TweaksAndFixes.Harmony
                             Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Succeeded")}:");
 
                             Dictionary<string, Dictionary<string, Dictionary<int, ShipGenEntry>>> succeededMap = new();
-
+                            
                             foreach (var success in succeeded)
                             {
-                                succeededMap.ValueOrNew(success.player).ValueOrNew(success.type).Add(success.year, success);
+                                succeededMap.ValueOrNew(success.Value.player).ValueOrNew(success.Value.type).Add(success.Value.year, success.Value);
                             }
-
+                            
                             foreach (var player in succeededMap)
                             {
                                 Melon<TweaksAndFixes>.Logger.Msg($"    {player.Key}:");
@@ -391,17 +453,92 @@ namespace TweaksAndFixes.Harmony
                 }
             }
 
-            if (__instance.progress.text != lastDisplayText)
+            // ===== Update Log ===== //
+
+            if (updateLog)
             {
-                foreach (var info in __instance.info)
+                updateLog = false;
+
+                // Overal statistics
+                string progressLog =
+                    $"requested,{designsRequested}\n" +
+                    $"completed,{designsCompleted}\n" +
+                    $"failures,{designsFailed}\n" +
+                    $"attempts,{designsAttempted}\n" +
+                    $"batch_count,{batchCount}\n" +
+                    $"total_time,{totalTime.Elapsed.TotalSeconds:N0}\n" +
+                    $"batch_time,{totalTime.Elapsed.TotalSeconds:N0}\n" +
+                    $"# Nation_Year,type:completed/failed/tries/time\n";
+
+                // Append all year/nation/type info
+                foreach (var n in nations)
                 {
-                    if (!checkedStrings.Contains(info))
+                    foreach (var y in years)
                     {
-                        checkedStrings.Add(info);
-                        designsCompleted++;
+                        progressLog += $"{n}_{y},";
+                        
+                        foreach (var t in types)
+                        {
+                            string key = EntryKey(n, t, y);
+
+                            ShipGenEntry failure = null;
+
+                            ShipGenEntry success = null;
+
+                            if (!succeeded.ContainsKey(key) && !failed.ContainsKey(key))
+                            {
+                                progressLog += $"{t}:0/0/0/0;";
+
+                                continue;
+                            }
+
+                            if (succeeded.ContainsKey(key))
+                            {
+                                success = succeeded[key];
+
+                                progressLog += $"{t}:{success.count}/0/{success.tries}/{success.time:N0};";
+
+                                continue;
+                            }
+
+                            if (failed.ContainsKey(key))
+                            {
+                                failure = failed[key];
+
+                                progressLog += $"{t}:0/{failure.count}/{failure.tries}/{failure.time:N0};";
+
+                                continue;
+                            }
+
+                            success = succeeded[key];
+
+                            failure = failed[key];
+
+                            progressLog += $"{t}:{success.count}/{failure.count}/{success.tries + failure.tries}/{success.time + failure.time:N0};";
+
+                        }
+
+                        // Trim ending semicolon
+                        progressLog = progressLog[..^1];
+
+                        progressLog += $"\n";
                     }
                 }
 
+                // Make folder and file
+                if (!Directory.Exists(Path.Join(Config._BasePath, "BatchShipGeneratorLogs")))
+                {
+                    Directory.CreateDirectory(Path.Join(Config._BasePath, "BatchShipGeneratorLogs"));
+                }
+
+                File.WriteAllText(Path.Join(Config._BasePath, "BatchShipGeneratorLogs", "progressLog.csv"), progressLog);
+            }
+
+            // ===== Update UI ===== //
+
+            if (__instance.progress.text != lastDisplayText)
+            {
+                // Overal info
                 string extraText =
                     $"\n\n{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Batch", $"{batchCount}")}\n" +
                     $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Requested", $"{designsRequested}")}\n" +
@@ -409,6 +546,7 @@ namespace TweaksAndFixes.Harmony
                     $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Tries", $"{designsAttempted}")}\n" +
                     $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Time", totalTime.Elapsed.ToString(timeFormat))}\n\n";
 
+                // User controls
                 if (!stopOnBatchEnd)
                 {
                     extraText += $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Stop_At_Batch_End")}\n";
@@ -418,12 +556,12 @@ namespace TweaksAndFixes.Harmony
                     extraText += $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Stoping_At_Batch_End")}\n";
                 }
 
-                // TODO: Implement sooner rather than later
-                // extraText += $"Press [Shift + ESC] to stop the generator immediately.\n";
+                extraText += $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Stop_Imediate")}\n";
 
                 // TODO: Implement this at some point :P
                 // extraText += $"Press [Tab] to toggle overlay visibility.\n";
 
+                // Trim useless text
                 var lastNewlineIndex = __instance.progress.text.LastIndexOf("\n");
 
                 if (lastNewlineIndex == -1) lastNewlineIndex = __instance.progress.text.Length;
@@ -432,8 +570,6 @@ namespace TweaksAndFixes.Harmony
 
                 lastDisplayText = __instance.progress.text;
             }
-
-            return !stopImmediate;
         }
 
         public static void ConfigureBSG(BatchShipGenerator bsg, string nation, string type, List<int> years, int count)
