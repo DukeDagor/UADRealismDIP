@@ -1187,7 +1187,7 @@ namespace TweaksAndFixes
                         visual.transform.SetParent(obj);
                         visual.transform.localPosition = Vector3.zero;
                         visual.transform.position += new Vector3(0, 0.1f, 0);
-                        visual.transform.localScale = Vector3.one * 0.1f;
+                        visual.transform.localScale = Vector3.one;
 
                         Melon<TweaksAndFixes>.Logger.Msg($"PATH: {obj.name}");
 
