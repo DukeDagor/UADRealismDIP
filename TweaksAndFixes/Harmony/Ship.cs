@@ -214,7 +214,171 @@ namespace TweaksAndFixes
 
 
 
+        // ########## Ship Scuttling ########## //
 
+        // CheckForSurrender
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(Ship.CheckForSurrender))]
+        internal static bool Prefix_CheckForSurrender(Ship __instance, bool force)
+        {
+            float sinkThreashold = Config.Param("crew_percents_surrender_threshold", 0.3f);
+
+            if (sinkThreashold <= __instance.CrewPercents && !force)
+            {
+                return true;
+            }
+
+            if (__instance.shipType.param.Contains("surrenders"))
+            {
+                Patch_Ui.replaceReportImportant = ModUtils.LocalizeF("$TAF_Ui_ReportShipSurrendered", __instance.Name());
+                return true;
+            }
+
+            Patch_Ui.replaceReportImportant = ModUtils.LocalizeF("$TAF_Ui_ReportShipScuttled", __instance.Name());
+            __instance.Sink("flooding");
+
+            MelonCoroutines.Start(ExplodeCharges(
+                __instance,
+                BattleManager.Instance.CurrentBattle.Timer.leftTime,
+                (float)System.Random.Shared.NextDouble() * 60 + 30
+            ));
+
+            // Effect.WaterSplash(10, __instance.gameObject.transform.position, new Quaternion());
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Create Torp:");
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Done:");
+
+            return false;
+        }
+
+        private static bool IsBattleEnd(Ship ship)
+        {
+            return ship == null;
+        }
+
+        internal static System.Collections.IEnumerator ExplodeCharges(Ship ship, float startTime, float durration)
+        {
+            bool reportedWillScuttle = false;
+
+            while (!IsBattleEnd(ship) && BattleManager.Instance.CurrentBattle.Timer.leftTime > startTime - durration)
+            {
+                if (!reportedWillScuttle && BattleManager.Instance.CurrentBattle.Timer.leftTime < startTime - durration + 5)
+                {
+                    G.ui.ReportImportant(ModUtils.LocalizeF("$TAF_Ui_ReportShipScuttling", ship.Name()), ship);
+                    reportedWillScuttle = true;
+                }
+
+                yield return new WaitForSeconds(1);
+            }
+
+            if (IsBattleEnd(ship)) goto EXIT;
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Beginning scuttle effect for ship {ship.Name(false, false)}...");
+
+            var mockPart = new Part();
+            mockPart.data = G.GameData.parts["torpedo_x0"];
+            mockPart.ship = ship;
+            mockPart._ship_k__BackingField = ship;
+
+            var sectionsGo = ship.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChild("Sections");
+            float foreZ = 0;
+            float rearZ = 0;
+
+            foreach (var section in sectionsGo.GetChildren())
+            {
+                if (!section.active) continue;
+
+                foreach (var mesh in section.transform.GetComponentsInChildren<MeshRenderer>())
+                {
+                    if (!mesh.gameObject.name.ToLower().Contains("hull")) continue;
+
+                    float lengthZ = mesh.bounds.size.z;
+
+                    if (section.transform.localPosition.z + lengthZ > foreZ)
+                    {
+                        foreZ = section.transform.localPosition.z + lengthZ;
+                    }
+
+                    if (section.transform.localPosition.z - lengthZ < rearZ)
+                    {
+                        rearZ = section.transform.localPosition.z - lengthZ;
+                    }
+                }
+            }
+
+            float lastCharge = 0;
+
+            for (float i = 0.25f; i < 1f; i += 0.25f)
+            {
+                lastCharge = BattleManager.Instance.CurrentBattle.Timer.leftTime;
+
+                var leftCharge = Torpedo.Create(
+                    mockPart, ship.gameObject.transform.position,
+                    Vector3.right, 9999999, 0
+                );
+                leftCharge.gameObject.SetParent(sectionsGo);
+
+                leftCharge.transform.localPosition = new Vector3(-ship.collision.radius, 0, Mathf.Lerp(foreZ, rearZ, i));// i * ship.collision.height / 4);
+                leftCharge.torpedoEffectScale = ship.collision.height / 100f + (float)(System.Random.Shared.NextDouble() - 0.5);
+                leftCharge.Explode();
+
+                leftCharge.transform.localPosition = new Vector3(ship.collision.radius, 0, leftCharge.transform.localPosition.z);// i * ship.collision.height / 4);
+                leftCharge.torpedoEffectScale = ship.collision.height / 100f + (float)(System.Random.Shared.NextDouble() - 0.5);
+                leftCharge.Explode();
+
+                leftCharge.RemoveSelf();
+
+                while (!IsBattleEnd(ship) && BattleManager.Instance.CurrentBattle.Timer.leftTime > lastCharge - 2)
+                {
+                    yield return new WaitForSeconds(0.25f);
+                }
+
+                if (IsBattleEnd(ship)) goto EXIT;
+            }
+
+            List<Part> guns = new();
+
+            foreach (var part in ship.mainGuns)
+            {
+                guns.Add(part);
+            }
+
+            foreach (var part in ship.parts)
+            {
+                if (!part.data.isGun || ship.mainGuns.Contains(part)) continue;
+
+                guns.Add(part);
+            }
+
+            float lastFlash = 0;
+            float flashDurration = 0;
+
+            foreach (var gun in guns)
+            {
+                lastFlash = BattleManager.Instance.CurrentBattle.Timer.leftTime;
+                flashDurration = (float)System.Random.Shared.NextDouble() * 2.5f + 2.5f;
+
+                ship.StartFire(ship.GetSectionFromPositions(gun.transform.position), gun.transform.position);
+
+                yield return new WaitForEndOfFrame();
+                yield return new WaitForEndOfFrame();
+
+                ship.AddSound("flash_fire", Vector3.zero, null, false);
+                Effect.FlashFire(gun, 0);
+
+                while (!IsBattleEnd(ship) && BattleManager.Instance.CurrentBattle.Timer.leftTime > lastFlash - flashDurration)
+                {
+                    yield return new WaitForSeconds(0.25f);
+                }
+
+                if (IsBattleEnd(ship)) goto EXIT;
+            }
+
+        EXIT:
+            yield break;
+        }
 
         // ########## Fixes by Crux10086 ########## //
 
@@ -228,7 +392,6 @@ namespace TweaksAndFixes
         {
             if (Patch_Shell.updating == null)
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"Error: Updating shell is null!");
                 return;
             }
 

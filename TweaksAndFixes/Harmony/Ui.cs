@@ -171,6 +171,24 @@ namespace TweaksAndFixes
 
 
 
+        // ########## Fix Missing Localization ########## //
+
+        public static string replaceReportImportant = string.Empty;
+        
+        [HarmonyPatch(nameof(Ui.ReportImportant))]
+        [HarmonyPrefix]
+        public static void Prefix_ReportImportant(ref string text, Ship ship)
+        {
+            if (replaceReportImportant.Length != 0)
+            {
+                text = replaceReportImportant;
+
+                replaceReportImportant = string.Empty;
+            }
+        }
+
+
+
 
 
         // ########## CUSTOM DOCKYARD LOGIC ########## //
