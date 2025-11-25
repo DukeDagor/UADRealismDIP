@@ -18,7 +18,7 @@ Damage Instability,,,,,,,,,,Instability from being hit.
 Gun Recoil,,,,,,,,,,Instability from our own guns firing.
 Engine Vibrations,,,,,,,,,,Vibrations from the ship’s engines and machinery.
 Guns of Different Barrels,,,,,,,,,,Number of gun calibers on our ship increases uncertainty when counting splashes.
-Not Centerlined Guns ,,,,,,,,,,"Wing guns complicate the firing solution, as each side has different positions and rotations compared to each other and the center line"
+Not Centerlined Guns,,,,,,,,,,"Wing guns complicate the firing solution, as each side has different positions and rotations compared to each other and the center line"
 Various Funnel Emissions,,,,,,,,,,"Smoke from funnels, varies with speed/damage."
 Thick Smoke from own Funnel,,,,,,,,,,Might be deprecated.
 Own Guns' Splashes,,,,,,,,,,Splashes from our own guns degrade accuracy.
@@ -36,14 +36,6 @@ Target's Maneuver,,,,,,,,,,Acceleration/Deceleration from the enemy turning or c
 Target's Slow Speed,,,,,,,,,,Accuracy buff for slow moving targets.
 Target's Fast Speed,,,,,,,,,,Accuracy buff for fast moving targets.
 Target behind Smoke,,,,,,,,,,"When firing at a target hidden by a smoke cloud, visual targeting is impaired."
-#,,,,,,,,,,
-# Gun-Mark modifiers,,,,,,,,,,
-Guns Grade,1st,0,Guns,Mk 1,,,,,,The multiplier is mostly random and based on the lowest mark gun. It's recommended that these be disabled.
-Guns Grade,2nd,0,Guns,Mk 2,,,,,,
-Guns Grade,3rd,0,Guns,Mk 3,,,,,,
-Guns Grade,4th,0,Guns,Mk 4,,,,,,
-Guns Grade,5th,0,Guns,Mk 5,,,,,,
-Guns Grade,6th,0,Guns,Mk 6,,,,,,
 #,,,,,,,,,,
 # Tech & Part (Constant) Modifiers,,,,,,,,,,
 Technologies,,,,,,,,,,Various tech bonuses to accuracy.

@@ -40,13 +40,6 @@ namespace TweaksAndFixes
 
         static Patch_Ship_HitChanceCalc()
         {
-            IgnoreList["Gun"] = new HashSet<string> { "All" };
-            IgnoreList["Crew Training"] = new HashSet<string> { "All" };
-            IgnoreList["Time"] = new HashSet<string> { "All" };
-            IgnoreList["Weather"] = new HashSet<string> { "All" };
-            IgnoreList["Wind"] = new HashSet<string> { "All" };
-            IgnoreList["Sea Waves"] = new HashSet<string> { "All" };
-            IgnoreList["Sun Glare"] = new HashSet<string> { "All" };
         }
 
         internal static void Prefix(Ship.HitChanceCalc __instance, ref float mult, ref string reason, ref string value)
