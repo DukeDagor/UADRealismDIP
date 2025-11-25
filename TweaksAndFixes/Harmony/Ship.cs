@@ -206,6 +206,52 @@ namespace TweaksAndFixes
 
 
 
+        // PartMats
+
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Ship.PartMats))]
+        internal static void Prefix_PartMats(Ship __instance, ref Il2CppSystem.Collections.Generic.List<MatInfo> __result)
+        {
+            // Melon<TweaksAndFixes>.Logger.Msg($"Costs:");
+
+            foreach (var mat in __result)
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg($"  {mat.name} : {mat.cost}");
+
+                if (__instance.shipType.paramx.ContainsKey(mat.name))
+                {
+                    foreach (var mod in __instance.shipType.paramx[mat.name])
+                    {
+                        var split = mod.Split(':');
+
+                        if (split.Length != 2)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Error($"Invalid cost modifier param for `{mat.name}`: `{mod}`. Invalid format. Should be name(cost:#;weight:#) or name(cost:#) or name(weight:#).");
+                        }
+
+                        string type = split[0];
+                        string numRaw = split[1];
+
+                        if (!float.TryParse(numRaw, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out float mult))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Error($"Invalid cost modifier param for `{mat.name}`: `{numRaw}`. Invalid number.");
+                        }
+
+                        if (type == "cost")
+                        {
+                            // Melon<TweaksAndFixes>.Logger.Msg($"    {mat.cost} -> {mat.cost * mult}");
+                            mat.cost *= mult;
+                        }
+                        else if (type == "weight")
+                        {
+                            // Melon<TweaksAndFixes>.Logger.Msg($"    {mat.weight} -> {mat.weight * mult}");
+                            mat.weight *= mult;
+                        }
+                    }
+                }
+            }
+        }
+
 
         // ########## Ship Scuttling ########## //
 
