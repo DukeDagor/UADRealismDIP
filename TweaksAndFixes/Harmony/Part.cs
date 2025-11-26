@@ -195,6 +195,62 @@ namespace TweaksAndFixes
 
 
 
+        [HarmonyPatch(nameof(Part.GunBarrelLength))]
+        [HarmonyPrefix]
+        internal static bool Prefix_GunBarrelLength(PartData data, Ship ship, bool update, ref string __result)
+        {
+            if (Config.Param("taf_guns_direct_assign_caliber_length_modifier", 0) == 0)
+            {
+                return true;
+            }
+
+            Ship.TurretCaliber cal = null;
+
+            if (ship == null)
+            {
+                __result = "/??";
+                return false;
+            }
+
+            foreach (var caliber in ship.shipGunCaliber)
+            {
+                if (caliber == null) continue;
+
+                if (caliber.turretPartData == data)
+                {
+                    cal = caliber;
+                    break;
+                }
+            }
+
+            if (cal == null)
+            {
+                return true;
+            }
+
+            float caliberLength = -1;
+
+            foreach (var part in ship.parts)
+            {
+                if (part == null) continue;
+
+                if (part.data != data) continue;
+
+                if (part.barrelLength == -1)
+                {
+                    part.UpdateCollidersSize(ship);
+                }
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"{part.key.modelKey.modelName} : {part.key.modelKey.caliberLengthModifier} * {cal.length} * {cal.diameter} = {ModUtils.toInt(part.key.modelKey.caliberLengthModifier * cal.length)}");
+                part.caliberLength = ModUtils.toInt((float)Math.Round(part.key.modelKey.caliberLengthModifier * (cal.length / 100.0f + 1)));
+                caliberLength = part.caliberLength;
+            }
+
+            __result = $"/{caliberLength}";
+
+            return false;
+        }
+
 
 
         // ########## Fixes by Crux10086 ########## //
