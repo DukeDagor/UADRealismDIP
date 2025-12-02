@@ -12,7 +12,6 @@ namespace TweaksAndFixes.Data
         {
             { "Gun",                        "$Ui_Battle_Gun"},
             { "Crew Training",              "$Ui_Battle_CrewTraining"},
-            { "Guns Grade",                 "$Accuracies_Guns_Grade"},
             { "Time",                       "$Accuracies_Time"},
             { "Weather",                    "$Accuracies_Weather"},
             { "Wind",                       "$Accuracies_Wind"},
@@ -24,6 +23,12 @@ namespace TweaksAndFixes.Data
 
         private static readonly Dictionary<string, string> _Localizations = new() {
             { "",                           ""},
+            { "Guns Grade",                 "$Accuracies_Guns_Grade"},
+            { "1st",                        "$Accuracies_1st"},
+            { "2nd",                        "$Accuracies_2nd"},
+            { "3rd",                        "$Accuracies_3rd"},
+            { "4th",                        "$Accuracies_4th"},
+            { "5th",                        "$Accuracies_5th"},
             { "Base",                       "$Ui_Battle_Base"},
             { "range Xkm",                  "$Ui_Battle_range0km"},
             { "Out of Range",               "$Ui_Battle_OutOfRange"},
@@ -129,6 +134,13 @@ namespace TweaksAndFixes.Data
             langKeys[""] = "";
             langKeys["range Xkm"] = ModUtils.LocalizeF(_Localizations["range Xkm"]);
 
+            langKeys[ModUtils.LocalizeF("$Accuracies_Guns_Grade")]  = "Guns Grade";
+            langKeys[ModUtils.LocalizeF("$Accuracies_1st")]         = "1st";
+            langKeys[ModUtils.LocalizeF("$Accuracies_2nd")]         = "2nd";
+            langKeys[ModUtils.LocalizeF("$Accuracies_3rd")]         = "3rd";
+            langKeys[ModUtils.LocalizeF("$Accuracies_4th")]         = "4th";
+            langKeys[ModUtils.LocalizeF("$Accuracies_5th")]         = "5th";
+
             _LocalizedIgnoreKeys[LocalizeManager.CurrentLanguage] = new();
             var ignoreKeys = _LocalizedIgnoreKeys[LocalizeManager.CurrentLanguage];
 
@@ -223,6 +235,12 @@ namespace TweaksAndFixes.Data
 
             string locName = localizedKeys[name];
             bool isBase = locName == "Base";
+
+            if (locName == "Guns Grade")
+            {
+                accuracy = 1;
+                return true;
+            }
 
             if (!localizedKeys.ContainsKey(subname) && !isBase)
             {
