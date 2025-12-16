@@ -212,11 +212,24 @@ namespace TweaksAndFixes
                 return false;
             }
 
+            string bName = data.name;
+
+            if (bName.Contains("_side"))
+            {
+                bName = bName.Replace("_side", "");
+            }
+            else
+            {
+                bName += "_side";
+            }
+
+            PartData? sideData = G.GameData.parts.ContainsKey(bName) ? G.GameData.parts[bName] : null;
+
             foreach (var caliber in ship.shipGunCaliber)
             {
                 if (caliber == null) continue;
 
-                if (caliber.turretPartData == data)
+                if (caliber.turretPartData == data || caliber.turretPartData == sideData)
                 {
                     cal = caliber;
                     break;
@@ -234,7 +247,7 @@ namespace TweaksAndFixes
             {
                 if (part == null) continue;
 
-                if (part.data != data) continue;
+                if (part.data != data && part.data != sideData) continue;
 
                 if (part.barrelLength == -1)
                 {
