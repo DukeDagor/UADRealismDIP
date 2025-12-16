@@ -7,7 +7,7 @@ A collection of tweaks, fixes, and moddability support features for Ultimate Adm
 ## Focus/Bugs/Feedback/Suggesstions/Help
 My development will be focused around Brother Munro's [Dreadnought Improvement Project](https://www.nexusmods.com/ultimateadmiraldreadnoughts/mods/7?tab=description), though TAF will still be usable as a standalone mod. If you encounter any bugs while using TAF, please report them in as much detail as possible.
 
-If you have feedback/suggestions, join the [Brother Munro Community Discord Server](https://discord.gg/ZSAEVZ9Q) and post in #taf-feature-suggestions. If you encounter installation issues, feel free to ask in the #tweaks-and-fixes channel.
+If you have feedback/suggestions, join the [Brother Munro Community Discord Server](https://discord.gg/kjYeC5dyya) and post in #taf-feature-suggestions. If you encounter installation issues, feel free to ask in the #tweaks-and-fixes channel.
 
 ## [We Have a Wiki](https://github.com/DukeDagor/UADRealismDIP/wiki)!
 Follow the link or go to the Wiki tab of this repository for all the information that was originally in the README and more! Though it's a heavy work in progress, the Wiki will be extended to include info on all aspects of UAD modding. Contact me in the discord server if you wish to contribute!
