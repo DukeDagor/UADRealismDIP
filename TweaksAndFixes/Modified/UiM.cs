@@ -1902,7 +1902,7 @@ namespace TweaksAndFixes
 
             foreach (var rel in CD.Relations.Values)
             {
-                if (!rel.isWar)
+                if (!rel.isWar || rel.PeaceTreatyChance <= 0.0)
                     continue;
 
                 Player a, b;
@@ -1925,15 +1925,6 @@ namespace TweaksAndFixes
                     hasHuman = rel.a == PlayerController.Instance;
                 }
 
-                // Early check: If the war has gone on for too long with no VP, just call for peace
-                int turnsSinceStart = CampaignController.Instance.CurrentDate.MonthsPassedSince(rel.recentWarStartDate);
-
-                if (vpA + vpB < lowVPThreshold && turnsSinceStart > monthsForLowVPWarEnd)
-                {
-                    _this.AskForPeace(hasHuman, rel, PlayerController.Instance, LocalizeManager.Localize("$TAF_Ui_War_WhitePeace"), vpA >= vpB);
-                    continue;
-                }
-
                 int turnsSinceCheck = CampaignController.Instance.CurrentDate.MonthsPassedSince(rel.LastTreatyCheckDate);
                 var checkThresh = rel.TreatyCheckMonthTreashold;
                 if (checkThresh == 0)
@@ -1943,6 +1934,16 @@ namespace TweaksAndFixes
                 }
                 if (turnsSinceCheck < checkThresh)
                     continue;
+                rel.LastTreatyCheckDate = CampaignController.Instance.CurrentDate;
+
+                // Early check: If the war has gone on for too long with no VP, just call for peace
+                int turnsSinceStart = CampaignController.Instance.CurrentDate.MonthsPassedSince(rel.recentWarStartDate);
+
+                if (vpA + vpB < lowVPThreshold && turnsSinceStart > monthsForLowVPWarEnd)
+                {
+                    _this.AskForPeace(hasHuman, rel, PlayerController.Instance, LocalizeManager.Localize("$TAF_Ui_War_WhitePeace"), vpA >= vpB);
+                    continue;
+                }
 
                 Player loserPlayer = null;
                 if (Mathf.Abs(vpB - vpA) >= peace_min_vp_difference && Mathf.Max((vpB + 1f) / (vpA + 1f), (vpB + 1f) / (vpA + 1f)) >= peace_enemy_vp_ratio && vpA + vpB >= peace_vp_sum_prolonged_war)
