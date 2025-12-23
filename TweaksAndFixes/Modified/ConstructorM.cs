@@ -5,7 +5,10 @@ using UnityEngine;
 using MelonLoader;
 using UnityEngine.UI;
 using System.Text.Json;
-using static Il2CppSystem.Linq.Expressions.Interpreter.CastInstruction.CastInstructionNoT;
+using Il2CppTMPro;
+using static TweaksAndFixes.Modified.ConstructorM;
+using Harmony;
+using System.Threading;
 
 namespace TweaksAndFixes.Modified
 {
@@ -54,24 +57,39 @@ namespace TweaksAndFixes.Modified
 
         public class Store
         {
-            public List<Visual.Store> Visuals { get; set; }
+            public List<PartModelVisual.Store> PartModelVisuals { get; set; }
+            public List<CylinderVisual.Store> CylinderVisuals { get; set; }
             public string saveFile { get; set; }
             public Vector2Store gridSize { get; set; }
 
             public Store()
             {
-                Visuals = new();
+                PartModelVisuals = new();
+                CylinderVisuals = new();
                 saveFile = string.Empty;
                 gridSize = new();
             }
 
             public Store(bool isCreating)
             {
-                Visuals = new();
+                PartModelVisuals = new();
+                CylinderVisuals = new();
                 
                 foreach (var visual in ConstructorM.Visuals)
                 {
-                    Visuals.Add(new Visual.Store(visual));
+                    switch (visual.type)
+                    {
+                        case 1:
+                            PartModelVisuals.Add(new PartModelVisual.Store((PartModelVisual)visual));
+                            break;
+
+                        case 2:
+                            CylinderVisuals.Add(new CylinderVisual.Store((CylinderVisual)visual));
+                            break;
+
+                        default:
+                            break;
+                    }
                 }
 
                 saveFile = ConstructorM.saveFile;
@@ -81,9 +99,43 @@ namespace TweaksAndFixes.Modified
 
         public class Visual
         {
+            public enum Type
+            {
+                NONE,
+                PART_MODEL,
+                CYLINDER
+            }
+
+            public int id;
+            public GameObject root;
+            public GameObject ui;
+            public bool isDestroyed = false;
+            public bool makeCopy = false;
+            public int type = 0;
+
+            public Visual()
+            {
+                id = -1;
+                root = null;
+                ui = null;
+            }
+
+            public virtual void Delete() { }
+
+            public virtual void AddToScene() { }
+
+            public virtual void Update(List<Visual> Visuals) { }
+        }
+
+        public class PartModelVisual : Visual
+        {
+            public static List<string> VALID_AXES = new() { "model", "mark", "length", "diameter" };
+            public static string VALID_AXIS_STRING = "model, mark, length, diameter";
+
             public class Store
             {
                 public int id { get; set; }
+                public int type { get; set; }
                 public Vector3Store position { get; set; }
                 public Vector2Store spacing { get; set; }
                 public Vector3Store rotation { get; set; }
@@ -98,6 +150,7 @@ namespace TweaksAndFixes.Modified
                 public Store()
                 {
                     id = new();
+                    type = new();
                     position = new();
                     spacing = new();
                     rotation = new();
@@ -110,9 +163,10 @@ namespace TweaksAndFixes.Modified
                     yAxis = string.Empty;
                 }
 
-                public Store(Visual from)
+                public Store(PartModelVisual from)
                 {
                     id = from.id;
+                    type = from.type;
                     position = new(from.position);
                     spacing = new(from.spacing);
                     rotation = new(from.rotation);
@@ -128,19 +182,10 @@ namespace TweaksAndFixes.Modified
                 }
             }
 
-            public static List<string> VALID_AXES = new() { "model", "mark", "length", "diameter" };
-            public static string VALID_AXIS_STRING = "model, mark, length, diameter";
-
-            public int id;
-            public GameObject root;
-            public GameObject ui;
-            public bool isDestroyed = false;
-            public bool makeCopy = false;
-            public readonly List<GameObject> visuals = new();
             public List<string> models = new();
-            public Vector3 position;
             public Vector2 spacing;
             public Vector3 rotation;
+            public Vector3 position;
             public List<int> modelIndexes = new();
             public List<int> markIndexes = new();
             public List<float> diameters = new();
@@ -148,12 +193,14 @@ namespace TweaksAndFixes.Modified
             public string xAxis;
             public string yAxis;
 
-            public Visual(Store from)
+            public PartModelVisual(Store from)
             {
-                this.id = from.id;
+                id = from.id;
+                type = from.type;
                 position = from.position.from();
                 spacing = from.spacing.from();
                 rotation = from.rotation.from();
+                type = 1;
 
                 xAxis = from.xAxis;
                 yAxis = from.yAxis;
@@ -187,18 +234,21 @@ namespace TweaksAndFixes.Modified
                 root.transform.SetParent(ConstructorM.models);
                 root.transform.localPosition = position;
 
-                ui = GameObject.Instantiate(MDETemplate);
+                ui = GameObject.Instantiate(PartModelVisualTemplate);
                 MakeUI();
 
                 AddToScene();
             }
 
-            public Visual(int id)
+            public PartModelVisual(int id)
             {
                 this.id = id;
                 position = new();
                 spacing = new Vector2(25, 25);
                 rotation = new();
+                type = 1;
+
+                Melon<TweaksAndFixes>.Logger.Msg($"Checking: {id} : {type}");
 
                 modelIndexes.Add(-1);
 
@@ -219,19 +269,20 @@ namespace TweaksAndFixes.Modified
                 root.transform.SetParent(ConstructorM.models);
                 root.transform.localPosition = position;
 
-                ui = GameObject.Instantiate(MDETemplate);
+                ui = GameObject.Instantiate(PartModelVisualTemplate);
                 MakeUI();
                 // gun_12_x2,gun_12_x2_germany_bb_bc,gun_12_x2_britain_bb_bc,gun_12_x2_italy_bb_bc,gun_12_x2_japan_bb_bc,gun_12_x2_usa_bb_bc,gun_12_x2_france_bb_bc,gun_12_x2_russia_bb_bc,gun_12_x2_austria_bb_bc,gun_12_x2_spain_bb_bc,gun_12_x2_china_bb_bc,gun_12_x2_greece_bb_bc,gun_12_x2_scandinavia_bb_bc,gun_12_x2_ottoman_bb_bc,gun_12_x2_brazil_bb_bc
 
                 AddToScene();
             }
 
-            public Visual(int id, Visual copy)
+            public PartModelVisual(int id, PartModelVisual copy)
             {
                 this.id = id;
                 position = copy.position;
                 spacing = copy.spacing;
                 rotation = copy.rotation;
+                type = 1;
 
                 xAxis = copy.xAxis;
                 yAxis = copy.yAxis;
@@ -265,7 +316,7 @@ namespace TweaksAndFixes.Modified
                 root.transform.SetParent(ConstructorM.models);
                 root.transform.localPosition = position;
 
-                ui = GameObject.Instantiate(MDETemplate);
+                ui = GameObject.Instantiate(PartModelVisualTemplate);
                 MakeUI();
 
                 AddToScene();
@@ -273,7 +324,7 @@ namespace TweaksAndFixes.Modified
 
             private void MakeUI()
             {
-                ui.SetParent(MDEList, false);
+                ui.SetParent(VisualsList, false);
                 ui.SetActive(true);
 
                 var modelsInputField = new TAFUI.TAF_InputField(ui.GetChild("Model_List_Input"), 25);
@@ -284,7 +335,7 @@ namespace TweaksAndFixes.Modified
 
                     char separator = ',';
                     var split = value.Split(separator);
-                    
+
                     foreach (string key in split)
                     {
                         if (!G.GameData.partModels.ContainsKey(key))
@@ -612,7 +663,7 @@ namespace TweaksAndFixes.Modified
                     yAxisInputField.SetText(value);
                 }));
                 yAxisInputField.SetText(yAxis);
-                
+
                 var deleteButton = new TAFUI.TAF_Button(ui.GetChild("Model_Delete_Button"));
                 deleteButton.SetOnClick(new Action(() => {
                     Delete();
@@ -624,7 +675,7 @@ namespace TweaksAndFixes.Modified
                 }));
             }
 
-            public void Delete()
+            public override void Delete()
             {
                 foreach (var child in root.GetChildren())
                 {
@@ -636,14 +687,17 @@ namespace TweaksAndFixes.Modified
                 ui.TryDestroy();
 
                 isDestroyed = true;
+                dirtyChanged = true;
             }
 
-            public void AddToScene()
+            public override void AddToScene()
             {
                 foreach (var child in root.GetChildren())
                 {
-                    child.TryDestroy();
+                    child.TryDestroy(true);
                 }
+
+                dirtyChanged = true;
 
                 if (xAxis.Length == 0 || yAxis.Length == 0)
                 {
@@ -781,11 +835,468 @@ namespace TweaksAndFixes.Modified
                         Vector3 position = new(spacing.x * x, 0, spacing.y * y);
 
                         Melon<TweaksAndFixes>.Logger.Msg($"  Mark {mark} gun with diameter {diameter} and length {length} has model {model} (default == {!hasModel}) with scale {ModUtils.Lerp(scale, maxScale, diameter)}");
-                        
+
                         AddModelToScene(root, model, position, rotation, ModUtils.Lerp(scale, maxScale, diameter));
                     }
                 }
 
+                dirtyChanged = true;
+            }
+        }
+
+        public class CylinderVisual : Visual
+        {
+            public class Store
+            {
+                public int id { get; set; }
+                public int type { get; set; }
+                public float diameter { get; set; }
+                public string unit { get; set; }
+                public string binding { get; set; }
+
+                public Store()
+                {
+                    id = new();
+                    type = new();
+                    diameter = new();
+                    models = new();
+                    unit = string.Empty;
+                    binding = string.Empty;
+                }
+
+                public Store(CylinderVisual from)
+                {
+                    id = from.id;
+                    type = from.type;
+                    diameter = from.diameter;
+
+                    unit = from.unit;
+                    binding = from.binding;
+                }
+            }
+
+
+            public string binding = "turret";
+            public float diameter;
+            public string unit;
+            public Dictionary<GameObject, GameObject> VisualToCylider = new();
+
+            public static Dictionary<string, BarrelOffsetOverride> BarrelOffsetOverrides = new();
+
+            public class BarrelOffsetOverride : Serializer.IPostProcess
+            {
+
+                [Serializer.Field] public string name = string.Empty;
+                [Serializer.Field] public string barrel_1 = string.Empty;
+                [Serializer.Field] public string barrel_2 = string.Empty;
+                [Serializer.Field] public string barrel_3 = string.Empty;
+                [Serializer.Field] public string barrel_4 = string.Empty;
+                [Serializer.Field] public float barrel_length = 0;
+                [Serializer.Field] public float turret_height = 0;
+
+                public Vector3 barrelOffset1 = Vector3.zero;
+                public Vector3 barrelOffset2 = Vector3.zero;
+                public Vector3 barrelOffset3 = Vector3.zero;
+                public Vector3 barrelOffset4 = Vector3.zero;
+                public List<Vector3> barrelOffsets = new();
+
+                public void PostProcess()
+                {
+                    if (barrel_1.Length >= 7 && barrel_1.StartsWith('(') && barrel_1.EndsWith(')'))
+                    {
+                        var posData = barrel_1[1..^1].Replace(" ", "").Split(",");
+
+                        if (posData.Length == 3)
+                        {
+                            float x = 0;
+                            float y = 0;
+                            float z = 0;
+
+                            if (float.TryParse(posData[0], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out x) && float.TryParse(posData[1], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out y) && float.TryParse(posData[2], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out z))
+                            {
+                                barrelOffset1 = new Vector3(x, y, z);
+                                barrelOffsets.Add(barrelOffset1);
+                            }
+                            else
+                            {
+                                Melon<TweaksAndFixes>.Logger.Error($"BarrelOffsetOverrides: [{name}] Invalid position `{barrel_1}`");
+                            }
+                        }
+                        else
+                        {
+                            Melon<TweaksAndFixes>.Logger.Error($"BarrelOffsetOverrides: [{name}] Invalid position `{barrel_1}`");
+                        }
+                    }
+                    else if (barrel_1.Length > 0)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"BarrelOffsetOverrides: [{name}] Invalid position `{barrel_1}`");
+                    }
+
+                    if (barrel_2.Length >= 7 && barrel_2.StartsWith('(') && barrel_2.EndsWith(')'))
+                    {
+                        var posData = barrel_2[1..^1].Replace(" ", "").Split(",");
+
+                        if (posData.Length == 3)
+                        {
+                            float x = 0;
+                            float y = 0;
+                            float z = 0;
+
+                            if (float.TryParse(posData[0], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out x) && float.TryParse(posData[1], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out y) && float.TryParse(posData[2], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out z))
+                            {
+                                barrelOffset2 = new Vector3(x, y, z);
+                                barrelOffsets.Add(barrelOffset2);
+                            }
+                            else
+                            {
+                                Melon<TweaksAndFixes>.Logger.Error($"BarrelOffsetOverrides: [{name}] Invalid offset `{barrel_2}`");
+                            }
+                        }
+                        else
+                        {
+                            Melon<TweaksAndFixes>.Logger.Error($"BarrelOffsetOverrides: [{name}] Invalid offset `{barrel_2}`");
+                        }
+                    }
+                    else if (barrel_2.Length > 0)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"BarrelOffsetOverrides: [{name}] Invalid offset `{barrel_2}`");
+                    }
+
+                    if (barrel_3.Length >= 7 && barrel_3.StartsWith('(') && barrel_3.EndsWith(')'))
+                    {
+                        var posData = barrel_3[1..^1].Replace(" ", "").Split(",");
+
+                        if (posData.Length == 3)
+                        {
+                            float x = 0;
+                            float y = 0;
+                            float z = 0;
+
+                            if (float.TryParse(posData[0], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out x) && float.TryParse(posData[1], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out y) && float.TryParse(posData[2], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out z))
+                            {
+                                barrelOffset3 = new Vector3(x, y, z);
+                                barrelOffsets.Add(barrelOffset3);
+                            }
+                            else
+                            {
+                                Melon<TweaksAndFixes>.Logger.Error($"BarrelOffsetOverrides: [{name}] Invalid offset `{barrel_3}`");
+                            }
+                        }
+                        else
+                        {
+                            Melon<TweaksAndFixes>.Logger.Error($"BarrelOffsetOverrides: [{name}] Invalid offset `{barrel_3}`");
+                        }
+                    }
+                    else if (barrel_3.Length > 0)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"BarrelOffsetOverrides: [{name}] Invalid offset `{barrel_3}`");
+                    }
+
+                    if (barrel_4.Length >= 7 && barrel_4.StartsWith('(') && barrel_4.EndsWith(')'))
+                    {
+                        var posData = barrel_4[1..^1].Replace(" ", "").Split(",");
+
+                        if (posData.Length == 3)
+                        {
+                            float x = 0;
+                            float y = 0;
+                            float z = 0;
+
+                            if (float.TryParse(posData[0], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out x) && float.TryParse(posData[1], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out y) && float.TryParse(posData[2], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out z))
+                            {
+                                barrelOffset4 = new Vector3(x, y, z);
+                                barrelOffsets.Add(barrelOffset4);
+                            }
+                            else
+                            {
+                                Melon<TweaksAndFixes>.Logger.Error($"BarrelOffsetOverrides: [{name}] Invalid offset `{barrel_4}`");
+                            }
+                        }
+                        else
+                        {
+                            Melon<TweaksAndFixes>.Logger.Error($"BarrelOffsetOverrides: [{name}] Invalid offset `{barrel_4}`");
+                        }
+                    }
+                    else if (barrel_4.Length > 0)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"BarrelOffsetOverrides: [{name}] Invalid offset `{barrel_4}`");
+                    }
+
+                    BarrelOffsetOverrides.Add(name, this);
+                }
+            }
+
+            public static void LoadBarrelOffsetOverridesData()
+            {
+                List<BarrelOffsetOverride> list = new List<BarrelOffsetOverride>();
+                string? text = Serializer.CSV.GetTextFromFile(Path.Combine(Config._BasePath, "DebugSaves", "barrelOffsetOverrides.csv"));
+
+                if (text == null)
+                {
+                    Melon<TweaksAndFixes>.Logger.Error($"Failed to load `barrelOffsetOverrides.csv`.");
+                    return;
+                }
+
+                Serializer.CSV.Read<List<BarrelOffsetOverride>, BarrelOffsetOverride>(text, list, true, true);
+            }
+
+            public CylinderVisual(int id)
+            {
+                this.id = id;
+                diameter = 1f;
+                unit = "meter";
+                type = 2;
+
+                root = new("Cylinder_Visual");
+                root.transform.SetParent(ConstructorM.models);
+                root.transform.localPosition = Vector3.zero;
+
+                ui = GameObject.Instantiate(CylinderVisualTemplate);
+                MakeUI();
+
+                AddToScene();
+            }
+
+            public CylinderVisual(Store from)
+            {
+                id = from.id;
+                type = from.type;
+                diameter = from.diameter;
+
+                unit = from.unit;
+                binding = from.binding;
+
+                root = new("Cylinder_Visual");
+                root.transform.SetParent(ConstructorM.models);
+                root.transform.localPosition = Vector3.zero;
+
+                ui = GameObject.Instantiate(CylinderVisualTemplate);
+                MakeUI();
+
+                AddToScene();
+            }
+
+            public CylinderVisual(int id, CylinderVisual copy)
+            {
+                this.id = id;
+                type = copy.type;
+                diameter = copy.diameter;
+
+                unit = copy.unit;
+                binding = copy.binding;
+
+                root = new("Cylinder_Visual");
+                root.transform.SetParent(ConstructorM.models);
+                root.transform.localPosition = Vector3.zero;
+
+                ui = GameObject.Instantiate(CylinderVisualTemplate);
+                MakeUI();
+
+                AddToScene();
+            }
+
+            private void MakeUI()
+            {
+                ui.SetParent(VisualsList, false);
+                ui.SetActive(true);
+
+                var CVTTargetListInput = new TAFUI.TAF_InputField(ui.GetChild("Cylider_Target_Input"), 25);
+                CVTTargetListInput.SetOnSubmit(new System.Action<string>((string value) => {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Entered: `{value}`");
+
+                    binding = value;
+
+                    AddToScene();
+
+                    CVTTargetListInput.SetText(value);
+                }));
+                CVTTargetListInput.SetText(binding);
+                
+                var CVTDiameterInput = new TAFUI.TAF_InputField(ui.GetChild("Cylinder_Diameter_Input"), 8);
+                CVTDiameterInput.SetOnSubmit(new System.Action<string>((string value) => {
+
+                    bool inch = unit == "inch";
+
+                    if (!float.TryParse(value, out float d))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"Error: Invalid diameter `{value}`!");
+                        return;
+                    }
+
+                    diameter = d;
+
+                    AddToScene();
+
+                    CVTDiameterInput.StaticText.text = value;
+                }));
+                CVTDiameterInput.SetText($"{diameter}");
+
+                var CVTUnitInput = new TAFUI.TAF_InputField(ui.GetChild("Cylinder_Unit_Input"), 8);
+                CVTUnitInput.SetOnSubmit(new System.Action<string>((string value) => {
+
+                    unit = value;
+
+                    AddToScene();
+
+                    CVTUnitInput.StaticText.text = value;
+                }));
+                CVTUnitInput.SetText($"{unit}");
+
+                var deleteButton = new TAFUI.TAF_Button(ui.GetChild("Cylinder_Delete_Button"));
+                deleteButton.SetOnClick(new Action(() => {
+                    Delete();
+                }));
+
+                var copyButton = new TAFUI.TAF_Button(ui.GetChild("Cylinder_Copy_Button"));
+                copyButton.SetOnClick(new Action(() => {
+                    makeCopy = true;
+                }));
+            }
+
+            public override void Delete()
+            {
+                foreach (var child in root.GetChildren())
+                {
+                    child.TryDestroy();
+                }
+
+                root.TryDestroy();
+
+                ui.TryDestroy();
+
+                isDestroyed = true;
+                dirtyChanged = true;
+            }
+
+            public override void AddToScene()
+            {
+                dirtyChanged = true;
+            }
+
+            public float GetDiameter()
+            {
+                if (unit == "meter")
+                    return diameter;
+                else if (unit == "inch")
+                    return diameter / 39.37008f;
+                else if (unit == "feet")
+                    return diameter / 3.28084f;
+                else
+                    return diameter;
+            }
+
+            public override void Update(List<Visual> Visuals)
+            {
+                if (dirtyChanged)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Dirty changed, deleting cylinders!");
+
+                    foreach (var child in root.GetChildren())
+                    {
+                        child.TryDestroy(true);
+                    }
+
+                    VisualToCylider.Clear();
+                }
+
+                foreach (var visual in Visuals)
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"Checking: {visual.id} : {type}");
+
+                    if (visual.type != 1) continue; // if (type == Type.CYLINDER) continue;
+
+                    // Melon<TweaksAndFixes>.Logger.Msg($"Parsing: {visual.id}");
+
+                    foreach (var obj in visual.root.GetChildren())
+                    {
+                        if (VisualToCylider.ContainsKey(obj))
+                        {
+                            continue;
+                        }
+
+                        // Create
+
+                        if (binding == "turret")
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"Add turret: {obj.name} at {obj.transform.position}");
+
+                            GameObject turretCylider = GameObject.Instantiate(TAFGlobalCache.cyliderVisualizer);
+                            turretCylider.SetParent(root);
+                            turretCylider.transform.position = obj.transform.position;
+                            turretCylider.transform.eulerAngles = new Vector3(0, 0, 0);
+
+                            float maxHeight = 0;
+
+                            foreach (var child in obj.GetChildren())
+                            {
+                                if (child.name.Contains("barrel")) continue;
+
+                                if (child.GetComponent<MeshRenderer>() == null) continue;
+
+                                var renderer = child.GetComponent<MeshRenderer>();
+
+                                if (!renderer) continue;
+
+                                var bounds = renderer.bounds;
+
+                                float height = bounds.extents.y + bounds.center.y;
+
+                                if (height > maxHeight)
+                                {
+                                    maxHeight = height;
+                                }
+                            }
+
+                            // var bounds = obj.GetComponent<MeshRenderer>().bounds;
+                            turretCylider.transform.SetScale(GetDiameter(), maxHeight + 0.1f, GetDiameter());//bounds.extents.x, 10f, bounds.extents.x);
+
+                            VisualToCylider.Add(obj, null);
+                        }
+                        
+                        else if (binding == "barrel" && BarrelOffsetOverrides.ContainsKey(obj.name))
+                        {
+                            foreach (var offset in BarrelOffsetOverrides[obj.name].barrelOffsets)
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"Add barrel: {obj.transform.position + offset}");
+                                
+                                GameObject barrelCylider = GameObject.Instantiate(TAFGlobalCache.cyliderVisualizer);
+                                barrelCylider.SetParent(root);
+                                barrelCylider.transform.position = obj.transform.position + offset * obj.transform.localScale.x;
+                                barrelCylider.transform.eulerAngles = new Vector3(90, 0, 0);
+                                barrelCylider.transform.SetScale(
+                                    GetDiameter(),
+                                    BarrelOffsetOverrides[obj.name].barrel_length * obj.transform.localScale.x + 0.1f,
+                                    GetDiameter()
+                                );
+                            }
+
+                            VisualToCylider.Add(obj, null);
+                        }
+                        
+                        else if (binding == "barrel")
+                        {
+                            List<GameObject> barrels = new();
+
+                            ModUtils.FindChildrenContains(obj, "barrel_", barrels);
+
+                            foreach (var barrel in barrels)
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"Add barrel: {barrel.name} at {obj.transform.position}");
+
+                                if (barrel.GetComponent<MeshRenderer>() == null) continue;
+
+                                GameObject barrelCylider = GameObject.Instantiate(TAFGlobalCache.cyliderVisualizer);
+                                barrelCylider.SetParent(root);
+                                var bounds = barrel.GetComponent<MeshRenderer>().bounds;
+                                barrelCylider.transform.position = bounds.center;
+                                barrelCylider.transform.eulerAngles = new Vector3(90, 0, 0);
+                                barrelCylider.transform.SetScale(GetDiameter(), bounds.extents.z + 0.1f, GetDiameter());
+                            }
+
+                            VisualToCylider.Add(obj, null);
+                        }
+                    }
+                }
             }
         }
 
@@ -793,17 +1304,19 @@ namespace TweaksAndFixes.Modified
         public static GameObject floor;
         public static GameObject models;
 
-        public static GameObject MDETemplate;
-        public static GameObject MDEList;
+        public static GameObject PartModelVisualTemplate;
+        public static GameObject CylinderVisualTemplate;
+        public static GameObject VisualsList;
 
         public static Material gridMat;
 
-        public static bool makeNew = false;
+        public static int makeNew = 0;
 
         public static string saveFile = "";
-        public static Vector2 gridSize = new(100_000, 100_000);
+        public static Vector2 gridSize = new(10_000, 10_000);
 
         public static bool active = false;
+        public static bool dirtyChanged = false;
 
         public static readonly List<Visual> Visuals = new();
 
@@ -871,6 +1384,7 @@ namespace TweaksAndFixes.Modified
             G.ui.GetChild("Constructor").SetActive(false);
             G.ui.GetChild("Common").SetActive(false);
             G.cam.Bloom(false);
+            G.cam.DepthOfField(false);
             G.cam.fogEndDistanceOrig = new Il2CppSystem.Nullable<float>(float.MaxValue);
             G.cam.fogStartDistanceOrig = new Il2CppSystem.Nullable<float>(float.MaxValue);
 
@@ -899,6 +1413,8 @@ namespace TweaksAndFixes.Modified
 
             if (!consructorRoot) return;
 
+            CylinderVisual.LoadBarrelOffsetOverridesData();
+
             container = new GameObject("Part_Debug");
             container.SetParent(consructorRoot);
             container.transform.position = Vector3.zero;
@@ -922,7 +1438,7 @@ namespace TweaksAndFixes.Modified
             var tex = new Texture2D(512, 512, TextureFormat.DXT1, true);
             if (!ImageConversion.LoadImage(tex, rawData))
             {
-                Melon<TweaksAndFixes>.Logger.Error("Failed to load flag image file");
+                Melon<TweaksAndFixes>.Logger.Error("Failed to load grid image file");
             }
 
             tex.wrapMode = TextureWrapMode.Repeat;
@@ -944,15 +1460,29 @@ namespace TweaksAndFixes.Modified
             if(G.ui.GetChild("Constructor").active) G.ui.GetChild("Constructor").SetActive(false);
             if(G.ui.GetChild("Common").active) G.ui.GetChild("Common").SetActive(false);
 
-            if (makeNew)
+            if (makeNew != 0)
             {
-                Visuals.Add(new Visual(Visuals.Count));
+                switch (makeNew)
+                {
+                    case 1:
+                        Visuals.Add(new PartModelVisual(Visuals.Count));
+                        break;
+                    
+                    case 2:
+                        Visuals.Add(new CylinderVisual(Visuals.Count));
+                        break;
 
-                makeNew = false;
+                    default:
+                        break;
+                }
+
+                makeNew = 0;
             }
 
             for (int i = Visuals.Count - 1; i >= 0; i--)
             {
+                Visuals[i].Update(Visuals);
+
                 if (Visuals[i].isDestroyed)
                 {
                     Melon<TweaksAndFixes>.Logger.Msg($"Destroying");
@@ -963,11 +1493,26 @@ namespace TweaksAndFixes.Modified
                 if (Visuals[i].makeCopy)
                 {
                     Melon<TweaksAndFixes>.Logger.Msg("Making copy");
-                    Visuals.Add(new Visual(Visuals.Count, Visuals[i]));
+
+                    switch (Visuals[i].type)
+                    {
+                        case 1:
+                            Visuals.Add(new PartModelVisual(Visuals.Count, (PartModelVisual)Visuals[i]));
+                            break;
+
+                        case 2:
+                            Visuals.Add(new CylinderVisual(Visuals.Count, (CylinderVisual)Visuals[i]));
+                            break;
+
+                        default:
+                            break;
+                    }
 
                     Visuals[i].makeCopy = false;
                 }
             }
+
+            dirtyChanged = false;
         }
 
         public static void ReloadModels()
@@ -982,7 +1527,7 @@ namespace TweaksAndFixes.Modified
         {
             saveFile = from.saveFile;
             var newGridSize = from.gridSize.from();
-            MakeGridCube(new(newGridSize.x, -1, newGridSize.y), new(0,0.5f,0));
+            MakeGridCube(new(newGridSize.x, -1, newGridSize.y), new(0,-0.5f,0));
             gridSizeInput.SetText($"{gridSize.x},{gridSize.y}");
 
             foreach (var visual in Visuals) 
@@ -992,9 +1537,14 @@ namespace TweaksAndFixes.Modified
 
             Visuals.Clear();
 
-            foreach (var visual in from.Visuals)
+            foreach (var visual in from.PartModelVisuals)
             {
-                Visuals.Add(new Visual(visual));
+                Visuals.Add(new PartModelVisual(visual));
+            }
+
+            foreach (var visual in from.CylinderVisuals)
+            {
+                Visuals.Add(new CylinderVisual(visual));
             }
         }
 
@@ -1039,12 +1589,68 @@ namespace TweaksAndFixes.Modified
             buttonsTransform.offsetMax = new Vector2(360, -650);
             buttonsTransform.offsetMin = new Vector2(15, -685);
 
+            // Global/Ui/UiMain/Popup/List Selection Popup
+
+            GameObject createMenu = GameObject.Instantiate(ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/List Selection Popup"));
+            createMenu.name = "Create_Menu";
+            createMenu.SetActive(false);
+            createMenu.transform.parent = sideWindow.transform;
+            createMenu.transform.SetScale(1, 1, 1);
+            createMenu.transform.localPosition = Vector3.zero;
+            createMenu.TryDestroyComponent<Image>();
+            createMenu.TryDestroyComponent<ListSelectionPopupUI>();
+
+            GameObject createMenuRoot = createMenu.GetChild("Root");
+
+            createMenuRoot.GetChild("Buttons").GetChild("Select").SetActive(false);
+
+            GameObject createMenuButtonCancel = createMenuRoot.GetChild("Buttons").GetChild("Cancel");
+            Button createMenuButtonCancelComp = createMenuButtonCancel.GetComponent<Button>();
+            createMenuButtonCancelComp.onClick.RemoveAllListeners();
+            createMenuButtonCancelComp.onClick.AddListener(new Action(() => {
+                createMenu.SetActive(false);
+            }));
+
+            GameObject CreateMenuScrollView = ModUtils.GetChildAtPath("Scroll/Viewport/Content", createMenuRoot);
+
+            GameObject CreateMenuItemTemplate = CreateMenuScrollView.GetChild("Template");
+            CreateMenuItemTemplate.TryDestroyComponent<SelectionPopup_elementUI>();
+            CreateMenuItemTemplate.GetChild("FavoritePort").TryDestroy(true);
+
+            GameObject CreateMenuItemPartModel = GameObject.Instantiate(CreateMenuItemTemplate);
+            CreateMenuItemPartModel.SetParent(CreateMenuScrollView);
+            CreateMenuItemPartModel.SetActive(true);
+            CreateMenuItemPartModel.transform.SetScale(1, 1, 1);
+            GameObject CreateMenuItemPartModelText = CreateMenuItemPartModel.GetChild("Text (TMP)");
+            TMP_Text CreateMenuItemPartModelTextComp = CreateMenuItemPartModelText.GetComponent<TMP_Text>();
+            CreateMenuItemPartModelTextComp.text = "Part Model Visual";
+            Button CreateMenuItemPartModelButton = CreateMenuItemPartModel.GetComponent<Button>();
+            CreateMenuItemPartModelButton.onClick.RemoveAllListeners();
+            CreateMenuItemPartModelButton.onClick.AddListener(new Action(() => {
+                makeNew = 1;
+                createMenu.SetActive(false);
+            }));
+
+            GameObject CreateMenuItemCylinder = GameObject.Instantiate(CreateMenuItemTemplate);
+            CreateMenuItemCylinder.SetParent(CreateMenuScrollView);
+            CreateMenuItemCylinder.SetActive(true);
+            CreateMenuItemCylinder.transform.SetScale(1, 1, 1);
+            GameObject CreateMenuItemCylinderText = CreateMenuItemCylinder.GetChild("Text (TMP)");
+            TMP_Text CreateMenuItemCylinderComp = CreateMenuItemCylinderText.GetComponent<TMP_Text>();
+            CreateMenuItemCylinderComp.text = "Cylinder Visual";
+            Button CreateMenuItemCylinderButton = CreateMenuItemCylinder.GetComponent<Button>();
+            CreateMenuItemCylinderButton.onClick.RemoveAllListeners();
+            CreateMenuItemCylinderButton.onClick.AddListener(new Action(() => {
+                makeNew = 2;
+                createMenu.SetActive(false);
+            }));
+
             var buttonsCreateButton = new TAFUI.TAF_Button(
                 buttons, "Create_Button", "Create", Vector3.one, Vector3.one
             );
             buttonsCreateButton.root.transform.SetParent(buttonsLayout.transform);
             buttonsCreateButton.SetOnClick(new Action(() => {
-                makeNew = true;
+                createMenu.SetActive(true);
             }));
 
             var buttonsHideButton = new TAFUI.TAF_Button(
@@ -1083,133 +1689,9 @@ namespace TweaksAndFixes.Modified
             scrollViewScrollBarTransform.offsetMax = new(6, 0);
             scrollViewScrollBarTransform.offsetMin = new(-3, 17);
 
-            // ../UIMain/Debug_Map_UI/Root/Scroll View/Viewport/List
+            MakePartModelVisualUI(scrollView);
 
-            MDEList = scrollView.GetChild("Viewport").GetChild("List");
-
-            // ../UIMain/Debug_Map_UI/Root/Scroll View/Viewport/List/Template
-
-            GameObject refference = scrollView.GetChild("Viewport").GetChild("List").GetChildren()[0];
-            MDETemplate = new GameObject("Template");
-            MDETemplate.SetActive(false);
-            MDETemplate.SetParent(MDEList, false);
-            MDETemplate.transform.localPosition = Vector3.zero;
-            MDETemplate.transform.SetScale(1,1,1);
-            RectTransform MDETemplateTransform = MDETemplate.AddComponent<RectTransform>();
-            MDETemplateTransform.offsetMax = new Vector2(635, 0);
-            MDETemplateTransform.offsetMin = new Vector2(-280, -200);
-            GameObject MDETemplateBG = GameObject.Instantiate(refference.GetChild("Highlight"));
-            MDETemplateBG.SetParent(MDETemplate, false);
-            MDETemplateBG.name = "BG";
-            MDETemplateBG.SetActive(true);
-
-            foreach (var child in scrollView.GetChild("Viewport").GetChild("List").GetChildren())
-            {
-                if (child == MDETemplate) continue;
-                child.TryDestroy();
-            }
-
-
-
-            Vector2 origin = new(300, -10);
-            Vector2 lf = new(0, -25);
-            int lCnt = 0;
-            Vector2 tab = new((635.0f - 300.0f) / 4, 0);
-
-            var MDETemplateModelListHeader = new TAFUI.TAF_Text(
-                MDETemplate, "Model_List_Header", "Model List", origin + tab * 1 + lf * lCnt, origin + tab * 0 + lf * (lCnt + 1)
-            );
-            var MDETemplateModelListInput = new TAFUI.TAF_InputField(
-                MDETemplate, "Model_List_Input", origin + tab * 3.75f + lf * lCnt, origin + tab * 0.5f + lf * (lCnt + 1),
-                "gun_6_x2, ...", "gun_6_x2, ...", true, 25
-            );
-            lCnt++;
-            
-            var MDETemplateModelPositionHeader = new TAFUI.TAF_Text(
-                MDETemplate, "Model_Position_Header", "Position", origin + tab * 1 + lf * lCnt, origin + tab * 0 + lf * (lCnt + 1)
-            );
-            var MDETemplateModelPositionInput = new TAFUI.TAF_InputField(
-                MDETemplate, "Model_Position_Input", origin + tab * 1.9f + lf * lCnt, origin + tab * 0.5f + lf * (lCnt + 1),
-                "0,0,0", "x,y,z", true, 8
-            );
-
-            var MDETemplateModelSpacingHeader = new TAFUI.TAF_Text(
-                MDETemplate, "Model_Spacing_Header", "Spacing", origin + tab * 3 + lf * lCnt, origin + tab * 2.1f + lf * (lCnt + 1)
-            );
-            var MDETemplateModelSpacingInput = new TAFUI.TAF_InputField(
-                MDETemplate, "Model_Spacing_Input", origin + tab * 4 + lf * lCnt, origin + tab * 2.5f + lf * (lCnt + 1),
-                "0,0", "x,y", true, 8
-            );
-            lCnt++;
-
-            var MDETemplateModelRotationHeader = new TAFUI.TAF_Text(
-                MDETemplate, "Model_Rotation_Header", "Rotation", origin + tab * 1 + lf * lCnt, origin + tab * 0 + lf * (lCnt + 1)
-            );
-            var MDETemplateModelRotationInput = new TAFUI.TAF_InputField(
-                MDETemplate, "Model_Rotation_Input", origin + tab * 1.9f + lf * lCnt, origin + tab * 0.5f + lf * (lCnt + 1),
-                "0,0,0", "p,y,r", true, 8
-            );
-            lCnt++;
-
-            var MDETemplateModelIndexesHeader = new TAFUI.TAF_Text(
-                MDETemplate, "Model_Indexes_Header", "Model Idx", origin + tab * 1 + lf * lCnt, origin + tab * 0 + lf * (lCnt + 1)
-            );
-            var MDETemplateModelIndexesInput = new TAFUI.TAF_InputField(
-                MDETemplate, "Model_Indexes_Input", origin + tab * 1.9f + lf * lCnt, origin + tab * 0.5f + lf * (lCnt + 1),
-                "all", "1,2,...", true, 8
-            );
-
-            var MDETemplateMarkIndexesHeader = new TAFUI.TAF_Text(
-                MDETemplate, "Mark_Indexes_Header", "Mark Idx", origin + tab * 3 + lf * lCnt, origin + tab * 2.1f + lf * (lCnt + 1)
-            );
-            var MDETemplateMarkIndexesInput = new TAFUI.TAF_InputField(
-                MDETemplate, "Mark_Indexes_Input", origin + tab * 4 + lf * lCnt, origin + tab * 2.5f + lf * (lCnt + 1),
-                "1,2,3,4,5", "1,2,...", true, 8
-            );
-            lCnt++;
-
-            var MDETemplateModelDiameterHeader = new TAFUI.TAF_Text(
-                MDETemplate, "Model_Indexes_Header", "Diameter", origin + tab * 1 + lf * lCnt, origin + tab * 0 + lf * (lCnt + 1)
-            );
-            var MDETemplateModelDiameterInput = new TAFUI.TAF_InputField(
-                MDETemplate, "Model_Diameter_Input", origin + tab * 1.9f + lf * lCnt, origin + tab * 0.5f + lf * (lCnt + 1),
-                "0", "0,0.1,...", true, 8
-            );
-
-            var MDETemplateModelLengthHeader = new TAFUI.TAF_Text(
-                MDETemplate, "Model_Length_Header", "Length", origin + tab * 3 + lf * lCnt, origin + tab * 2.1f + lf * (lCnt + 1)
-            );
-            var MDETemplateModelLengthInput = new TAFUI.TAF_InputField(
-                MDETemplate, "Model_Length_Input", origin + tab * 4 + lf * lCnt, origin + tab * 2.5f + lf * (lCnt + 1),
-                "0", "1,2,...", true, 8
-            );
-            lCnt++;
-
-            var MDETemplateModelXAxisHeader = new TAFUI.TAF_Text(
-                MDETemplate, "Model_XAxis_Header", "X-Axis", origin + tab * 1 + lf * lCnt, origin + tab * 0 + lf * (lCnt + 1)
-            );
-            var MDETemplateModelXAxisInput = new TAFUI.TAF_InputField(
-                MDETemplate, "Model_XAxis_Input", origin + tab * 1.9f + lf * lCnt, origin + tab * 0.5f + lf * (lCnt + 1),
-                "mark", "mark", true, 8
-            );
-
-            var MDETemplateModelYAxisHeader = new TAFUI.TAF_Text(
-                MDETemplate, "Model_YAxis_Header", "Y-Axis", origin + tab * 3 + lf * lCnt, origin + tab * 2.1f + lf * (lCnt + 1)
-            );
-            var MDETemplateModelYAxisInput = new TAFUI.TAF_InputField(
-                MDETemplate, "Model_YAxis_Input", origin + tab * 4 + lf * lCnt, origin + tab * 2.5f + lf * (lCnt + 1),
-                "model", "model", true, 8
-            );
-            lCnt++;
-
-            var MDETemplateDeleteButton = new TAFUI.TAF_Button(
-                MDETemplate, "Model_Delete_Button", "Delete", origin + tab * 1.8f + lf * lCnt, origin + tab * -0.2f + lf * (lCnt) + lf * 1.25f
-            );
-
-            var MDETemplateCopyButton = new TAFUI.TAF_Button(
-                MDETemplate, "Model_Copy_Button", "Copy", origin + tab * 4f + lf * lCnt, origin + tab * 2f + lf * (lCnt) + lf * 1.25f
-            );
-            lCnt++;
+            MakeCylinderVisualUI(scrollView);
 
             // ../UIMain/Debug_Map_UI/Root/Grid_Size_Input/
 
@@ -1328,6 +1810,209 @@ namespace TweaksAndFixes.Modified
                 saveNameInput.SetText(value);
             }));
 
+        }
+
+        public static void MakePartModelVisualUI(GameObject scrollView)
+        {
+            // ../UIMain/Debug_Map_UI/Root/Scroll View/Viewport/List
+
+            VisualsList = scrollView.GetChild("Viewport").GetChild("List");
+
+            // ../UIMain/Debug_Map_UI/Root/Scroll View/Viewport/List/Template
+
+            GameObject refference = scrollView.GetChild("Viewport").GetChild("List").GetChildren()[0];
+            PartModelVisualTemplate = new GameObject("Template");
+            PartModelVisualTemplate.SetActive(false);
+            PartModelVisualTemplate.SetParent(VisualsList, false);
+            PartModelVisualTemplate.transform.localPosition = Vector3.zero;
+            PartModelVisualTemplate.transform.SetScale(1, 1, 1);
+            RectTransform PartModelVisualTemplateTransform = PartModelVisualTemplate.AddComponent<RectTransform>();
+            PartModelVisualTemplateTransform.offsetMax = new Vector2(635, 0);
+            PartModelVisualTemplateTransform.offsetMin = new Vector2(-280, -200);
+            GameObject PartModelVisualTemplateBG = GameObject.Instantiate(refference.GetChild("Highlight"));
+            PartModelVisualTemplateBG.SetParent(PartModelVisualTemplate, false);
+            PartModelVisualTemplateBG.name = "BG";
+            PartModelVisualTemplateBG.SetActive(true);
+
+            // foreach (var child in scrollView.GetChild("Viewport").GetChild("List").GetChildren())
+            // {
+            //     if (child == CyliderVisualTemplate) continue;
+            //     child.TryDestroy();
+            // }
+
+
+
+            Vector2 origin = new(300, -10);
+            Vector2 lf = new(0, -25);
+            int lCnt = 0;
+            Vector2 tab = new((635.0f - 300.0f) / 4, 0);
+
+            var MDETemplateModelListHeader = new TAFUI.TAF_Text(
+                PartModelVisualTemplate, "Model_List_Header", "Model List", origin + tab * 1 + lf * lCnt, origin + tab * 0 + lf * (lCnt + 1)
+            );
+            var MDETemplateModelListInput = new TAFUI.TAF_InputField(
+                PartModelVisualTemplate, "Model_List_Input", origin + tab * 3.75f + lf * lCnt, origin + tab * 0.5f + lf * (lCnt + 1),
+                "gun_6_x2, ...", "gun_6_x2, ...", true, 25
+            );
+            lCnt++;
+
+            var MDETemplateModelPositionHeader = new TAFUI.TAF_Text(
+                PartModelVisualTemplate, "Model_Position_Header", "Position", origin + tab * 1 + lf * lCnt, origin + tab * 0 + lf * (lCnt + 1)
+            );
+            var MDETemplateModelPositionInput = new TAFUI.TAF_InputField(
+                PartModelVisualTemplate, "Model_Position_Input", origin + tab * 1.9f + lf * lCnt, origin + tab * 0.5f + lf * (lCnt + 1),
+                "0,0,0", "x,y,z", true, 8
+            );
+
+            var MDETemplateModelSpacingHeader = new TAFUI.TAF_Text(
+                PartModelVisualTemplate, "Model_Spacing_Header", "Spacing", origin + tab * 3 + lf * lCnt, origin + tab * 2.1f + lf * (lCnt + 1)
+            );
+            var MDETemplateModelSpacingInput = new TAFUI.TAF_InputField(
+                PartModelVisualTemplate, "Model_Spacing_Input", origin + tab * 4 + lf * lCnt, origin + tab * 2.5f + lf * (lCnt + 1),
+                "0,0", "x,y", true, 8
+            );
+            lCnt++;
+
+            var MDETemplateModelRotationHeader = new TAFUI.TAF_Text(
+                PartModelVisualTemplate, "Model_Rotation_Header", "Rotation", origin + tab * 1 + lf * lCnt, origin + tab * 0 + lf * (lCnt + 1)
+            );
+            var MDETemplateModelRotationInput = new TAFUI.TAF_InputField(
+                PartModelVisualTemplate, "Model_Rotation_Input", origin + tab * 1.9f + lf * lCnt, origin + tab * 0.5f + lf * (lCnt + 1),
+                "0,0,0", "p,y,r", true, 8
+            );
+            lCnt++;
+
+            var MDETemplateModelIndexesHeader = new TAFUI.TAF_Text(
+                PartModelVisualTemplate, "Model_Indexes_Header", "Model Idx", origin + tab * 1 + lf * lCnt, origin + tab * 0 + lf * (lCnt + 1)
+            );
+            var MDETemplateModelIndexesInput = new TAFUI.TAF_InputField(
+                PartModelVisualTemplate, "Model_Indexes_Input", origin + tab * 1.9f + lf * lCnt, origin + tab * 0.5f + lf * (lCnt + 1),
+                "all", "1,2,...", true, 8
+            );
+
+            var MDETemplateMarkIndexesHeader = new TAFUI.TAF_Text(
+                PartModelVisualTemplate, "Mark_Indexes_Header", "Mark Idx", origin + tab * 3 + lf * lCnt, origin + tab * 2.1f + lf * (lCnt + 1)
+            );
+            var MDETemplateMarkIndexesInput = new TAFUI.TAF_InputField(
+                PartModelVisualTemplate, "Mark_Indexes_Input", origin + tab * 4 + lf * lCnt, origin + tab * 2.5f + lf * (lCnt + 1),
+                "1,2,3,4,5", "1,2,...", true, 8
+            );
+            lCnt++;
+
+            var MDETemplateModelDiameterHeader = new TAFUI.TAF_Text(
+                PartModelVisualTemplate, "Model_Indexes_Header", "Diameter", origin + tab * 1 + lf * lCnt, origin + tab * 0 + lf * (lCnt + 1)
+            );
+            var MDETemplateModelDiameterInput = new TAFUI.TAF_InputField(
+                PartModelVisualTemplate, "Model_Diameter_Input", origin + tab * 1.9f + lf * lCnt, origin + tab * 0.5f + lf * (lCnt + 1),
+                "0", "0,0.1,...", true, 8
+            );
+
+            var MDETemplateModelLengthHeader = new TAFUI.TAF_Text(
+                PartModelVisualTemplate, "Model_Length_Header", "Length", origin + tab * 3 + lf * lCnt, origin + tab * 2.1f + lf * (lCnt + 1)
+            );
+            var MDETemplateModelLengthInput = new TAFUI.TAF_InputField(
+                PartModelVisualTemplate, "Model_Length_Input", origin + tab * 4 + lf * lCnt, origin + tab * 2.5f + lf * (lCnt + 1),
+                "0", "1,2,...", true, 8
+            );
+            lCnt++;
+
+            var MDETemplateModelXAxisHeader = new TAFUI.TAF_Text(
+                PartModelVisualTemplate, "Model_XAxis_Header", "X-Axis", origin + tab * 1 + lf * lCnt, origin + tab * 0 + lf * (lCnt + 1)
+            );
+            var MDETemplateModelXAxisInput = new TAFUI.TAF_InputField(
+                PartModelVisualTemplate, "Model_XAxis_Input", origin + tab * 1.9f + lf * lCnt, origin + tab * 0.5f + lf * (lCnt + 1),
+                "mark", "mark", true, 8
+            );
+
+            var MDETemplateModelYAxisHeader = new TAFUI.TAF_Text(
+                PartModelVisualTemplate, "Model_YAxis_Header", "Y-Axis", origin + tab * 3 + lf * lCnt, origin + tab * 2.1f + lf * (lCnt + 1)
+            );
+            var MDETemplateModelYAxisInput = new TAFUI.TAF_InputField(
+                PartModelVisualTemplate, "Model_YAxis_Input", origin + tab * 4 + lf * lCnt, origin + tab * 2.5f + lf * (lCnt + 1),
+                "model", "model", true, 8
+            );
+            lCnt++;
+
+            var MDETemplateDeleteButton = new TAFUI.TAF_Button(
+                PartModelVisualTemplate, "Model_Delete_Button", "Delete", origin + tab * 1.8f + lf * lCnt, origin + tab * -0.2f + lf * (lCnt) + lf * 1.25f
+            );
+
+            var MDETemplateCopyButton = new TAFUI.TAF_Button(
+                PartModelVisualTemplate, "Model_Copy_Button", "Copy", origin + tab * 4f + lf * lCnt, origin + tab * 2f + lf * (lCnt) + lf * 1.25f
+            );
+            lCnt++;
+        }
+
+        public static void MakeCylinderVisualUI(GameObject scrollView)
+        {
+
+            // ../UIMain/Debug_Map_UI/Root/Scroll View/Viewport/List
+
+            VisualsList = scrollView.GetChild("Viewport").GetChild("List");
+
+            // ../UIMain/Debug_Map_UI/Root/Scroll View/Viewport/List/Template
+
+            GameObject refference = scrollView.GetChild("Viewport").GetChild("List").GetChildren()[0];
+            CylinderVisualTemplate = new GameObject("Template");
+            CylinderVisualTemplate.SetActive(false);
+            CylinderVisualTemplate.SetParent(VisualsList, false);
+            CylinderVisualTemplate.transform.localPosition = Vector3.zero;
+            CylinderVisualTemplate.transform.SetScale(1, 1, 1);
+            RectTransform CyliderVisualTemplateTransform = CylinderVisualTemplate.AddComponent<RectTransform>();
+            CyliderVisualTemplateTransform.offsetMax = new Vector2(635, 0);
+            CyliderVisualTemplateTransform.offsetMin = new Vector2(-280, -100);
+            GameObject CyliderVisualTemplateBG = GameObject.Instantiate(refference.GetChild("Highlight"));
+            CyliderVisualTemplateBG.SetParent(CylinderVisualTemplate, false);
+            CyliderVisualTemplateBG.name = "BG";
+            CyliderVisualTemplateBG.SetActive(true);
+
+            foreach (var child in scrollView.GetChild("Viewport").GetChild("List").GetChildren())
+            {
+                if (child.name.Contains("Template")) continue;
+                child.TryDestroy();
+            }
+
+
+
+            Vector2 origin = new(300, -10);
+            Vector2 lf = new(0, -25);
+            int lCnt = 0;
+            Vector2 tab = new((635.0f - 300.0f) / 4, 0);
+
+            var CVTTargetHeader = new TAFUI.TAF_Text(
+                CylinderVisualTemplate, "Cylider_Target_Header", "Target", origin + tab * 1 + lf * lCnt, origin + tab * 0 + lf * (lCnt + 1)
+            );
+            var CVTTargetListInput = new TAFUI.TAF_InputField(
+                CylinderVisualTemplate, "Cylider_Target_Input", origin + tab * 3.75f + lf * lCnt, origin + tab * 0.5f + lf * (lCnt + 1),
+                "PartModels", "PartModels", true, 25
+            );
+            lCnt++;
+
+            var CVTDiameterHeader = new TAFUI.TAF_Text(
+                CylinderVisualTemplate, "Cylinder_Diameter_Header", "Diameter", origin + tab * 1 + lf * lCnt, origin + tab * 0 + lf * (lCnt + 1)
+            );
+            var CVTDiameterInput = new TAFUI.TAF_InputField(
+                CylinderVisualTemplate, "Cylinder_Diameter_Input", origin + tab * 1.9f + lf * lCnt, origin + tab * 0.5f + lf * (lCnt + 1),
+                "1", "2/5.25\"", true, 8
+            );
+
+            var CVTUnitHeader = new TAFUI.TAF_Text(
+                CylinderVisualTemplate, "Cylinder_Unit_Header", "Unit", origin + tab * 3 + lf * lCnt, origin + tab * 2.1f + lf * (lCnt + 1)
+            );
+            var CVTUnitInput = new TAFUI.TAF_InputField(
+                CylinderVisualTemplate, "Cylinder_Unit_Input", origin + tab * 4 + lf * lCnt, origin + tab * 2.5f + lf * (lCnt + 1),
+                "meter", "meter/inch/feet", true, 8
+            );
+            lCnt++;
+
+            var CVTDeleteButton = new TAFUI.TAF_Button(
+                CylinderVisualTemplate, "Cylinder_Delete_Button", "Delete", origin + tab * 1.8f + lf * lCnt, origin + tab * -0.2f + lf * (lCnt) + lf * 1.25f
+            );
+
+            var CVTCopyButton = new TAFUI.TAF_Button(
+                CylinderVisualTemplate, "Cylinder_Copy_Button", "Copy", origin + tab * 4f + lf * lCnt, origin + tab * 2f + lf * (lCnt) + lf * 1.25f
+            );
+            lCnt++;
         }
 
         public static GameObject AddModelToScene(GameObject parent, string name, Vector3 pos, Vector3 rotation, float scale)
