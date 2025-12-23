@@ -461,7 +461,7 @@ namespace TweaksAndFixes
 
             int mark = Patch_Shell.updating.from.ship.TechGunGrade(Patch_Shell.updating.from.data);
 
-            float min = Config.Param("taf_shell_deck_hit_percent_min", 0);
+            float min = Config.Param("taf_shell_deck_hit_percent_min", 0f);
             float max = Config.Param("taf_shell_deck_hit_percent_max", 1.2f);
 
             float deckPercent = ((max - min) * (percentDeckModifier * ((float)mark / (float)Config.MaxGunGrade))) + min;
@@ -595,7 +595,7 @@ namespace TweaksAndFixes
 
             // Melon<TweaksAndFixes>.Logger.Msg($"  {__instance.Name(false, false)} : {rangeToEnemy} > {__instance.weaponRangesCache[torpData]}");
 
-            if (rangeToEnemy > __instance.weaponRangesCache[torpData] * Config.Param("taf_torpedo_max_launch_range_percent", 0.8f))
+            if (rangeToEnemy > __instance.weaponRangesCache[torpData] * Config.Param("taf_torpedo_max_launch_range_percent", 0.9f))
             {
                 // Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name(false, false)} : {rangeToEnemy} > {__instance.weaponRangesCache[torpData] * Config.Param("taf_torpedo_max_launch_range_percent", 0.8f)} : {__result.Name(false, false)} : {enemy?.Name(false, false) ?? "NULL"}");
 
