@@ -23,6 +23,8 @@ namespace TweaksAndFixes.Data
 
         public static GameObject cubeVisualizer;
 
+        public static GameObject cyliderVisualizer;
+
         public static GameObject partModelTemplates;
 
         public static GameObject UITemplates;
@@ -64,6 +66,7 @@ namespace TweaksAndFixes.Data
             boarder.transform.SetParent(partModelTemplates);
 
             CreateCube();
+            CreateCylider();
 
             UITemplates = new GameObject();
             UITemplates.name = "UI Templates";
@@ -91,10 +94,32 @@ namespace TweaksAndFixes.Data
             cubeVisualizer.TryDestroyComponent<LODGroup>();
             cubeVisualizer.TryDestroyComponent<AutomaticLOD>();
             cubeVisualizer.GetComponent<MeshRenderer>().material.color = new Color(1f, 1f, 1f, 0.8f);
-            cubeVisualizer.GetChild("LOD0").transform.SetParent(null);
-            cubeVisualizer.GetChild("LOD1").transform.SetParent(null);
-            cubeVisualizer.GetChild("LOD2").transform.SetParent(null);
-            
+            cubeVisualizer.GetChild("LOD0").TryDestroy();
+            cubeVisualizer.GetChild("LOD1").TryDestroy();
+            cubeVisualizer.GetChild("LOD2").TryDestroy();
+
+            Resources.UnloadAsset(template);
+        }
+
+        private static void CreateCylider()
+        {
+            var template = Resources.Load<GameObject>("tsesarevich_gun_152_x3");
+
+            cyliderVisualizer = GameObject.Instantiate(ModUtils.GetChildAtPath("Visual/tsh_gun_152_x2_001/tsh_gun_152_barrel_001 1/Cylinder", template));
+            cyliderVisualizer.name = "cyliderVisualizer";
+            cyliderVisualizer.transform.SetScale(1, 1, 1);
+            cyliderVisualizer.transform.SetParent(partModelTemplates);
+            cyliderVisualizer.TryDestroyComponent<LODGroup>();
+            cyliderVisualizer.TryDestroyComponent<AutomaticLOD>();
+
+            var cyliderMat = new Material(Shader.Find("Standard"));
+            cyliderMat.SetOverrideTag("RenderType", "Transparent");
+
+            cyliderVisualizer.GetComponent<MeshRenderer>().material = cyliderMat;
+            cyliderVisualizer.GetChild("LOD0").TryDestroy();
+            cyliderVisualizer.GetChild("LOD1").TryDestroy();
+            cyliderVisualizer.GetChild("LOD2").TryDestroy();
+
             Resources.UnloadAsset(template);
         }
     }
