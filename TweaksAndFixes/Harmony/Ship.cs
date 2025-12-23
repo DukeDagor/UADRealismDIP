@@ -204,6 +204,28 @@ namespace TweaksAndFixes
             }
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Ship.CStats))]
+        internal static void Postfix_CStats(Ship __instance)
+        {
+            var statData = G.GameData.stats["floatability"];
+
+            if (!__instance.stats_.ContainsKey(statData)) return;
+
+            var stat = __instance.stats_[statData];
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"floatability:");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  {stat.basic}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  {stat.misc}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  {stat.tech}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  {stat.modifiers}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  {stat.total}");
+
+            if (stat.total > Config.Param("taf_ship_stat_floatability_cap", 140f))
+            {
+                stat.basic = Config.Param("taf_ship_stat_floatability_cap", 140f) - stat.modifiers;
+            }
+        }
 
 
         // PartMats
