@@ -185,6 +185,15 @@ namespace TweaksAndFixes
                 FindChildrenStartsWith(obj.transform.GetChild(i).gameObject, str, list);
         }
 
+        // Reimplementation of stock function
+        public static void FindChildrenContains(GameObject obj, string str, List<GameObject> list)
+        {
+            if (obj.name.Contains(str))
+                list.Add(obj);
+            for (int i = 0; i < obj.transform.childCount; ++i)
+                FindChildrenContains(obj.transform.GetChild(i).gameObject, str, list);
+        }
+
         public static double Lerp(double a, double b, double t, bool clamp = true)
         {
             if (clamp)
