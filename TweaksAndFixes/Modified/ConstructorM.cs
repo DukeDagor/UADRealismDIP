@@ -881,9 +881,9 @@ namespace TweaksAndFixes.Modified
             public string unit;
             public Dictionary<GameObject, GameObject> VisualToCylider = new();
 
-            public static Dictionary<string, BarrelOffsetOverride> BarrelOffsetOverrides = new();
+            public static Dictionary<string, CylinderOverride> CylinderOverrides = new();
 
-            public class BarrelOffsetOverride : Serializer.IPostProcess
+            public class CylinderOverride : Serializer.IPostProcess
             {
 
                 [Serializer.Field] public string name = string.Empty;
@@ -1022,22 +1022,22 @@ namespace TweaksAndFixes.Modified
                         Melon<TweaksAndFixes>.Logger.Error($"BarrelOffsetOverrides: [{name}] Invalid offset `{barrel_4}`");
                     }
 
-                    BarrelOffsetOverrides.Add(name, this);
+                    CylinderOverrides.Add(name, this);
                 }
             }
 
-            public static void LoadBarrelOffsetOverridesData()
+            public static void LoadCylinderOverrideData()
             {
-                List<BarrelOffsetOverride> list = new List<BarrelOffsetOverride>();
-                string? text = Serializer.CSV.GetTextFromFile(Path.Combine(Config._BasePath, "DebugSaves", "barrelOffsetOverrides.csv"));
+                List<CylinderOverride> list = new List<CylinderOverride>();
+                string? text = Serializer.CSV.GetTextFromFile(Path.Combine(Config._BasePath, "DebugSaves", "cylinderOverrides.csv"));
 
                 if (text == null)
                 {
-                    Melon<TweaksAndFixes>.Logger.Error($"Failed to load `barrelOffsetOverrides.csv`.");
+                    Melon<TweaksAndFixes>.Logger.Error($"Failed to load `cylinderOverrides.csv`.");
                     return;
                 }
 
-                Serializer.CSV.Read<List<BarrelOffsetOverride>, BarrelOffsetOverride>(text, list, true, true);
+                Serializer.CSV.Read<List<CylinderOverride>, CylinderOverride>(text, list, true, true);
             }
 
             public CylinderVisual(int id)
@@ -1253,9 +1253,9 @@ namespace TweaksAndFixes.Modified
                             VisualToCylider.Add(obj, null);
                         }
                         
-                        else if (binding == "barrel" && BarrelOffsetOverrides.ContainsKey(obj.name))
+                        else if (binding == "barrel" && CylinderOverrides.ContainsKey(obj.name))
                         {
-                            foreach (var offset in BarrelOffsetOverrides[obj.name].barrelOffsets)
+                            foreach (var offset in CylinderOverrides[obj.name].barrelOffsets)
                             {
                                 Melon<TweaksAndFixes>.Logger.Msg($"Add barrel: {obj.transform.position + offset}");
                                 
@@ -1265,7 +1265,7 @@ namespace TweaksAndFixes.Modified
                                 barrelCylider.transform.eulerAngles = new Vector3(90, 0, 0);
                                 barrelCylider.transform.SetScale(
                                     GetDiameter(),
-                                    BarrelOffsetOverrides[obj.name].barrel_length * obj.transform.localScale.x + 0.1f,
+                                    CylinderOverrides[obj.name].barrel_length * obj.transform.localScale.x + 0.1f,
                                     GetDiameter()
                                 );
                             }
@@ -1413,7 +1413,7 @@ namespace TweaksAndFixes.Modified
 
             if (!consructorRoot) return;
 
-            CylinderVisual.LoadBarrelOffsetOverridesData();
+            CylinderVisual.LoadCylinderOverrideData();
 
             container = new GameObject("Part_Debug");
             container.SetParent(consructorRoot);
