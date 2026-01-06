@@ -359,7 +359,14 @@ namespace TweaksAndFixes
             mockPart.ship = ship;
             mockPart._ship_k__BackingField = ship;
 
-            var sectionsGo = ship.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChild("Sections");
+            var sectionsGo = ModUtils.FindDeepChild(ship.hull.gameObject, "Sections"); // ship.hull.gameObject.GetChildren()[0].GetChildren()[0].GetChild("Sections");
+
+            if (sectionsGo == null)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"  Error! Could not find `Sections` game object in ship! Aborting charge effect!\n{ModUtils.DumpHierarchy(ship.hull.gameObject)}");
+                goto EXIT;
+            }
+
             float foreZ = 0;
             float rearZ = 0;
 
@@ -800,6 +807,7 @@ namespace TweaksAndFixes
                 _IsInChangeHullWithHuman = true;
             }
         }
+
         [HarmonyPatch(nameof(Ship.ChangeHull))]
         [HarmonyPostfix]
         internal static void Postfix_ChangeHull(Ship __instance)
@@ -859,6 +867,7 @@ namespace TweaksAndFixes
             //     LastCreatedShip = new Il2CppSystem.Collections.Generic.List<Ship>(player.designs)[^2];
             // }
         }
+
         [HarmonyPatch(nameof(Ship.SetDraught))]
         [HarmonyPostfix]
         internal static void Postfix_SetDraught(Ship __instance)
