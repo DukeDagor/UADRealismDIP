@@ -2,10 +2,8 @@
 using Il2Cpp;
 using Il2CppTMPro;
 using MelonLoader;
-using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.UI;
-using static Il2Cpp.Ui.SkirmishSetup;
 
 namespace TweaksAndFixes.Harmony
 {
@@ -33,6 +31,8 @@ namespace TweaksAndFixes.Harmony
             }
         }
 
+        private static readonly Guid id = Guid.NewGuid();
+
         // Format: 00h 00m 00s
         private static readonly string timeFormat = "hh'h 'mm'm 'ss's'";
 
@@ -56,8 +56,9 @@ namespace TweaksAndFixes.Harmony
         private static int batchCount = 1;
 
         // Time tracking
-        private static readonly Stopwatch totalTime = new();
-        private static readonly Stopwatch batchTime = new();
+        private static bool genStarted = false;
+        private static DateTime totalTime = new(0);
+        private static DateTime batchTime = new(0);
 
         // UI tracking
         private static string lastDisplayText = "";
@@ -122,8 +123,10 @@ namespace TweaksAndFixes.Harmony
         internal static void Postfix_Start(BatchShipGenerator __instance)
         {
             __instance.startButton.onClick.AddListener(new System.Action(() => {
-                if (!totalTime.IsRunning) totalTime.Start();
-                if (!batchTime.IsRunning) batchTime.Start();
+                genStarted = true;
+
+                if (totalTime.Ticks == 0) totalTime = DateTime.Now;
+                if (batchTime.Ticks == 0) batchTime = DateTime.Now;
 
                 if (designsRequested == -1)
                 {
@@ -310,8 +313,8 @@ namespace TweaksAndFixes.Harmony
                     Melon<TweaksAndFixes>.Logger.Msg($"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Batch", $"{batchCount}")}");
                     Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Requested", $"{designsRequested}")}");
                     Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Completed", $"{designsCompleted}")}");
-                    Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Batch_Time", batchTime.Elapsed.ToString(timeFormat))}");
-                    Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Time", totalTime.Elapsed.ToString(timeFormat))}");
+                    Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Batch_Time", (DateTime.Now - batchTime).ToString(timeFormat))}");
+                    Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Time", (DateTime.Now - totalTime).ToString(timeFormat))}");
 
                     if (retryEntry != null)
                     {
@@ -362,7 +365,7 @@ namespace TweaksAndFixes.Harmony
 
                         // Restart the process
                         batchCount++;
-                        batchTime.Restart();
+                        batchTime = DateTime.Now;
                         __instance.startButton.onClick.Invoke();
                     }
 
@@ -374,7 +377,7 @@ namespace TweaksAndFixes.Harmony
                             $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Completed", $"{designsCompleted}")}\n" +
                             $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Tries", $"{designsAttempted}")}\n" +
                             $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Batches", $"{batchCount}")}\n" +
-                            $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Time", totalTime.Elapsed.ToString(timeFormat))}\n" +
+                            $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Time", (DateTime.Now - totalTime).ToString(timeFormat))}\n" +
                             $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_See_Log")}\n";
 
                         Melon<TweaksAndFixes>.Logger.Msg($"");
@@ -383,7 +386,7 @@ namespace TweaksAndFixes.Harmony
                         Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Completed", $"{designsCompleted}")}");
                         Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Tries", $"{designsAttempted}")}");
                         Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Batches", $"{batchCount}")}");
-                        Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Time", totalTime.Elapsed.ToString(timeFormat))}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"  {ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Time", (DateTime.Now - totalTime).ToString(timeFormat))}");
                         Melon<TweaksAndFixes>.Logger.Msg($"");
 
                         if (failed.Count > 0)
@@ -455,7 +458,7 @@ namespace TweaksAndFixes.Harmony
 
             // ===== Update Log ===== //
 
-            if (updateLog)
+            if (updateLog && genStarted)
             {
                 updateLog = false;
 
@@ -466,8 +469,8 @@ namespace TweaksAndFixes.Harmony
                     $"failures,{designsFailed}\n" +
                     $"attempts,{designsAttempted}\n" +
                     $"batch_count,{batchCount}\n" +
-                    $"total_time,{totalTime.Elapsed.TotalSeconds:N0}\n" +
-                    $"batch_time,{totalTime.Elapsed.TotalSeconds:N0}\n" +
+                    $"total_time,{(DateTime.Now - totalTime).TotalSeconds:N0}\n" +
+                    $"batch_time,{(DateTime.Now - batchTime).TotalSeconds:N0}\n" +
                     $"# Nation_Year,type:completed/failed/tries/time\n";
 
                 // Append all year/nation/type info
@@ -531,7 +534,7 @@ namespace TweaksAndFixes.Harmony
                     Directory.CreateDirectory(Path.Join(Config._BasePath, "BatchShipGeneratorLogs"));
                 }
 
-                File.WriteAllText(Path.Join(Config._BasePath, "BatchShipGeneratorLogs", "progressLog.csv"), progressLog);
+                File.WriteAllText(Path.Join(Config._BasePath, "BatchShipGeneratorLogs", $"progressLog_{id.ToString("N")[..8]}.csv"), progressLog);
             }
 
             // ===== Update UI ===== //
@@ -544,7 +547,7 @@ namespace TweaksAndFixes.Harmony
                     $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Requested", $"{designsRequested}")}\n" +
                     $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Completed", $"{designsCompleted}")}\n" +
                     $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Tries", $"{designsAttempted}")}\n" +
-                    $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Time", totalTime.Elapsed.ToString(timeFormat))}\n\n";
+                    $"{ModUtils.LocalizeF("$TAF_Ui_BatchShipGenerator_Total_Time", (DateTime.Now - totalTime).ToString(timeFormat))}\n\n";
 
                 // User controls
                 if (!stopOnBatchEnd)
@@ -601,7 +604,7 @@ namespace TweaksAndFixes.Harmony
 
             foreach (var option in bsg.nationDropdown.options)
             {
-                if (option.text == nation)
+                if (option.text.ToLower() == nation.ToLower())
                 {
                     bsg.nationDropdown.SetValue(bsg.nationDropdown.options.IndexOf(option));
                     found = true;
@@ -618,7 +621,7 @@ namespace TweaksAndFixes.Harmony
 
             foreach (var option in bsg.shipTypeDropdown.options)
             {
-                if (option.text == type)
+                if (option.text.ToLower() == type.ToLower())
                 {
                     bsg.shipTypeDropdown.SetValue(bsg.shipTypeDropdown.options.IndexOf(option));
                     found = true;
