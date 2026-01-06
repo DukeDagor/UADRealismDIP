@@ -1342,6 +1342,21 @@ namespace TweaksAndFixes
                 }
             }
 
+            overweight = weight > _this.tempGoodWeight;
+            if (overweight && _this.shipType.name == "dd")
+            {
+                if (G.GameData.components.ContainsKey("multi_bottom_0")) 
+                    _this.InstallComponent(G.GameData.components["multi_bottom_0"]);
+            }
+
+            overweight = weight > _this.tempGoodWeight;
+            if (overweight && (_this.shipType.name == "dd" || _this.shipType.name == "tb"))
+            {
+                if (G.GameData.components.ContainsKey("ammo_shell_less"))
+                    _this.InstallComponent(G.GameData.components["ammo_shell_less"]);
+            }
+
+            overweight = weight > _this.tempGoodWeight;
             if (overweight)
             {
                 float minMS;
