@@ -1034,6 +1034,106 @@ namespace TweaksAndFixes
 
         const string bdlParamName = "ai_beamdraughtlimits";
 
+        private static void ClampShipStats(Ship ship)
+        {
+            bool modified = false;
+
+            var sd = ship.hull.data;
+            var st = ship.shipType;
+
+            float speed_min = st.speedMin;
+            float speed_max = st.speedMax;
+            float beam_min = sd.beamMin;
+            float beam_max = sd.beamMax;
+            float draught_min = sd.draughtMin;
+            float draught_max = sd.draughtMax;
+
+            if (st.paramx.ContainsKey("shipgen_clamp"))
+            {
+                modified = true;
+
+                foreach (var stat in st.paramx["shipgen_clamp"])
+                {
+                    var split = stat.Split(':');
+
+                    if (split.Length != 2)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"Invalid `shipTypes.csv` `shipgen_clamp` param: `{stat}` for ID `{st.name}`. Must be formatted `shipgen_clamp(stat;number, stat;number, ...)`.");
+                        continue;
+                    }
+
+                    string tag = split[0];
+
+                    if (!float.TryParse(split[1], out float val))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"Invalid `shipTypes.csv` `shipgen_clamp` param: `{stat}` for ID `{st.name}`. Must be valid number.");
+                        continue;
+                    }
+
+                    switch (tag)
+                    {
+                        case "speed_min": speed_min = Math.Clamp(val, st.speedMin, st.speedMax); break;
+                        case "speed_max": speed_max = Math.Clamp(val, st.speedMin, st.speedMax); break;
+                        case "beam_min": beam_min = Math.Clamp(val, sd.beamMin, sd.beamMax); break;
+                        case "beam_max": beam_max = Math.Clamp(val, sd.beamMin, sd.beamMax); break;
+                        case "draught_min": draught_min = Math.Clamp(val, sd.draughtMin, sd.draughtMax); break;
+                        case "draught_max": draught_max = Math.Clamp(val, sd.draughtMin, sd.draughtMax); break;
+                        default:
+                            Melon<TweaksAndFixes>.Logger.Error($"Invalid `parts.csv` `shipgen_clamp` param: `{stat}` for ID `{st.name}`. Unsuported stat. Can only be [speed_min, speed_max, beam_min, beam_max, draught_min, draught_max]");
+                            break;
+                    }
+                }
+            }
+
+            if (sd.paramx.ContainsKey("shipgen_clamp"))
+            {
+                modified = true;
+
+                foreach (var stat in sd.paramx["shipgen_clamp"])
+                {
+                    var split = stat.Split(':');
+
+                    if (split.Length != 2)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"Invalid `parts.csv` `shipgen_clamp` param: `{stat}` for ID `{sd.name}`. Must be formatted `shipgen_clamp(stat;number, stat;number, ...)`.");
+                        continue;
+                    }
+
+                    string tag = split[0];
+
+                    if (!float.TryParse(split[1], out float val))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Error($"Invalid `parts.csv` `shipgen_clamp` param: `{stat}` for ID `{sd.name}`. Must be valid number.");
+                        continue;
+                    }
+
+                    switch (tag)
+                    {
+                        case "speed_min":   speed_min   = Math.Clamp(val, st.speedMin, st.speedMax); break;
+                        case "speed_max":   speed_max   = Math.Clamp(val, st.speedMin, st.speedMax); break;
+                        case "beam_min":    beam_min    = Math.Clamp(val, sd.beamMin, sd.beamMax); break;
+                        case "beam_max":    beam_max    = Math.Clamp(val, sd.beamMin, sd.beamMax); break;
+                        case "draught_min": draught_min = Math.Clamp(val, sd.draughtMin, sd.draughtMax); break;
+                        case "draught_max": draught_max = Math.Clamp(val, sd.draughtMin, sd.draughtMax); break;
+                        default:
+                            Melon<TweaksAndFixes>.Logger.Error($"Invalid `parts.csv` `shipgen_clamp` param: `{stat}` for ID `{sd.name}`. Unsuported stat. Can only be [speed_min, speed_max, beam_min, beam_max, draught_min, draught_max]");
+                            break;
+                    }
+                }
+            }
+
+            if (!modified) return;
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Mod stats for ship {ship.Name(false, false)}:");
+            // if (speed_min != float.MinValue)   Melon<TweaksAndFixes>.Logger.Msg($"  speed:     {ship.speedMax * 1.943844f,10} -> {Math.Clamp(ship.speedMax, speed_min * 0.5144444f, speed_max * 0.5144444f) * 1.943844f}");
+            // if (beam_min != float.MinValue)    Melon<TweaksAndFixes>.Logger.Msg($"  beam:      {ship.beam,10} -> {Util.Remap(ship.beam, sd.beamMin, sd.beamMax, beam_min, beam_max)}");
+            // if (draught_min != float.MinValue) Melon<TweaksAndFixes>.Logger.Msg($"  draught:   {ship.draught,10} -> {Util.Remap(ship.draught, sd.draughtMin, sd.draughtMax, draught_min, draught_max)}");
+
+            ship.SetSpeedMax(Math.Clamp(ship.speedMax, speed_min * 0.5144444f, speed_max * 0.5144444f));
+            ship.SetBeam(Util.Remap(ship.beam, sd.beamMin, sd.beamMax, beam_min, beam_max));
+            ship.SetDraught(Util.Remap(ship.draught, sd.draughtMin, sd.draughtMax, draught_min, draught_max));
+        }
+
         [HarmonyPatch(nameof(Ship._GenerateRandomShip_d__573.MoveNext))]
         [HarmonyPrefix]
         internal static bool Prefix_MoveNext(Ship._GenerateRandomShip_d__573 __instance, out GRSData __state, ref bool __result)
@@ -1057,33 +1157,8 @@ namespace TweaksAndFixes
             __state.draughtMin = hd.draughtMin;
             __state.draughtMax = hd.draughtMax;
 
-            if (hd.paramx.TryGetValue(bdlParamName, out var bdlParam))
-            {
-                int iC = bdlParam.Count;
-                if (iC == 4)
-                {
-                    for (int i = 0; i < iC; ++i)
-                    {
-                        if (!float.TryParse(bdlParam[i], out var val))
-                        {
-                            Melon<TweaksAndFixes>.Logger.Error($"For ship {hd.name}, {bdlParamName} failed to parse {bdlParam[i]}");
-                            continue;
-                        }
-                        if (val != 0)
-                        {
-                            switch (i)
-                            {
-                                case 0: hd.beamMin = val; break;
-                                case 1: hd.beamMax = val; break;
-                                case 2: hd.draughtMin = val; break;
-                                default: hd.draughtMax = val; break;
-                            }
-                        }
-                    }
-                }
-                else
-                    Melon<TweaksAndFixes>.Logger.Error($"For ship {hd.name}, {bdlParamName} doesn't have 4 elements. The elements should be beamMin, beamMax, draughtMin, draughtMax. Values of 0 mean keep existing non-AI values.");
-            }
+            ClampShipStats(ship);
+
             switch (__state.state)
             {
                 case 0:
