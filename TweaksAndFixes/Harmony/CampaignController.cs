@@ -25,6 +25,16 @@ namespace TweaksAndFixes
         }
 
 
+        // GetResearchSpeed
+        [HarmonyPatch(nameof(CampaignController.GetResearchSpeed))]
+        [HarmonyPrefix]
+        internal static void Prefix_GetResearchSpeed(Player player, Technology tech)
+        {
+            if (Config.Param("taf_ai_disable_tech_priorities", 1) == 1 && player.isAi)
+            {
+                player.techPriorities.Clear();
+            }
+        }
 
 
 
