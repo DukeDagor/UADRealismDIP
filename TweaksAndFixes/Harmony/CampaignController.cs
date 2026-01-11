@@ -426,12 +426,15 @@ namespace TweaksAndFixes
                 {
                     // at war now
 
+                    Melon<TweaksAndFixes>.Logger.Msg($"State for {relation.a.Name(false)} x {relation.b.Name(false)} changed to war:");
+
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Find overlapping allies");
                     // First, find overlapping allies. They break
                     // both alliances.
-                    for (int i = __state.alliesA.Count; i-- > 0;)
+                    for (int i = __state.alliesA.Count - 1; i > 0; i--)
                     {
                         Player p = __state.alliesA[i];
-                        for (int j = __state.alliesB.Count; j-- > 0;)
+                        for (int j = __state.alliesB.Count - 1; j > 0; j--)
                         {
                             if (__state.alliesB[j] == p)
                             {
@@ -439,38 +442,56 @@ namespace TweaksAndFixes
                                 __state.alliesB.RemoveAt(j);
                                 var rel = RelationExt.Between(__instance.CampaignData.Relations, p, relation.a);
                                 if (rel.isAlliance) // had better be true
+                                {
+                                    Melon<TweaksAndFixes>.Logger.Msg($"    Set relation {rel.a.Name(false)} x {rel.b.Name(false)} to {-rel.attitude}");
                                     __instance.AdjustAttitude(rel, -rel.attitude, true, false, info, raiseEvents, true, fromCommonEnemy);
+                                }
                                 rel = RelationExt.Between(__instance.CampaignData.Relations, p, relation.b);
                                 if (rel.isAlliance)
+                                {
+                                    Melon<TweaksAndFixes>.Logger.Msg($"    Set relation {rel.a.Name(false)} x {rel.b.Name(false)} to {-rel.attitude}");
                                     __instance.AdjustAttitude(rel, -rel.attitude, true, false, info, raiseEvents, true, fromCommonEnemy);
+                                }
                                 break;
                             }
                         }
                     }
 
+                    Melon<TweaksAndFixes>.Logger.Msg($"  All other allies declare war");
                     // All other allies declare war
                     foreach (var p in __state.alliesA)
                     {
                         var rel = RelationExt.Between(__instance.CampaignData.Relations, p, relation.b);
                         if (!rel.isWar)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"    Set relation {rel.a.Name(false)} x {rel.b.Name(false)} to War");
                             __instance.AdjustAttitude(rel, -200f, true, false, info, raiseEvents, true, fromCommonEnemy);
+                        }
                     }
                     foreach (var p in __state.alliesB)
                     {
                         var rel = RelationExt.Between(__instance.CampaignData.Relations, p, relation.a);
                         if (!rel.isWar)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"    Set relation {rel.a.Name(false)} x {rel.b.Name(false)} to War");
                             __instance.AdjustAttitude(rel, -200f, true, false, info, raiseEvents, true, fromCommonEnemy);
+                        }
                     }
+
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Allies declare war on each other");
                     // Allies declare war on each other
-                    for (int i = __state.alliesA.Count; i-- > 0;)
+                    for (int i = __state.alliesA.Count - 1; i > 0; i--)
                     {
                         Player a = __state.alliesA[i];
-                        for (int j = __state.alliesB.Count; j-- > 0;)
+                        for (int j = __state.alliesB.Count - 1; j > 0; j--)
                         {
-                            Player b = __state.alliesB[i];
+                            Player b = __state.alliesB[j];
                             var rel = RelationExt.Between(__instance.CampaignData.Relations, a, b);
                             if (!rel.isWar)
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"    Set relation {rel.a.Name(false)} x {rel.b.Name(false)} to War");
                                 __instance.AdjustAttitude(rel, -200f, true, false, info, raiseEvents, true, fromCommonEnemy);
+                            }
                         }
                     }
                 }
