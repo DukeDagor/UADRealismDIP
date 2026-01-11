@@ -280,7 +280,7 @@ namespace TweaksAndFixes
 
                 MessageBoxUI.MessageBoxQueue queue = new MessageBoxUI.MessageBoxQueue();
                 queue.Header = LocalizeManager.Localize("$TAF_Ui_Retirement_Header");
-                queue.Text = String.Format(LocalizeManager.Localize("$TAF_Ui_Retirement_Body"), __instance.CurrentDate.AsDate().Year - 1890, retirementPromptFrequency);
+                queue.Text = String.Format(LocalizeManager.Localize("$TAF_Ui_Retirement_Body"), __instance.CurrentDate.AsDate().Year - __instance.StartYear, retirementPromptFrequency);
                 queue.Ok = LocalizeManager.Localize("$Ui_Popup_Generic_Yes");
                 queue.Cancel = LocalizeManager.Localize("$Ui_Popup_Generic_No");
                 queue.canBeClosed = false;
