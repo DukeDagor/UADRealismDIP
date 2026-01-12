@@ -1229,9 +1229,73 @@ namespace TweaksAndFixes
                 return;
 
             float tryRatio = tryN * 100f / triesTotal;
-            float weightToStopArmor = tonnage * 0.9999f;
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Reduce weight: Try ratio = {tryRatio} ({tryN} / {triesTotal}) with weight {weight} t./{tonnage} t.");
 
             bool overweight = weight > _this.tempGoodWeight;
+            if (overweight && _this.shipType.name == "dd"
+                && G.GameData.components.ContainsKey("multi_bottom_0"))
+            {
+                _this.InstallComponent(G.GameData.components["multi_bottom_0"]);
+                weight = _this.Weight();
+                if (weight > _this.tempGoodWeight) return;
+            }
+
+            overweight = weight > _this.tempGoodWeight;
+            if (overweight)
+            {
+                if (tryRatio > 50)
+                    _this.CurrentCrewQuarters = Ship.CrewQuarters.Standard;
+                else
+                    _this.CurrentCrewQuarters = Ship.CrewQuarters.Cramped;
+
+                weight = _this.Weight(false, true);
+                if (weight > _this.tempGoodWeight) return;
+            }
+
+            overweight = weight > _this.tempGoodWeight;
+            if (overweight && (_this.shipType.name == "dd" || _this.shipType.name == "tb")
+                && G.GameData.components.ContainsKey("shell_normal"))
+            {
+                _this.InstallComponent(G.GameData.components["shell_normal"]);
+                weight = _this.Weight();
+                if (weight > _this.tempGoodWeight) return;
+            }
+
+            overweight = weight > _this.tempGoodWeight;
+            if (overweight && (_this.shipType.name == "dd" || _this.shipType.name == "tb")
+                && G.GameData.components.ContainsKey("ammo_shell_less"))
+            {
+                _this.InstallComponent(G.GameData.components["ammo_shell_less"]);
+                weight = _this.Weight();
+                if (weight > _this.tempGoodWeight) return;
+            }
+
+            overweight = weight > _this.tempGoodWeight;
+            if (overweight && (_this.shipType.name == "dd" || _this.shipType.name == "tb"))
+            {
+                foreach (var cal in _this.shipGunCaliber)
+                {
+                    _this.SetCaliberDiameter(cal, 0);
+                }
+
+                weight = _this.Weight();
+                if (weight > _this.tempGoodWeight) return;
+            }
+
+            overweight = weight > _this.tempGoodWeight;
+            if (overweight && (_this.shipType.name == "dd" || _this.shipType.name == "tb"))
+            {
+                foreach (var cal in _this.shipGunCaliber)
+                {
+                    _this.SetCaliberLength(cal, 0);
+                }
+
+                weight = _this.Weight();
+                if (weight > _this.tempGoodWeight) return;
+            }
+
+            overweight = weight > _this.tempGoodWeight;
             if (!_this.IsShipWhitoutArmor())
             {
                 var gaInfo = GenArmorData.GetInfoFor(_this);
@@ -1343,20 +1407,6 @@ namespace TweaksAndFixes
             }
 
             overweight = weight > _this.tempGoodWeight;
-            if (overweight && _this.shipType.name == "dd")
-            {
-                if (G.GameData.components.ContainsKey("multi_bottom_0")) 
-                    _this.InstallComponent(G.GameData.components["multi_bottom_0"]);
-            }
-
-            overweight = weight > _this.tempGoodWeight;
-            if (overweight && (_this.shipType.name == "dd" || _this.shipType.name == "tb"))
-            {
-                if (G.GameData.components.ContainsKey("ammo_shell_less"))
-                    _this.InstallComponent(G.GameData.components["ammo_shell_less"]);
-            }
-
-            overweight = weight > _this.tempGoodWeight;
             if (overweight)
             {
                 float minMS;
@@ -1439,6 +1489,7 @@ namespace TweaksAndFixes
                 }
             }
 
+            overweight = weight > _this.tempGoodWeight;
             var minOpRange = MinOpRange(_this, VesselEntity.OpRange.Low);
             if (overweight && _this.opRange > minOpRange)
             {
@@ -1465,6 +1516,7 @@ namespace TweaksAndFixes
                 }
             }
 
+            overweight = weight > _this.tempGoodWeight;
             if (overweight)
             {
                 Ship.Survivability minSurv = Config.ShipGenTweaks ? MinSurv(_this, Ship.Survivability.High) : (_this.shipType.name == "dd" || _this.shipType.name == "tb" ? Ship.Survivability.Low : Ship.Survivability.High);
