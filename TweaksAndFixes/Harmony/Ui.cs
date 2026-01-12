@@ -82,6 +82,22 @@ namespace TweaksAndFixes
 
 
 
+        // AllowCameraControl
+
+        [HarmonyPatch(nameof(Ui.AllowCameraControl))]
+        [HarmonyPrefix]
+        internal static bool Prefix_AllowCameraControl(Ui __instance, ref bool __result)
+        {
+            if (!UiM.showPopups)
+            {
+                __result = true;
+                return false;
+            }
+
+            return true;
+        }
+
+
 
 
 
