@@ -110,10 +110,24 @@ namespace TweaksAndFixes
             if (!Config.PeaceCheckOverride)
                 return true;
 
+            if (GameManager.IsLoadingScreenActive) return false;
+
             UiM.CheckForPeace(__instance);
             return false;
         }
 
+        // AskForPeace
+
+        [HarmonyPatch(nameof(Ui.AskForPeace))]
+        [HarmonyPrefix]
+        internal static bool Prefix_AskForPeace(Ui __instance, bool isPlayerRelation, Relation relation, Player whoAsk, string msg, bool oppositePlayer)
+        {
+            if (!Config.PeaceCheckOverride)
+                return true;
+
+            UiM.AskForPeace(__instance, isPlayerRelation, relation, whoAsk, msg, oppositePlayer);
+            return false;
+        }
 
 
 
