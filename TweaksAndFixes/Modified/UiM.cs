@@ -1214,6 +1214,8 @@ namespace TweaksAndFixes
             bailoutEvent.SetActive(true);
         }
 
+        public static bool showPopups = true;
+
         public static void CreateHidePopupsButton()
         {
             GameObject popupSaveWindow = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/SaveWindow");
@@ -1221,7 +1223,7 @@ namespace TweaksAndFixes
             var regularPopups = regularPopupsRoot.GetChildren();
             GameObject basePopupsRoot = ModUtils.GetChildAtPath("Ui/UiMain", G.container);
 
-            bool showPopups = true;
+            showPopups = true;
 
             GameObject nextTurnButton = ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/Windows/Map Window/Next Turn Panel/Next Turn Button");
             GameObject hidePopupsButton = GameObject.Instantiate(nextTurnButton);
@@ -1279,7 +1281,7 @@ namespace TweaksAndFixes
                     }
                 }
 
-                regularPopupsRoot.SetActive(showPopups);
+                regularPopupsRoot.transform.localPosition = showPopups ? Vector3.zero : new(1000000,0,0);
 
                 if (basePopupsRoot.GetChild("MessageBox(Clone)", true) != null)
                 {
@@ -1304,7 +1306,7 @@ namespace TweaksAndFixes
 
                         hasPopups = true;
 
-                        child.SetActive(showPopups);
+                        child.transform.localPosition = showPopups ? Vector3.zero : new(1000000, 0, 0);
                     }
 
                     hidePopupsButton.transform.SetSiblingIndex(children.Count - 1);
