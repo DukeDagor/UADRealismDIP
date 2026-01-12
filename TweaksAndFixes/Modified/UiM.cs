@@ -1559,7 +1559,7 @@ namespace TweaksAndFixes
 
                 int parsedYear = 0;
 
-                if (value.Length == 0 || !int.TryParse(value, out parsedYear) || parsedYear == G.ui.sharedDesignYear || parsedYear < 1890 || parsedYear > 1950)
+                if (value.Length == 0 || !int.TryParse(value, out parsedYear) || parsedYear == G.ui.sharedDesignYear || parsedYear < Config.StartingYear || parsedYear > Config.Param("taf_shared_designer_max_year", 1960))
                 {
                     // Melon<TweaksAndFixes>.Logger.Msg($"  Parsed: `{parsedYear}`");
                     InputChooseYearEditField.text = G.ui.sharedDesignYear.ToString();
