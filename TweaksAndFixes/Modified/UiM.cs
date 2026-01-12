@@ -1904,7 +1904,7 @@ namespace TweaksAndFixes
 
             foreach (var rel in CD.Relations.Values)
             {
-                if (!rel.isWar || rel.PeaceTreatyChance <= 0.0)
+                if (!rel.isWar)
                     continue;
 
                 Player a, b;
@@ -1938,85 +1938,300 @@ namespace TweaksAndFixes
                     continue;
                 rel.LastTreatyCheckDate = CampaignController.Instance.CurrentDate;
 
+                Melon<TweaksAndFixes>.Logger.Msg($"Checking war: {rel.a.Name(false)} ({vpA} vp) vs. {rel.b.Name(false)} ({vpB} vp)");
+
                 // Early check: If the war has gone on for too long with no VP, just call for peace
                 int turnsSinceStart = CampaignController.Instance.CurrentDate.MonthsPassedSince(rel.recentWarStartDate);
 
                 if (vpA + vpB < lowVPThreshold && turnsSinceStart > monthsForLowVPWarEnd)
                 {
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Triggering White Peace Event: Rel A {vpA} vp + Rel B {vpB} vp < {lowVPThreshold} (Low VP Threash) && {turnsSinceStart} (Mo. Since Start) > {monthsForLowVPWarEnd} (Mo. For White Peace)");
+
                     _this.AskForPeace(hasHuman, rel, PlayerController.Instance, LocalizeManager.Localize("$TAF_Ui_War_WhitePeace"), vpA >= vpB);
                     continue;
                 }
 
+                // TODO: Add peace checks for no fleet, revolution, bad finances, blockade, major VP difference
+                // if (!a.revolution && a.govermentChangedPenalty > 0)
+                // {
+                //     Melon<TweaksAndFixes>.Logger.Msg($"  Triggering revolotionary peace for {a.Name(false)}: {a.govermentChangedPenalty} > 0");
+                // 
+                //     _this.AskForPeace(hasHuman, rel, PlayerController.Instance, LocalizeManager.Localize("$TAF_Ui_War_WhitePeace"), false);
+                //     continue;
+                // }
+                // 
+                // if (!b.revolution && b.govermentChangedPenalty > 0)
+                // {
+                //     Melon<TweaksAndFixes>.Logger.Msg($"  Triggering revolotionary peace for {b.Name(false)}: {b.govermentChangedPenalty} > 0");
+                // 
+                //     _this.AskForPeace(hasHuman, rel, PlayerController.Instance, LocalizeManager.Localize("$TAF_Ui_War_WhitePeace"), true);
+                //     continue;
+                // }
+
                 Player loserPlayer = null;
+
                 if (Mathf.Abs(vpB - vpA) >= peace_min_vp_difference && Mathf.Max((vpB + 1f) / (vpA + 1f), (vpB + 1f) / (vpA + 1f)) >= peace_enemy_vp_ratio && vpA + vpB >= peace_vp_sum_prolonged_war)
                 {
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Rel A {vpA} vp - Rel B {vpB} vp < {peace_min_vp_difference} (Min VP diff) && Rel A {vpA} vp / Rel B {vpB} vp >= {peace_enemy_vp_ratio} (VP Ratio) && Rel A {vpA} vp + Rel B {vpB} vp >= {peace_vp_sum_prolonged_war} (VP Prolonged War)");
                     loserPlayer = vpB > vpA ? a : b;
+                    Melon<TweaksAndFixes>.Logger.Msg($"    Chose loser: {loserPlayer.Name(false)}");
                 }
+
+                else if (Mathf.Max((vpB + 1f) / (vpA + 1f), (vpB + 1f) / (vpA + 1f)) > 5)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Rel A {vpA} vp / Rel B {vpB} vp >= {peace_enemy_vp_ratio} (VP Ratio)");
+                    loserPlayer = vpB > vpA ? a : b;
+                    Melon<TweaksAndFixes>.Logger.Msg($"    Chose loser: {loserPlayer.Name(false)}");
+                }
+
                 else if (turnsSinceStart >= monthsForEconCollapse)
                 {
+                    Melon<TweaksAndFixes>.Logger.Msg($"  {turnsSinceStart} Mo. since start > {monthsForEconCollapse} Mo. for econ collapse");
+
                     var wgeA = a.WealthGrowthEffective();
                     var wgeB = b.WealthGrowthEffective();
-                    if (wgeA <= 0)
-                    {
-                        if (wgeB <= 0)
-                        {
-                            var aRel = CampaignControllerM.GetAllianceRelation(a, b);
 
-                            float vpAA, vpAB;
-                            if (aRel.A.Players.Contains(a.data))
-                            {
-                                vpAA = aRel.vpA;
-                                vpAB = aRel.vpB;
-                            }
-                            else
-                            {
-                                vpAA = aRel.vpB;
-                                vpAB = aRel.vpA;
-                            }
-                            if (vpAA > vpAB)
-                                loserPlayer = b;
-                            else if (vpAA < vpAB)
-                                loserPlayer = a;
-                            else if (vpA > vpB)
-                                loserPlayer = b;
-                            else if (vpA < vpB)
-                                loserPlayer = a;
-                            else
-                                loserPlayer = UnityEngine.Random.Range(0, 1) == 0 ? a : b;
+                    Melon<TweaksAndFixes>.Logger.Msg($"    Rel A GDP growth {wgeA}");
+                    Melon<TweaksAndFixes>.Logger.Msg($"    Rel B GDP growth {wgeB}");
+
+                    var alRel = CampaignControllerM.GetAllianceRelation(a, b);
+
+                    float vpAA = 0, vpAB = 0;
+
+                    if (alRel != null)
+                    {
+                        if (alRel.A.Players.Contains(a.data))
+                        {
+                            vpAA = alRel.vpA;
+                            vpAB = alRel.vpB;
+                        }
+                        else
+                        {
+                            vpAA = alRel.vpB;
+                            vpAB = alRel.vpA;
                         }
 
-                        if (vpB > vpA
-                            || (CampaignControllerM.GetAllianceRelation(a, b) is AllianceRelation alRel
-                                && (alRel.A.Players.Contains(a.data) ?
-                                    (alRel.vpB > alRel.vpA)
-                                    : (alRel.vpA > alRel.vpB))))
+                        Melon<TweaksAndFixes>.Logger.Msg($"    Rel A Alliance VP {vpAA}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"    Rel B Alliance VP {vpAB}");
+                    }
+
+                    // Nation A's econ is failing
+                    if (wgeA <= 0 && wgeB > 0)
+                    {
+                        if (vpAA < vpAB)
                         {
+                            Melon<TweaksAndFixes>.Logger.Msg($"      Rel A Alliance vp {vpAA} < Rel B Alliance vp {vpAB}");
                             loserPlayer = a;
+                        }
+                        else if (vpA < vpB)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"      Rel A vp {vpA} < Rel B vp {vpB}");
+                            loserPlayer = a;
+                        }
+                    }
+
+                    // Nation B's econ is failing
+                    else if (wgeB <= 0 && wgeA > 0)
+                    {
+                        if (vpAA > vpAB)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"      Rel A Alliance vp {vpAA} > Rel B Alliance vp {vpAB}");
+                            loserPlayer = b;
+                        }
+                        else if (vpA > vpB)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"      Rel A vp {vpA} > Rel B vp {vpB}");
+                            loserPlayer = b;
+                        }
+                    }
+
+                    // Nation A's and nation B's econ is failing
+                    else// if (wgeA <= 0 && wgeB <= 0)
+                    {
+                        if (vpAA > vpAB)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"      Rel A Alliance vp {vpAA} > Rel B Alliance vp {vpAB}");
+                            loserPlayer = b;
+                        }
+                        else if (vpAA < vpAB)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"      Rel B Alliance vp {vpAB} > Rel A Alliance vp {vpAA}");
+                            loserPlayer = a;
+                        }
+                        else if (vpA > vpB)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"      Rel A vp {vpA} > Rel B vp {vpB}");
+                            loserPlayer = b;
+                        }
+                        else if (vpA < vpB)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"      Rel B vp {vpB} > Rel A vp {vpA}");
+                            loserPlayer = a;
+                        }
+                        else
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"      Rel B vp {vpB} == Rel A vp {vpA}, choosing randomly");
+                            loserPlayer = UnityEngine.Random.Range(0, 1) == 0 ? a : b;
+                        }
+                    }
+
+                    if (loserPlayer != null)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"        Chose loser: {loserPlayer.Name(false)}");
+                    }
+
+                    /*if (wgeA <= 0)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"    Rel A GDP growth {wgeA} <= 0");
+
+                        if (wgeB <= 0)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"    Rel B GDP growth {wgeA} <= 0");
+
+                            if (vpAA > vpAB)
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"    Rel A Alliance vp {vpAA} > Rel B Alliance vp {vpAB}");
+                                loserPlayer = b;
+                            }
+                            else if (vpAA < vpAB)
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"    Rel B Alliance vp {vpAB} > Rel A Alliance vp {vpAA}");
+                                loserPlayer = a;
+                            }
+                            else if (vpA > vpB)
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"    Rel A vp {vpA} > Rel B vp {vpB}");
+                                loserPlayer = b;
+                            }
+                            else if (vpA < vpB)
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"    Rel B vp {vpB} > Rel A vp {vpA}");
+                                loserPlayer = a;
+                            }
+                            else
+                            {
+                                loserPlayer = UnityEngine.Random.Range(0, 1) == 0 ? a : b;
+                            }
+
+                            Melon<TweaksAndFixes>.Logger.Msg($"      Chose loser: {loserPlayer.Name(false)}");
+                        }
+
+                        else if ((alRel != null && (alRel.A.Players.Contains(a.data) ?
+                                (alRel.vpB > alRel.vpA)
+                                : (alRel.vpA > alRel.vpB))))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg(
+                                $"    Rel A {(alRel.A.Players.Contains(a.data) ? alRel.vpB : alRel.vpA)} aliance vp > Rel B {(alRel.A.Players.Contains(a.data) ? alRel.vpA : alRel.vpB)} aliance vp"
+                            );
+                            loserPlayer = vpB > vpA ? a : b;
+                            Melon<TweaksAndFixes>.Logger.Msg($"      Chose loser: {loserPlayer.Name(false)}");
+                        }
+                        else
+                        {
+                            loserPlayer = vpB > vpA ? a : b;
                         }
                     }
                     else if (wgeB <= 0)
                     {
                         if (vpA > vpB
-                            || (CampaignControllerM.GetAllianceRelation(a, b) is AllianceRelation alRel
+                            || (alRel != null
                                 && (alRel.A.Players.Contains(a.data) ?
                                     (alRel.vpA > alRel.vpB)
                                     : (alRel.vpB > alRel.vpA))))
                         {
+                            Melon<TweaksAndFixes>.Logger.Msg(
+                                $"    Rel A {vpA} vp > Rel B {vpB} vp || Rel A {(alRel.A.Players.Contains(a.data) ? alRel.vpA : alRel.vpB)} aliance vp > Rel B {(alRel.A.Players.Contains(a.data) ? alRel.vpB : alRel.vpA)} aliance vp"
+                            );
                             loserPlayer = a;
+                            Melon<TweaksAndFixes>.Logger.Msg($"      Chose loser: {loserPlayer.Name(false)}");
                         }
-                    }
+                    }*/
                 }
 
                 if (loserPlayer != null)
                 {
                     if (loserPlayer == a)
-                        _this.AskForPeace(hasHuman, rel, PlayerController.Instance, LocalizeManager.Localize("$Ui_World_TheWarIsNotGoingWellThe") + "{0} {1}" + LocalizeManager.Localize("$Ui_World_asksYouShouldAskUnfPeace"), false);
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"  Result (Show to player: {hasHuman}): Loser {a.data.nameUi}, Winner {b.data.nameUi}");
+                        _this.AskForPeace(hasHuman, rel, PlayerController.Instance, LocalizeManager.Localize("$Ui_World_TheWarIsNotGoingWellThe") + "{0} {1}" + LocalizeManager.Localize("$Ui_World_asksYouShouldAskUnfPeace").Replace("{0}", "{2}"), false);
+                    }
                     else
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"  Result (Show to player: {hasHuman}): Loser {b.data.nameUi}, Winner {a.data.nameUi}");
                         _this.AskForPeace(hasHuman, rel, PlayerController.Instance, LocalizeManager.Localize("$Ui_World_WeAreWinningSnThe") + "{0} {1}" + LocalizeManager.Localize("$Ui_World_desperAsksPeaceTreaty"), true);
+                    }
                 }
             }
         }
 
+        public static void PrintTreatyRelationsMatrix()
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"Active treaties:");
+
+            foreach (var rel in CampaignController.Instance.CampaignData.Relations)
+            {
+                if (rel.Value.PeaceTreatyChance != -1)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg(
+                        $"  {rel.Key.Key.Name(false)} : {rel.Key.Value.Name(false)} -> {rel.Value.PeaceTreatyChance}% (Peace treaty allowed: {rel.Value.CanSignPeace()})"
+                    );
+                }
+            }
+        }
+
+        public static void AskForPeace(Ui _this, bool isPlayerRelation, Relation relation, Player whoAsk, string msg, bool oppositePlayer)
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"Ask for peace: {relation.a.Name(false)} vs. {relation.b.Name(false)}");
+
+            if (!isPlayerRelation)
+            {
+                CampaignController.Instance.PeaceTreaty(relation, UnityEngine.Random.value < 0.5f);
+                PrintTreatyRelationsMatrix();
+                return;
+            }
+
+            if (oppositePlayer)
+            {
+                whoAsk = relation.PlayerBesides(whoAsk);
+            }
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Winner: {whoAsk.Name(false)} vs. Loser: {relation.PlayerBesides(whoAsk).Name(false)}");
+
+            string playerNameA = whoAsk.Name();
+            string playerGovtA = whoAsk.GovermentType();
+            string playerNameB = relation.PlayerBesides(whoAsk).Name();
+
+            string message = string.Empty;
+
+            if (msg.Contains("{2}"))
+            {
+                message = String.Format(msg, playerNameA, playerGovtA, playerNameB);
+            }
+            else
+            {
+                message = String.Format(msg, playerNameA, playerGovtA);
+            }
+
+            string peaceTreaty = LocalizeManager.Localize("$Ui_World_Politics_PeaceTreaty");
+            string agree = LocalizeManager.Localize("$Ui_World_Agree");
+            string fightToTheEnd = LocalizeManager.Localize("$Ui_World_FightToTheEnd");
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Message: {message}");
+
+            MessageBoxUI.Show(
+                peaceTreaty, message, null, true, agree, fightToTheEnd,
+                new System.Action(() => {
+                    CampaignController.Instance.PeaceTreaty(relation, true);
+                    G.ui.RefreshCampaignUI();
+                    PrintTreatyRelationsMatrix();
+                }),
+                new System.Action(() => {
+                    CampaignController.Instance.PeaceTreaty(relation, false);
+                    G.ui.RefreshCampaignUI();
+                    PrintTreatyRelationsMatrix();
+                })
+            );
+        }
 
         // private static Slider beamSliderComp;
         // 
