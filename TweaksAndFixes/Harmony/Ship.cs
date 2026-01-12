@@ -1171,6 +1171,63 @@ namespace TweaksAndFixes
 
             ClampShipStats(ship);
 
+            if (__instance.__1__state > 1)
+            {
+                var _this = ship;
+
+                float bestWeight = _this.Weight();
+                ComponentData bestEngine = _this.components[G.GameData.compTypes["boilers"]];
+                ComponentData bestBoiler = _this.components[G.GameData.compTypes["engine"]];
+                ComponentData bestFuel = _this.components[G.GameData.compTypes["fuel"]];
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Start: {bestEngine.name} x {bestBoiler.name} x {bestFuel.name}: {_this.weight} t. / {_this.Tonnage()}");
+
+                foreach (var engine in G.GameData.technologies)
+                {
+                    if (engine.Value.componentx == null
+                        || engine.Value.componentx.type != "engine"
+                        || !_this.IsComponentAvailable(engine.Value.componentx)) continue;
+
+                    foreach (var boiler in G.GameData.technologies)
+                    {
+                        if (boiler.Value.componentx == null
+                            || boiler.Value.componentx.type != "boilers"
+                            || !_this.IsComponentAvailable(boiler.Value.componentx)) continue;
+
+                        foreach (var fuel in G.GameData.technologies)
+                        {
+                            if (fuel.Value.componentx == null
+                                || fuel.Value.componentx.type != "fuel"
+                                || !_this.IsComponentAvailable(fuel.Value.componentx)) continue;
+
+                            // Melon<TweaksAndFixes>.Logger.Msg($"    {engine.Key} x {boiler.Key} x {fuel.Key}");
+
+                            _this.InstallComponent(engine.Value.componentx);
+                            _this.InstallComponent(boiler.Value.componentx);
+                            _this.InstallComponent(fuel.Value.componentx);
+
+                            if (bestWeight > _this.Weight())
+                            {
+                                bestWeight = _this.Weight();
+                                bestEngine = engine.Value.componentx;
+                                bestBoiler = boiler.Value.componentx;
+                                bestFuel = fuel.Value.componentx;
+                            }
+                        }
+                    }
+                }
+
+                _this.InstallComponent(bestEngine);
+                _this.InstallComponent(bestBoiler);
+                _this.InstallComponent(bestFuel);
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Best Combo: {bestEngine.name} x {bestBoiler.name} x {bestFuel.name}: {_this.weight} t. / {_this.Tonnage()}");
+
+                if (_this.components[G.GameData.compTypes["torpedo_prop"]] == G.GameData.components["torpedo_prop_fast"])
+                {
+                    _this.InstallComponent(G.GameData.components["torpedo_prop_normal"]);
+                }
+            }
+
             switch (__state.state)
             {
                 case 0:
