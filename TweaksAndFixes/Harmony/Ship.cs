@@ -1034,6 +1034,14 @@ namespace TweaksAndFixes
 
         const string bdlParamName = "ai_beamdraughtlimits";
 
+        public static float Reratio(float v, float a1, float b1, float a2, float b2)
+        {
+            if (a2 == b2) return a2;
+            if (a1 == b1) return (a2 + b2) / 2;
+
+            return b2 + Math.Abs(a2 - b2) * ((v - b1) / Math.Abs(a1 - b1));
+        }
+
         private static void ClampShipStats(Ship ship)
         {
             bool modified = false;
@@ -1058,13 +1066,13 @@ namespace TweaksAndFixes
 
                     if (split.Length != 2)
                     {
-                        Melon<TweaksAndFixes>.Logger.Error($"Invalid `shipTypes.csv` `shipgen_clamp` param: `{stat}` for ID `{st.name}`. Must be formatted `shipgen_clamp(stat;number, stat;number, ...)`.");
+                        Melon<TweaksAndFixes>.Logger.Error($"Invalid `shipTypes.csv` `shipgen_clamp` param: `{stat}` for ID `{st.name}`. Must be formatted `shipgen_clamp(stat:number; stat:number; ...)`.");
                         continue;
                     }
 
                     string tag = split[0];
 
-                    if (!float.TryParse(split[1], out float val))
+                    if (!float.TryParse(split[1], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out float val))
                     {
                         Melon<TweaksAndFixes>.Logger.Error($"Invalid `shipTypes.csv` `shipgen_clamp` param: `{stat}` for ID `{st.name}`. Must be valid number.");
                         continue;
@@ -1095,13 +1103,13 @@ namespace TweaksAndFixes
 
                     if (split.Length != 2)
                     {
-                        Melon<TweaksAndFixes>.Logger.Error($"Invalid `parts.csv` `shipgen_clamp` param: `{stat}` for ID `{sd.name}`. Must be formatted `shipgen_clamp(stat;number, stat;number, ...)`.");
+                        Melon<TweaksAndFixes>.Logger.Error($"Invalid `parts.csv` `shipgen_clamp` param: `{stat}` for ID `{sd.name}`. Must be formatted `shipgen_clamp(stat:number; stat:number; ...)`.");
                         continue;
                     }
 
                     string tag = split[0];
 
-                    if (!float.TryParse(split[1], out float val))
+                    if (!float.TryParse(split[1], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out float val))
                     {
                         Melon<TweaksAndFixes>.Logger.Error($"Invalid `parts.csv` `shipgen_clamp` param: `{stat}` for ID `{sd.name}`. Must be valid number.");
                         continue;
@@ -1124,14 +1132,18 @@ namespace TweaksAndFixes
 
             if (!modified) return;
 
+            speed_min = speed_min > speed_max ? speed_max : speed_min;
+            beam_min = beam_min > beam_max ? beam_max : beam_min;
+            draught_min = draught_min > draught_max ? draught_max : draught_min;
+
             // Melon<TweaksAndFixes>.Logger.Msg($"Mod stats for ship {ship.Name(false, false)}:");
             // if (speed_min != float.MinValue)   Melon<TweaksAndFixes>.Logger.Msg($"  speed:     {ship.speedMax * 1.943844f,10} -> {Math.Clamp(ship.speedMax, speed_min * 0.5144444f, speed_max * 0.5144444f) * 1.943844f}");
             // if (beam_min != float.MinValue)    Melon<TweaksAndFixes>.Logger.Msg($"  beam:      {ship.beam,10} -> {Util.Remap(ship.beam, sd.beamMin, sd.beamMax, beam_min, beam_max)}");
             // if (draught_min != float.MinValue) Melon<TweaksAndFixes>.Logger.Msg($"  draught:   {ship.draught,10} -> {Util.Remap(ship.draught, sd.draughtMin, sd.draughtMax, draught_min, draught_max)}");
 
             ship.SetSpeedMax(Math.Clamp(ship.speedMax, speed_min * 0.5144444f, speed_max * 0.5144444f));
-            ship.SetBeam(Util.Remap(ship.beam, sd.beamMin, sd.beamMax, beam_min, beam_max));
-            ship.SetDraught(Util.Remap(ship.draught, sd.draughtMin, sd.draughtMax, draught_min, draught_max));
+            ship.SetBeam(Reratio(ship.beam, sd.beamMin, sd.beamMax, beam_min, beam_max));
+            ship.SetDraught(Reratio(ship.draught, sd.draughtMin, sd.draughtMax, draught_min, draught_max));
         }
 
         [HarmonyPatch(nameof(Ship._GenerateRandomShip_d__573.MoveNext))]
