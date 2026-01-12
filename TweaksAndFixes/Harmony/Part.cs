@@ -3,6 +3,7 @@ using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
 using System.Diagnostics;
+using System.Reflection;
 
 #pragma warning disable CS8603
 
@@ -748,37 +749,87 @@ namespace TweaksAndFixes
     // We can't target ref arguments in an attribute, so
     // we have to make this separate class to patch with a
     // TargetMethod call.
-    // [HarmonyPatch(typeof(Part))]
-    // internal class Patch_Part_CanPlaceGeneric
-    // {
-    //     internal static MethodBase TargetMethod()
-    //     {
-    //         //return AccessTools.Method(typeof(Part), nameof(Part.CanPlace), new Type[] { typeof(string).MakeByRefType(), typeof(List<Part>).MakeByRefType(), typeof(List<Collider>).MakeByRefType() });
-    // 
-    //         // Do this manually
-    //         var methods = AccessTools.GetDeclaredMethods(typeof(Part));
-    //         foreach (var m in methods)
-    //         {
-    //             if (m.Name != nameof(Part.CanPlaceGeneric))
-    //                 continue;
-    // 
-    //             return m;
-    //         }
-    // 
-    //         return null;
-    //     }
-    // 
-    //     internal static bool Prefix(Part __instance, PartData data, Ship ship, bool partIsReal, string denyReason, ref bool __result)
-    //     {
-    //         if (__instance == null)
-    //         {
-    //             Melon<TweaksAndFixes>.Logger.Msg("Skipping check can place!");
-    //             __result = false;
-    //             return false;
-    //         }
-    //         return true;
-    //     }
-    // }
+    [HarmonyPatch(typeof(Part))]
+    internal class Patch_Part_CanPlaceGeneric
+    {
+        internal static MethodBase TargetMethod()
+        {
+            //return AccessTools.Method(typeof(Part), nameof(Part.CanPlace), new Type[] { typeof(string).MakeByRefType(), typeof(List<Part>).MakeByRefType(), typeof(List<Collider>).MakeByRefType() });
+
+            // Do this manually
+            var methods = AccessTools.GetDeclaredMethods(typeof(Part));
+            foreach (var m in methods)
+            {
+                if (m.Name != nameof(Part.CanPlaceGeneric))
+                    continue;
+    
+                return m;
+            }
+
+            return null;
+        }
+    
+        // TODO: Actually check FCAP ratios to better match the desired FCAP.
+        internal static bool Prefix(Part __instance, PartData data, Ship ship, bool partIsReal, ref string denyReason, ref bool __result)
+        {
+            if (data.isFunnel)
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg($"CanPlaceGeneric: {data.nameUi}! ({Patch_Ship._AddRandomPartsRoutine != null} && {ship.badData.Contains(data)})");
+
+                if (!ship.statsValid)
+                    ship.CStats();
+
+                var eff = ship.stats.GetValueOrDefault(G.GameData.stats["smoke_exhaust"]);
+
+                if (eff == null)
+                    return true;
+
+                if (eff.total < Config.Param("taf_generate_funnel_maxefficiency", 150f))
+                    return true;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  FCap {eff.total} >= {Config.Param("taf_generate_funnel_maxefficiency", 150f)}");
+
+                int count = 0;
+                // Dictionary<PartData, float> funnelCaps = new();
+                // float total = 0;
+
+                foreach (var part in ship.parts)
+                {
+                    if (!part.data.isFunnel) continue;
+
+                    count++;
+
+                    // funnelCaps.Add(part.data, part.data.statsx[G.GameData.stats["fcap"]]);
+                    // total += part.data.statsx[G.GameData.stats["fcap"]];
+                    // 
+                    // Melon<TweaksAndFixes>.Logger.Msg($"    {part.data.nameUi} -> {part.data.statsx[G.GameData.stats["fcap"]]} fcap");
+                }
+
+                if (count <= 2)
+                    return true;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  {count} funnels : {total} fCap stat");
+                // 
+                // foreach (var fcap in funnelCaps)
+                // {
+                //     funnelCaps[fcap.Key] /= total;
+                // 
+                //     Melon<TweaksAndFixes>.Logger.Msg($"    {fcap.Key.nameUi} -> {funnelCaps[fcap.Key] * 100}% of fcap");
+                // }
+                // 
+                // if (eff.total * (1f - funnelCaps[data]) < Config.Param("taf_generate_funnel_maxefficiency", 150f))
+                //     return true;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Denying mounting of {data.nameUi}!");
+
+                __result = false;
+                denyReason = "amount";
+                return false;
+            }
+
+            return true;
+        }
+    }
 
     // We can't target ref arguments in an attribute, so
     // we have to make this separate class to patch with a
