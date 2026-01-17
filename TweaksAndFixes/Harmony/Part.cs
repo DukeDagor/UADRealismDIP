@@ -772,7 +772,7 @@ namespace TweaksAndFixes
         // TODO: Actually check FCAP ratios to better match the desired FCAP.
         internal static bool Prefix(Part __instance, PartData data, Ship ship, bool partIsReal, ref string denyReason, ref bool __result)
         {
-            if (data.isFunnel)
+            if (GameManager.IsAutodesignActive && data.isFunnel)
             {
                 // Melon<TweaksAndFixes>.Logger.Msg($"CanPlaceGeneric: {data.nameUi}! ({Patch_Ship._AddRandomPartsRoutine != null} && {ship.badData.Contains(data)})");
 
