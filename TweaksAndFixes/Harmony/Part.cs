@@ -205,9 +205,9 @@ namespace TweaksAndFixes
                 return true;
             }
 
-            Ship.TurretCaliber cal = null;
+            Ship.TurretCaliber? cal = null;
 
-            if (ship == null)
+            if (ship == null || !data.isGun)
             {
                 __result = "/??";
                 return false;
@@ -219,11 +219,12 @@ namespace TweaksAndFixes
 
                 var calPart = caliber.turretPartData;
 
-                if (calPart.caliber == data.caliber && calPart.name[0] == data.name[0])
-                {
-                    cal = caliber;
-                    break;
-                }
+                if (calPart.caliber != data.caliber) continue;
+
+                if (Ship.IsCasemateGun(calPart) != Ship.IsCasemateGun(data)) continue;
+
+                cal = caliber;
+                break;
             }
 
             if (cal == null)
@@ -237,9 +238,11 @@ namespace TweaksAndFixes
             {
                 if (part == null) continue;
 
-                var partData = part.data;
+                if (part.data.caliber != data.caliber) continue;
 
-                if (partData.caliber != data.caliber || partData.name[0] != data.name[0]) continue;
+                if (part.data.barrels != data.barrels) continue;
+
+                if (Ship.IsCasemateGun(part.data) != Ship.IsCasemateGun(data)) continue;
 
                 if (part.barrelLength == -1)
                 {
