@@ -317,8 +317,8 @@ namespace TweaksAndFixes
 
             if (!BaseGamePartModelData._Data.ContainsKey(partName))
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"Error! Key for {partName} not found! Failed to override {part.Name()}!");
-                Melon<TweaksAndFixes>.Logger.Msg($"{ModUtils.DumpHierarchy(part.gameObject)}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"Error! Key for {partName} not found! Failed to override {part.Name()}!");
+                // Melon<TweaksAndFixes>.Logger.Msg($"{ModUtils.DumpHierarchy(part.gameObject)}");
                 return;
             }
 
