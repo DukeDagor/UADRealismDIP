@@ -347,8 +347,8 @@ namespace TweaksAndFixes
                 if (Funnel)
                 {
                     PartRotation = 0;
-                    RotationValue = 0;
-                    FixedRotation = true;
+                    RotationValue = 180;
+                    FixedRotation = false;
                     FixedRotationValue = true;
                     IgnoreSoftAutoRotate = true;
                     UseDefaultMountRotation = false;
