@@ -303,7 +303,7 @@ namespace TweaksAndFixes
                 return false;
             }
 
-            return _InUpdateConstructor;
+            return _InUpdateConstructor && !GameManager.IsAutodesignActive;
         }
 
         public static void SetDestroyNextTurn()
