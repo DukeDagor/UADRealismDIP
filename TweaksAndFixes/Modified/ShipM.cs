@@ -1952,6 +1952,11 @@ namespace TweaksAndFixes
                         isLimited = true;
                         maxCalibers[i] = mc;
                     }
+                    else if (ship.shipType.paramx.TryGetValue($"ai_max_caliber_{b}", out var stlst) && stlst.Count > 0 && int.TryParse(stlst[0], out int stmc))
+                    {
+                        isLimited = true;
+                        maxCalibers[i] = stmc;
+                    }
                     else
                     {
                         maxCalibers[i] = noLimitCount;
@@ -1964,6 +1969,11 @@ namespace TweaksAndFixes
                     {
                         isLimited = true;
                         minCalibers[i] = mc;
+                    }
+                    else if (ship.shipType.paramx.TryGetValue($"ai_min_caliber_{b}", out var stlst) && stlst.Count > 0 && int.TryParse(stlst[0], out int stmc))
+                    {
+                        isLimited = true;
+                        minCalibers[i] = stmc;
                     }
                     else
                     {
