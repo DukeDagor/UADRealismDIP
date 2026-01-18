@@ -2293,6 +2293,7 @@ namespace TweaksAndFixes
                     if (SelectedPart != null)
                     {
                         G.ui.ClearPlacingPart(false);
+                        SelectedPart = null;
                     }
 
                     ship.TAFData().ResetGunGrade(caliber, isCasemate);
