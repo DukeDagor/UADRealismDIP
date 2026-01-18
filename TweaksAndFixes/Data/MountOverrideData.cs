@@ -208,7 +208,7 @@ namespace TweaksAndFixes
             mount.rotateForwardBack = mountOverride.orientation == "fore/aft";
             mount.rotateLeftRight = mountOverride.orientation == "starboard/port";
 
-            mount.rotateSame = mountOverride.rotate_same == 1;
+            mount.rotateSame = true;
         }
 
         private static void UpdateMountParamiters(Mount mount, MountOverrideData mountOverride)
@@ -268,7 +268,7 @@ namespace TweaksAndFixes
             mount.rotateForwardBack = mountOverride.orientation == "fore/aft";
             mount.rotateLeftRight = mountOverride.orientation == "starboard/port";
 
-            mount.rotateSame = mountOverride.rotate_same == 1;
+            mount.rotateSame = true;
         }
 
         public static StringBuilder path = new(1024);
