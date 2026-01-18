@@ -73,9 +73,44 @@ namespace TweaksAndFixes
             switch (type)
             {
                 case LogType.Log: Melon<TweaksAndFixes>.Logger.Msg(logStr); break;
-                case LogType.Warning: Melon<TweaksAndFixes>.Logger.Warning(logStr); break;
+                case LogType.Warning:
+                    // Silence warning: "for ship 'name' tonnage # is out of bounds #/#, clamped"
+                    if (condition != null && condition.StartsWith("for ship '") && condition.EndsWith(", clamped"))
+                        break;
+
+                    // Silence warning: "BoxColliders does not support negative scale or size..."
+                    if (condition != null && condition.StartsWith("BoxColliders does not support negative scale or size."))
+                        break;
+
+                    // Silence warning: "failed to generate random ship of type `type`, hull hull_name in X tries"
+                    if (condition != null && condition.StartsWith("failed to generate random ship of type"))
+                        break;
+
+                    // Silence warning: "not found varients: ..."
+                    if (condition != null && (condition.StartsWith("not found varients: ") || condition.StartsWith("not found variants:")))
+                        break;
+
+                    // Silence warning: during autogeneration, tonnage limit is below min tonnage, clamped to min
+                    if (condition != null && condition.StartsWith("during autogeneration, tonnage limit is below min tonnage, clamped to min"))
+                        break;
+
+                    // Silence warning: dontChangeLoadingScreen improperly set
+                    if (condition != null && condition.StartsWith("dontChangeLoadingScreen improperly set"))
+                        break;
+
+                    // Silence warning: Parent of RectTransform is being set with parent property.
+                    if (condition != null && condition.StartsWith("Parent of RectTransform is being set with parent property."))
+                        break;
+
+                    Melon<TweaksAndFixes>.Logger.Warning(logStr);
+                    break;
                 case LogType.Error:
                 case LogType.Exception:
+
+                    // Silence warning: "failed to generate ship of type `type`, hull hull_name in X tries"
+                    if (condition != null && condition.StartsWith("failed to generate ship of type"))
+                        break;
+
                     Melon<TweaksAndFixes>.Logger.Error($"[Unity]: {condition}\n{stackTrace}");
                     //Melon<TweaksAndFixes>.Logger.Error(logStr);
                     break;
