@@ -1026,13 +1026,14 @@ namespace TweaksAndFixes
         internal struct GRSData
         {
             public int state;
+            public int tryNum;
             public float beamMin;
             public float beamMax;
             public float draughtMin;
             public float draughtMax;
         }
 
-        const string bdlParamName = "ai_beamdraughtlimits";
+        public static bool shipGenActive = false;
 
         public static float Reratio(float v, float a1, float b1, float a2, float b2)
         {
@@ -1137,6 +1138,9 @@ namespace TweaksAndFixes
             draught_min = draught_min > draught_max ? draught_max : draught_min;
 
             // Melon<TweaksAndFixes>.Logger.Msg($"Mod stats for ship {ship.Name(false, false)}:");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  {speed_min} - {speed_max}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  {beam_min} - {beam_max}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  {draught_min} - {draught_max}");
             // if (speed_min != float.MinValue)   Melon<TweaksAndFixes>.Logger.Msg($"  speed:     {ship.speedMax * 1.943844f,10} -> {Math.Clamp(ship.speedMax, speed_min * 0.5144444f, speed_max * 0.5144444f) * 1.943844f}");
             // if (beam_min != float.MinValue)    Melon<TweaksAndFixes>.Logger.Msg($"  beam:      {ship.beam,10} -> {Util.Remap(ship.beam, sd.beamMin, sd.beamMax, beam_min, beam_max)}");
             // if (draught_min != float.MinValue) Melon<TweaksAndFixes>.Logger.Msg($"  draught:   {ship.draught,10} -> {Util.Remap(ship.draught, sd.draughtMin, sd.draughtMax, draught_min, draught_max)}");
@@ -1146,35 +1150,14 @@ namespace TweaksAndFixes
             ship.SetDraught(Reratio(ship.draught, sd.draughtMin, sd.draughtMax, draught_min, draught_max));
         }
 
-        [HarmonyPatch(nameof(Ship._GenerateRandomShip_d__573.MoveNext))]
-        [HarmonyPrefix]
-        internal static bool Prefix_MoveNext(Ship._GenerateRandomShip_d__573 __instance, out GRSData __state, ref bool __result)
+        private static void OptimizeComponents(Ship ship)
         {
-            Patch_Ship._GenerateRandomShipRoutine = __instance;
-            //if (lastName != __instance.__4__this.vesselName)
-            //{
-            //    lastName = __instance.__4__this.vesselName;
-            //    Melon<TweaksAndFixes>.Logger.Msg($"ShipGen {__instance.__4__this.vesselName} ({__instance.__4__this.hull.data.name}) for {__instance.__4__this.player.data.name}, #{shipCount++}"); // state {__instance.__1__state}");
-            //}
-            //Melon<TweaksAndFixes>.Logger.Msg($"{__instance.__4__this.vesselName}: state {__instance.__1__state}");
+            var _this = ship;
 
-            // So we know what state we started in.
-            __state = new GRSData();
-            __state.state = __instance.__1__state;
-            Patch_Ship._GenerateShipState = __state.state;
-            var ship = __instance.__4__this;
-            var hd = ship.hull.data;
-            __state.beamMin = hd.beamMin;
-            __state.beamMax = hd.beamMax;
-            __state.draughtMin = hd.draughtMin;
-            __state.draughtMax = hd.draughtMax;
-
-            ClampShipStats(ship);
-
-            if (__instance.__1__state > 1)
+            if (G.GameData.compTypes.ContainsKey("boilers") &&
+                G.GameData.compTypes.ContainsKey("engine") &&
+                G.GameData.compTypes.ContainsKey("fuel"))
             {
-                var _this = ship;
-
                 float bestWeight = _this.Weight();
                 ComponentData bestEngine = _this.components[G.GameData.compTypes["boilers"]];
                 ComponentData bestBoiler = _this.components[G.GameData.compTypes["engine"]];
@@ -1221,11 +1204,190 @@ namespace TweaksAndFixes
                 _this.InstallComponent(bestBoiler);
                 _this.InstallComponent(bestFuel);
                 // Melon<TweaksAndFixes>.Logger.Msg($"  Best Combo: {bestEngine.name} x {bestBoiler.name} x {bestFuel.name}: {_this.weight} t. / {_this.Tonnage()}");
+            }
 
-                if (_this.components[G.GameData.compTypes["torpedo_prop"]] == G.GameData.components["torpedo_prop_fast"])
+            if (G.GameData.compTypes.ContainsKey("torpedo_prop") &&
+                G.GameData.components.ContainsKey("torpedo_prop_fast") &&
+                G.GameData.components.ContainsKey("torpedo_prop_normal") &&
+                _this.components[G.GameData.compTypes["torpedo_prop"]] == G.GameData.components["torpedo_prop_fast"])
+            {
+                _this.InstallComponent(G.GameData.components["torpedo_prop_normal"]);
+            }
+
+            if (G.GameData.compTypes.ContainsKey("shell") &&
+                G.GameData.components.ContainsKey("shell_light") &&
+                G.GameData.components.ContainsKey("shell_normal") &&
+                _this.components[G.GameData.compTypes["shell"]] == G.GameData.components["shell_light"])
+            {
+                _this.InstallComponent(G.GameData.components["shell_normal"]);
+            }
+        }
+
+        public static void OnShipgenStart()
+        {
+            PrintShipgenStart(Patch_Ship._GenerateRandomShipRoutine, Patch_Ship._GenerateRandomShipRoutine.__4__this);
+            shipGenActive = true;
+        }
+
+        public static void OnShipgenEnd()
+        {
+            PrintShipgenEnd(Patch_Ship._GenerateRandomShipRoutine);
+            shipGenActive = false;
+        }
+
+        private static void PrintShipgenIssues(Ship._GenerateRandomShip_d__573 __instance, Ship ship)
+        {
+            if (Config.Param("taf_debug_shipgen_info", 0) == 0) return;
+
+            int numMainTurrets = 0;
+            int numMainBarrels = 0;
+
+            foreach (var part in ship.parts)
+            {
+                if (!part.data.isGun) continue;
+
+                if (!ship.IsMainCal(part)) continue;
+
+                numMainTurrets++;
+                numMainBarrels += part.data.barrels;
+            }
+
+            bool hasMinMainTurrets = ship.hull.data.minMainTurrets == -1 || ship.hull.data.minMainTurrets <= numMainTurrets;
+            bool hasMinMainBarrels = ship.hull.data.minMainBarrels == -1 || ship.hull.data.minMainBarrels <= numMainBarrels;
+
+            bool isValidCostReqParts = ship.IsValidCostReqParts(
+                out string isValidCostReqPartsReason,
+                out Il2CppSystem.Collections.Generic.List<ShipType.ReqInfo> notPassed,
+                out Il2CppSystem.Collections.Generic.Dictionary<Part, string> badParts);
+
+            bool isValidCostWeightBarbette = ship.IsValidCostWeightBarbette(
+                out string isValidCostWeightBarbetteReason,
+                out Il2CppSystem.Collections.Generic.List<Part> errorBarbettePart);
+
+            bool isTonnageAllowedByTech = ship.player.IsTonnageAllowedByTech(ship.Tonnage(), ship.shipType);
+
+            bool isValidWeightOffset = ship.IsValidWeightOffset();
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Attempt {__instance._tryN_5__5} / {__instance._triesTotal_5__4}");
+
+            if (!hasMinMainTurrets && !hasMinMainBarrels)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"  Insufficent main turret or barrel count: (only one needs to be true)");
+                Melon<TweaksAndFixes>.Logger.Msg($"    Turret Cnt. = {numMainTurrets} / {ship.hull.data.minMainTurrets}");
+                Melon<TweaksAndFixes>.Logger.Msg($"    Barrel Cnt. = {numMainBarrels} / {ship.hull.data.minMainBarrels}");
+            }
+
+            if (!isValidCostReqParts)
+            {
+                if (notPassed.Count > 0)
                 {
-                    _this.InstallComponent(G.GameData.components["torpedo_prop_normal"]);
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Unmet Requirements:");
+                    foreach (var req in notPassed)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"    {req.stat.name,10} : {ship.stats[req.stat].total} ({req.min} ~ {req.max})");
+                    }
                 }
+
+                if (badParts.Count > 0)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Invalid parts:");
+                    foreach (var part in badParts)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"    {part.Key.data.name,10} : {part.Value}");
+                    }
+                }
+            }
+
+            if (ship.Weight() > ship.Tonnage())
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"  Ship Overweight: {(int)ship.Weight()}t / {(int)ship.Tonnage()}t");
+            }
+
+            if (!isValidCostWeightBarbette)
+            {
+                if (errorBarbettePart.Count > 0)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Empty barbettes:");
+
+                    foreach (var barbette in errorBarbettePart)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"    {barbette.data.name}");
+                    }
+                }
+            }
+
+            if (!isTonnageAllowedByTech)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"  Tonnage outside tech range.");
+            }
+
+            if (!isValidWeightOffset)
+            {
+                float inst_x = ship.stats_[G.GameData.stats["instability_x"]].total;
+                float inst_z = ship.stats_[G.GameData.stats["instability_z"]].total;
+
+                Melon<TweaksAndFixes>.Logger.Msg($"  Invalid weight offset(s):");
+                if (inst_x > 0) Melon<TweaksAndFixes>.Logger.Msg($"    instability_x: {inst_x} > 0");
+                if (inst_z > 100) Melon<TweaksAndFixes>.Logger.Msg($"    instability_y: {inst_z} > 100");
+            }
+        }
+
+        private static void PrintShipgenStart(Ship._GenerateRandomShip_d__573 __instance, Ship ship)
+        {
+            if (Config.Param("taf_debug_shipgen_info", 0) == 0) return;
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Begin shipgen:");
+            Melon<TweaksAndFixes>.Logger.Msg($"  Hull   : {ship.hull.data.name} ({ship.hull.data.nameUi})");
+            Melon<TweaksAndFixes>.Logger.Msg($"  Model  : {ship.hull.data.model}");
+            Melon<TweaksAndFixes>.Logger.Msg($"  Nation : {ship.player.data.name} ({ship.player.data.nameUi})");
+            Melon<TweaksAndFixes>.Logger.Msg($"  Year   : {ship.dateCreated.AsDate().Year}");
+            Melon<TweaksAndFixes>.Logger.Msg($"First pass:");
+        }
+
+        private static void PrintShipgenEnd(Ship._GenerateRandomShip_d__573 __instance)
+        {
+            if (Config.Param("taf_debug_shipgen_info", 0) == 0) return;
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Shipgen halted");
+
+            if (__instance == null)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"  Result   : Interrupted");
+            }
+            else
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"  Attempts : {__instance._tryN_5__5} / {__instance._triesTotal_5__4}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  Result   : {(__instance._tryN_5__5 != __instance._triesTotal_5__4 ? "Success" : "Failure")}");
+            }
+
+        }
+
+        [HarmonyPatch(nameof(Ship._GenerateRandomShip_d__573.MoveNext))]
+        [HarmonyPrefix]
+        internal static bool Prefix_MoveNext(Ship._GenerateRandomShip_d__573 __instance, out GRSData __state, ref bool __result)
+        {
+            Patch_Ship._GenerateRandomShipRoutine = __instance;
+
+            // TODO:
+            //   Remove whole screen blocker, block part selector & side menus
+            //   Add pause/step buttons
+
+            // So we know what state we started in.
+            __state = new GRSData();
+            __state.state = __instance.__1__state;
+            __state.tryNum = __instance._tryN_5__5;
+            Patch_Ship._GenerateShipState = __state.state;
+            var ship = __instance.__4__this;
+            var hd = ship.hull.data;
+            __state.beamMin = hd.beamMin;
+            __state.beamMax = hd.beamMax;
+            __state.draughtMin = hd.draughtMin;
+            __state.draughtMax = hd.draughtMax;
+
+            if (__instance.__1__state > 1)
+            {
+                ClampShipStats(ship);
+                OptimizeComponents(ship);
             }
 
             switch (__state.state)
@@ -1303,7 +1465,7 @@ namespace TweaksAndFixes
 
         [HarmonyPatch(nameof(Ship._GenerateRandomShip_d__573.MoveNext))]
         [HarmonyPostfix]
-        internal static void Postfix_MoveNext(Ship._GenerateRandomShip_d__573 __instance, GRSData __state)
+        internal static void Postfix_MoveNext(Ship._GenerateRandomShip_d__573 __instance, GRSData __state, ref bool __result)
         {
             var ship = __instance.__4__this;
             var hd = ship.hull.data;
@@ -1314,6 +1476,13 @@ namespace TweaksAndFixes
             // For now, we're going to reset all grades regardless.
             //if (__state == 1 && (!__instance._isRefitMode_5__2 || !__instance.isSimpleRefit))
             //    __instance.__4__this.TAFData().ResetAllGrades();
+
+            if (__instance.__1__state > 1)
+            {
+                ClampShipStats(ship);
+                OptimizeComponents(ship);
+            }
+
             switch (__state.state)
             {
                 case 0:
@@ -1339,7 +1508,11 @@ namespace TweaksAndFixes
 
             Patch_Ship._GenerateRandomShipRoutine = null;
             Patch_Ship._GenerateShipState = -1;
-            //Melon<TweaksAndFixes>.Logger.Msg($"GenerateRandomShip Iteration for state {__state} ended, new state {__instance.__1__state}");
+
+            if (__state.tryNum != __instance._tryN_5__5 && __instance._tryN_5__5 != __instance._triesTotal_5__4)
+            {
+                PrintShipgenIssues(__instance, ship);
+            }
         }
     }
 

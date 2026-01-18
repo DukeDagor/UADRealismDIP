@@ -1225,20 +1225,26 @@ namespace TweaksAndFixes
 
             float tonnage = _this.Tonnage();
             float weight = _this.Weight();
+            float startWeight = weight;
             if (weight <= tonnage)
                 return;
 
             float tryRatio = tryN * 100f / triesTotal;
 
-            Melon<TweaksAndFixes>.Logger.Msg($"Reduce weight: Try ratio = {tryRatio} ({tryN} / {triesTotal}) with weight {weight} t./{tonnage} t.");
+            Dictionary<string, float> weightReductionLog = new();
 
             bool overweight = weight > _this.tempGoodWeight;
             if (overweight && _this.shipType.name == "dd"
                 && G.GameData.components.ContainsKey("multi_bottom_0"))
             {
                 _this.InstallComponent(G.GameData.components["multi_bottom_0"]);
+
+                if (weight > _this.Weight())
+                    weightReductionLog.Add("Set to Single Bottom", weight - _this.Weight());
+
                 weight = _this.Weight();
-                if (weight > _this.tempGoodWeight) return;
+
+                if (weight < _this.tempGoodWeight) goto Done;
             }
 
             overweight = weight > _this.tempGoodWeight;
@@ -1249,17 +1255,26 @@ namespace TweaksAndFixes
                 else
                     _this.CurrentCrewQuarters = Ship.CrewQuarters.Cramped;
 
+                if (weight > _this.Weight())
+                    weightReductionLog.Add("Crew Quarters", weight - _this.Weight());
+
                 weight = _this.Weight(false, true);
-                if (weight > _this.tempGoodWeight) return;
+
+                if (weight < _this.tempGoodWeight) goto Done;
             }
 
             overweight = weight > _this.tempGoodWeight;
-            if (overweight && (_this.shipType.name == "dd" || _this.shipType.name == "tb")
+            if (overweight && (_this.shipType.name == "dd" || _this.shipType.name == "tb" || tryRatio > 25)
                 && G.GameData.components.ContainsKey("shell_normal"))
             {
                 _this.InstallComponent(G.GameData.components["shell_normal"]);
+
+                if (weight > _this.Weight())
+                    weightReductionLog.Add("Shell Size", weight - _this.Weight());
+
                 weight = _this.Weight();
-                if (weight > _this.tempGoodWeight) return;
+
+                if (weight < _this.tempGoodWeight) goto Done;
             }
 
             overweight = weight > _this.tempGoodWeight;
@@ -1267,37 +1282,57 @@ namespace TweaksAndFixes
                 && G.GameData.components.ContainsKey("ammo_shell_less"))
             {
                 _this.InstallComponent(G.GameData.components["ammo_shell_less"]);
+
+                if (weight > _this.Weight())
+                    weightReductionLog.Add("Ammo Storage", weight - _this.Weight());
+
                 weight = _this.Weight();
-                if (weight > _this.tempGoodWeight) return;
+
+                if (weight < _this.tempGoodWeight) goto Done;
             }
 
             overweight = weight > _this.tempGoodWeight;
-            if (overweight && (_this.shipType.name == "dd" || _this.shipType.name == "tb"))
+            if (overweight && (_this.shipType.name == "dd" || _this.shipType.name == "tb" || tryRatio > 25))
             {
                 foreach (var cal in _this.shipGunCaliber)
                 {
                     _this.SetCaliberDiameter(cal, 0);
-                }
 
-                weight = _this.Weight();
-                if (weight > _this.tempGoodWeight) return;
+                    if (weight > _this.Weight())
+                        weightReductionLog.Add(
+                            $"{cal.turretPartData.GetCaliberInch(_this)}\" {(Ship.IsCasemateGun(cal.turretPartData) ? "Casemate" : "Turret")} Diam",
+                            weight - _this.Weight()
+                        );
+
+                    weight = _this.Weight();
+
+                    if (weight < _this.tempGoodWeight) goto Done;
+                }
             }
 
             overweight = weight > _this.tempGoodWeight;
-            if (overweight && (_this.shipType.name == "dd" || _this.shipType.name == "tb"))
+            if (overweight && (_this.shipType.name == "dd" || _this.shipType.name == "tb" || tryRatio > 50))
             {
                 foreach (var cal in _this.shipGunCaliber)
                 {
-                    _this.SetCaliberLength(cal, 0);
-                }
+                    _this.SetCaliberLength(cal, Mathf.Clamp(cal.length, -1000, 0));
 
-                weight = _this.Weight();
-                if (weight > _this.tempGoodWeight) return;
+                    if (weight > _this.Weight())
+                        weightReductionLog.Add(
+                            $"{cal.turretPartData.GetCaliberInch(_this)}\" {(Ship.IsCasemateGun(cal.turretPartData) ? "Casemate" : "Turret")} Len",
+                            weight - _this.Weight()
+                        );
+
+                    weight = _this.Weight();
+
+                    if (weight < _this.tempGoodWeight) goto Done;
+                }
             }
 
             overweight = weight > _this.tempGoodWeight;
             if (!_this.IsShipWhitoutArmor())
             {
+                float tempWeight = weight;
                 var gaInfo = GenArmorData.GetInfoFor(_this);
                 if (gaInfo != null)
                 {
@@ -1404,11 +1439,15 @@ namespace TweaksAndFixes
                         }
                     }
                 }
+
+                if (tempWeight > _this.Weight())
+                    weightReductionLog.Add("Armor", tempWeight - _this.Weight());
             }
 
             overweight = weight > _this.tempGoodWeight;
             if (overweight)
             {
+                float tempWeight = weight;
                 float minMS;
                 float speedLimiter = _this.hull.data.speedLimiter;
                 float year = _this.GetYear(_this);
@@ -1487,12 +1526,17 @@ namespace TweaksAndFixes
                         }
                     }
                 }
+
+                if (tempWeight > _this.Weight())
+                    weightReductionLog.Add("Speed", tempWeight - _this.Weight());
             }
 
             overweight = weight > _this.tempGoodWeight;
             var minOpRange = MinOpRange(_this, VesselEntity.OpRange.Low);
             if (overweight && _this.opRange > minOpRange)
             {
+                float tempWeight = weight;
+
                 if (tryRatio > 75)
                     _this.limiter = 4;
                 else if (tryRatio > 50)
@@ -1514,11 +1558,16 @@ namespace TweaksAndFixes
                         break;
                     }
                 }
+
+                if (tempWeight > _this.Weight())
+                    weightReductionLog.Add("Op. Range", tempWeight - _this.Weight());
             }
 
             overweight = weight > _this.tempGoodWeight;
             if (overweight)
             {
+                float tempWeight = weight;
+
                 Ship.Survivability minSurv = Config.ShipGenTweaks ? MinSurv(_this, Ship.Survivability.High) : (_this.shipType.name == "dd" || _this.shipType.name == "tb" ? Ship.Survivability.Low : Ship.Survivability.High);
                 while (_this.survivability > minSurv)
                 {
@@ -1528,7 +1577,34 @@ namespace TweaksAndFixes
                     if (weight < _this.tempGoodWeight)
                         break;
                 }
+
+                if (tempWeight > _this.Weight())
+                    weightReductionLog.Add("Bulkheads", tempWeight - _this.Weight());
             }
+
+        Done:
+
+            if (Config.Param("taf_debug_shipgen_info", 0) == 0) return;
+
+            if (startWeight == weight || weightReductionLog.Count == 0)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"  Failed to reduce weight: {(int)weight}t / {(int)tonnage}t");
+                return;
+            }
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Reduce weight: {(int)startWeight}t -> {(int)weight}t / {(int)tonnage}t");
+
+            float totalReduction = 0;
+
+            foreach (var reduction in weightReductionLog)
+            {
+                totalReduction += reduction.Value;
+                Melon<TweaksAndFixes>.Logger.Msg($"    {reduction.Key,-20} : -{reduction.Value:0.00}t");
+            }
+
+            Melon<TweaksAndFixes>.Logger.Msg($"    {"Total",-20} : -{totalReduction:0.00}t");
+
+            return;
         }
 
         public static float GetMinSpeed(Ship _this, float speedLimit, Il2CppSystem.Random rnd)

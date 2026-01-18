@@ -126,6 +126,20 @@ namespace TweaksAndFixes
             // Melon<TweaksAndFixes>.Logger.Msg($"  Active Ship: {(Patch_Ship.LastCreatedShip == null ? "NULL" : Patch_Ship.LastCreatedShip.Name(false, false))}");
         }
 
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(GameManager.EndAutodesign))]
+        internal static void Prefix_EndAutodesign()
+        {
+            Patch_ShipGenRandom.OnShipgenEnd();
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(GameManager.StartAutodesign))]
+        internal static void Prefix_StartAutodesign()
+        {
+            Patch_ShipGenRandom.OnShipgenStart();
+        }
+
         // [HarmonyPrefix]
         // [HarmonyPatch(nameof(GameManager.UpdateLoadingConstructor))]
         // internal static void Prefix_UpdateLoadingConstructor(bool needCleanup, Il2CppSystem.Action onDone)
