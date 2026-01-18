@@ -116,10 +116,10 @@ namespace TweaksAndFixes
 
             Melon<TweaksAndFixes>.Logger.Msg($"--->Tonnage {totalTonnage:N0} surpassed target {targetTonnage:N0} with hysteresis {(targetTonnage + hystAdd):N0}, so continuing");
 
-            foreach (var c in scrapCandidates)
-            {
-                Melon<TweaksAndFixes>.Logger.Msg($"------> Candidate {c.ship.Name(false, false).PadLeft(32)} : {c.score}");
-            }
+            // foreach (var c in scrapCandidates)
+            // {
+            //     Melon<TweaksAndFixes>.Logger.Msg($"------> Candidate {c.ship.Name(false, false).PadLeft(32)} : {c.score}");
+            // }
 
             float toScrap = totalTonnage - targetTonnage;
             scrapCandidates.Sort((a, b) => b.score.CompareTo(a.score));
