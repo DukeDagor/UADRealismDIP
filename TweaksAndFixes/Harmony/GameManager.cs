@@ -154,6 +154,20 @@ namespace TweaksAndFixes
         //     Melon<TweaksAndFixes>.Logger.Msg($"ChangeState: GameState newState {newState}, bool raiseEnterStateEvents {raiseEnterStateEvents}");
         // }
 
+        // [HarmonyPrefix]
+        // [HarmonyPatch(nameof(GameManager.CanHandleMouseInput))]
+        // internal static bool Prefix_CanHandleMouseInput(ref bool __result)
+        // {
+        //     if (!UiM.showPopups)
+        //     {
+        //         __result = true;
+        // 
+        //         return false;
+        //     }
+        // 
+        //     return true;
+        // }
+
         public static GameObject GameSavedInfoText = new();
         public static Text GameSavedInfoTextElement = new();
         public static float FadeTime = 5.0f;

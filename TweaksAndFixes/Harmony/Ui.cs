@@ -83,19 +83,19 @@ namespace TweaksAndFixes
 
 
         // AllowCameraControl
-
-        [HarmonyPatch(nameof(Ui.AllowCameraControl))]
-        [HarmonyPrefix]
-        internal static bool Prefix_AllowCameraControl(Ui __instance, ref bool __result)
-        {
-            if (!UiM.showPopups)
-            {
-                __result = true;
-                return false;
-            }
-
-            return true;
-        }
+        // 
+        // [HarmonyPatch(nameof(Ui.AllowCameraControl))]
+        // [HarmonyPrefix]
+        // internal static bool Prefix_AllowCameraControl(Ui __instance, ref bool __result)
+        // {
+        //     if (!UiM.showPopups)
+        //     {
+        //         __result = true;
+        //         return false;
+        //     }
+        // 
+        //     return true;
+        // }
 
 
 
@@ -2469,10 +2469,34 @@ namespace TweaksAndFixes
     {
         public static bool overrideCamBounds = false;
         public static Vector3 camBounds = Vector3.zero;
+        // public static List<BasePopupWindow> windows = new();
+        // 
+        // [HarmonyPatch(nameof(Cam.Update))]
+        // [HarmonyPrefix]
+        // internal static void Prefix_Update(Cam __instance)
+        // {
+        //     if (!UiM.showPopups)
+        //     {
+        //         foreach (var window in BasePopupWindow.AllActivePopup)
+        //         {
+        //             windows.Add(window);
+        //         }
+        // 
+        //         BasePopupWindow.AllActivePopup.Clear();
+        // 
+        //         Melon<TweaksAndFixes>.Logger.Msg($"Cam control allowed:");
+        //         Melon<TweaksAndFixes>.Logger.Msg($"  {GameManager.IsCampaign}");
+        //         Melon<TweaksAndFixes>.Logger.Msg($"  {GameManager.IsWorld}");
+        //         Melon<TweaksAndFixes>.Logger.Msg($"  {Input.GetMouseButton(0)}");
+        //         Melon<TweaksAndFixes>.Logger.Msg($"  {GameManager.IsWorldMap}");
+        //         Melon<TweaksAndFixes>.Logger.Msg($"  {BasePopupWindow.IsAnyPopupActive}");
+        //         Melon<TweaksAndFixes>.Logger.Msg($"  {GameManager.CanHandleMouseInput()}");
+        //     }
+        // }
 
         [HarmonyPatch(nameof(Cam.Update))]
         [HarmonyPostfix]
-        internal static void Postfix_CameraController(Cam __instance)
+        internal static void Postfix_Update(Cam __instance)
         {
             // Only works for battles and shipbuilder, there's a custom script for the map
             if (Config.Param("taf_camera_disable_edge_scroll", 1) == 1)
@@ -2503,6 +2527,16 @@ namespace TweaksAndFixes
 
                 __instance.limitMinRotationX = 0;
             }
+
+            // if (!UiM.showPopups)
+            // {
+            //     foreach (var window in windows)
+            //     {
+            //         BasePopupWindow.AllActivePopup.Add(window);
+            //     }
+            // 
+            //     windows.Clear();
+            // }
         }
     }
 }
