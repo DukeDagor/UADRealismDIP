@@ -352,6 +352,12 @@ namespace TweaksAndFixes
             }
 
             shipRet.SetActive(false);
+
+            if (shipRet.id == Il2CppSystem.Guid.Empty)
+            {
+                shipRet.id = Il2CppSystem.Guid.NewGuid();
+            }
+
             return shipRet;
         }
 

@@ -36,6 +36,21 @@ namespace TweaksAndFixes
             }
         }
 
+        [HarmonyPatch(nameof(CampaignController.GetStore))]
+        [HarmonyPostfix]
+        internal static void Postfix_GetStore(ref CampaignController.Store __result)
+        {
+            for (int i = __result.Ships.Count - 1; i >= 0; i--)
+            {
+                if (__result.Ships[i].status == VesselEntity.Status.Erased
+                    || __result.Ships[i].status == VesselEntity.Status.Sunk
+                    || __result.Ships[i].status == VesselEntity.Status.Scrapped)
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Removing {__rsult.Ships[i].status} ship '{__result.Ships[i].vesselName}'");
+                    __result.Ships.RemoveAt(i);
+                }
+            }
+        }
 
 
 
@@ -99,6 +114,20 @@ namespace TweaksAndFixes
         internal static void Prefix_OnNewTurn(CampaignController __instance)
         {
             // Melon<TweaksAndFixes>.Logger.Msg($"OnNewTurn"); // <<< Trigger on start of new turn
+
+            var vessels = __instance.CampaignData.Vessels;
+
+            for (int i = vessels.Count - 1; i >= 0; i--)
+            {
+                if (vessels[i].status == VesselEntity.Status.Erased
+                    || vessels[i].status == VesselEntity.Status.Sunk
+                    || vessels[i].status == VesselEntity.Status.Scrapped)
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"Removing {vessels[i].status} ship '{vessels[i].vesselName}'");
+                    Ship.TryToEraseVessel(vessels[i]);
+                }
+            }
+
             Patch_Player.ResetChangePlayerGDP();
             isLoadingNewTurn = false;
         }

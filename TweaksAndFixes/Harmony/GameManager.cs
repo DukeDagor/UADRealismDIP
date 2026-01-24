@@ -238,17 +238,98 @@ namespace TweaksAndFixes
     [HarmonyPatch(typeof(GameManager._LoadCampaign_d__98))]
     internal class Patch_GameManager_LoadCampaigndCoroutine
     {
+        // public static Stopwatch watch = new();
+        // public static int lastState = 0;
+
         // This method calls CampaignController.PrepareProvinces *before* CampaignMap.PreInit
         // So we patch here and skip the preinit patch.
         [HarmonyPatch(nameof(GameManager._LoadCampaign_d__98.MoveNext))]
         [HarmonyPrefix]
         internal static void Prefix_MoveNext(GameManager._LoadCampaign_d__98 __instance)
         {
+            // TODO: Patch state 17 (G.ui.PrepareShipAllTex(ship))
+            // watch.Start();
+            // 
+            // if (__instance.__1__state != lastState)
+            // {
+            //     Melon<TweaksAndFixes>.Logger.Msg($"{__instance.__1__state} -> {lastState} : {watch.ElapsedMilliseconds}");
+            //     watch.Restart();
+            //     lastState = __instance.__1__state;
+            // }
+
+            if (__instance.__1__state == 9)
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg($"Checking for null design IDs...");
+
+                List<Ship.Store> designs = new();
+                List<Ship.Store> nullIds = new();
+
+                int total = 0;
+
+                foreach (var ship in __instance.__8__1.store.Ships)
+                {
+                    if (!ship.isSharedDesign
+                        || ship.status == VesselEntity.Status.Erased
+                        || ship.status == VesselEntity.Status.Sunk
+                        || ship.status == VesselEntity.Status.Scrapped
+                        || ship.designId != Il2CppSystem.Guid.Empty)
+                        continue;
+
+                    if (ship.id == Il2CppSystem.Guid.Empty)
+                    {
+                        ship.id = Il2CppSystem.Guid.NewGuid();
+                        Melon<TweaksAndFixes>.Logger.Msg($"  Design '{ship.vesselName}' now has ID {ship.id}");
+                        designs.Add(ship);
+                    }
+                    else
+                    {
+                        total++;
+                        nullIds.Add(ship);
+                    }
+                }
+
+                if (total != 0) Melon<TweaksAndFixes>.Logger.Msg($"Found {total} null ID ships, matching to designs:");
+
+                foreach (var ship in nullIds)
+                {
+                    bool found = false;
+
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Checking Ship {ship.vesselName}");
+
+                    foreach (var design in designs)
+                    {
+                        if (ship.parts.Count != design.parts.Count) continue;
+
+                        bool failed = false;
+                        for (int i = 0; i < ship.parts.Count; i++)
+                        {
+                            if (ship.parts[i].Id != design.parts[i].Id) failed = true;
+                        }
+                        if (failed) continue;
+
+                        ship.designId = design.id;
+                        found = true;
+                        Melon<TweaksAndFixes>.Logger.Msg($"  Ship {ship.vesselName} is of design {design.vesselName}");
+                        break;
+                    }
+
+                    if (!found)
+                        Melon<TweaksAndFixes>.Logger.Msg($"  Ship {ship.vesselName} has no matching design!");
+                }
+            }
+
             if (__instance.__1__state == 6 && (Config.OverrideMap != Config.OverrideMapOptions.Disabled))
             {
                 MapData.LoadMapData();
                 Patch_CampaignMap._SkipNextMapPatch = true;
             }
         }
+
+        // [HarmonyPatch(nameof(GameManager._LoadCampaign_d__98.MoveNext))]
+        // [HarmonyPostfix]
+        // internal static void Postfix_MoveNext(GameManager._LoadCampaign_d__98 __instance)
+        // {
+        //     watch.Stop();
+        // }
     }
 }
