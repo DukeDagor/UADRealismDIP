@@ -775,9 +775,148 @@ namespace TweaksAndFixes
         // TODO: Actually check FCAP ratios to better match the desired FCAP.
         internal static bool Prefix(Part __instance, PartData data, Ship ship, bool partIsReal, ref string denyReason, ref bool __result)
         {
-            if (GameManager.IsAutodesignActive && data.isFunnel)
+            // if (!GameManager.IsAutodesignActive) return true;
+
+            if (data.isGun)
             {
-                // Melon<TweaksAndFixes>.Logger.Msg($"CanPlaceGeneric: {data.nameUi}! ({Patch_Ship._AddRandomPartsRoutine != null} && {ship.badData.Contains(data)})");
+                float max_main_gun_cal = -1;
+                float min_main_gun_cal = -1;
+                float max_main_gun_barrels = -1;
+                float min_main_gun_barrels = -1;
+                float max_main_gun_count = -1;
+                float max_sec_gun_count = -1;
+
+                var st = ship.shipType;
+
+                if (st.paramx.ContainsKey("shipgen_limit"))
+                {
+                    foreach (var stat in st.paramx["shipgen_limit"])
+                    {
+                        var split = stat.Split(':');
+
+                        if (split.Length != 2)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Error($"Invalid `shipTypes.csv` `shipgen_limit` param: `{stat}` for ID `{st.name}`. Must be formatted `shipgen_limit(stat:number; stat:number; ...)`.");
+                            continue;
+                        }
+
+                        string tag = split[0];
+
+                        if (!float.TryParse(split[1], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out float val))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Error($"Invalid `shipTypes.csv` `shipgen_limit` param: `{stat}` for ID `{st.name}`. Must be valid number.");
+                            continue;
+                        }
+
+                        switch (tag)
+                        {
+                            case "max_main_gun_cal": max_main_gun_cal = val; break;
+                            case "min_main_gun_cal": min_main_gun_cal = val; break;
+                            case "max_main_gun_barrels": max_main_gun_barrels = val; break;
+                            case "min_main_gun_barrels": min_main_gun_barrels = val; break;
+                            case "max_main_gun_count": max_main_gun_count = val; break;
+                            case "max_sec_gun_count": max_sec_gun_count = val; break;
+                            default:
+                                Melon<TweaksAndFixes>.Logger.Error($"Invalid `shipTypes.csv` `shipgen_limit` param: `{stat}` for ID `{st.name}`. Unsuported stat. Can only be [max_main_gun_cal, min_main_gun_cal, max_main_gun_barrels, min_main_gun_barrels, max_main_gun_count, max_sec_gun_count]");
+                                break;
+                        }
+                    }
+                }
+
+                var hd = ship.hull.data;
+
+                if (hd.paramx.ContainsKey("shipgen_limit"))
+                {
+                    foreach (var stat in hd.paramx["shipgen_limit"])
+                    {
+                        var split = stat.Split(':');
+
+                        if (split.Length != 2)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Error($"Invalid `parts.csv` `shipgen_limit` param: `{stat}` for ID `{hd.name}`. Must be formatted `shipgen_limit(stat:number; stat:number; ...)`.");
+                            continue;
+                        }
+
+                        string tag = split[0];
+
+                        if (!float.TryParse(split[1], System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out float val))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Error($"Invalid `parts.csv` `shipgen_limit` param: `{stat}` for ID `{hd.name}`. Must be valid number.");
+                            continue;
+                        }
+
+                        switch (tag)
+                        {
+                            case "max_main_gun_cal": max_main_gun_cal = val; break;
+                            case "min_main_gun_cal": min_main_gun_cal = val; break;
+                            case "max_main_gun_barrels": max_main_gun_barrels = val; break;
+                            case "min_main_gun_barrels": min_main_gun_barrels = val; break;
+                            case "max_main_gun_count": max_main_gun_count = val; break;
+                            case "max_sec_gun_count": max_sec_gun_count = val; break;
+                            default:
+                                Melon<TweaksAndFixes>.Logger.Error($"Invalid `parts.csv` `shipgen_limit` param: `{stat}` for ID `{hd.name}`. Unsuported stat. Can only be [max_main_gun_cal, min_main_gun_cal, max_main_gun_barrels, min_main_gun_barrels, max_main_gun_count, max_sec_gun_count]");
+                                break;
+                        }
+                    }
+                }
+
+                if (ship.IsMainCal(data))
+                {
+                    if ((max_main_gun_cal != -1 && data.GetCaliberInch(ship) > max_main_gun_cal)
+                        || (min_main_gun_cal != -1 && data.GetCaliberInch(ship) < min_main_gun_cal))
+                    {
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Gun cal size {data.GetCaliberInch(ship)} outside range {min_main_gun_cal} ~ {max_main_gun_cal}");
+                        __result = false;
+                        denyReason = "size";
+                        return false;
+                    }
+
+                    if ((max_main_gun_barrels != -1 && data.barrels > max_main_gun_barrels)
+                        || (min_main_gun_barrels != -1 && data.barrels < min_main_gun_barrels))
+                    {
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Gun barrel cnt {data.barrels} outside range {min_main_gun_barrels} ~ {max_main_gun_barrels}");
+                        __result = false;
+                        denyReason = "barrel count";
+                        return false;
+                    }
+
+                    if ((max_main_gun_count != -1 && ship.mainGuns.Count > max_main_gun_count))
+                    {
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Main gun cnt {ship.mainGuns.Count} outside range N/A ~ {max_main_gun_count}");
+                        __result = false;
+                        denyReason = "count";
+                        return false;
+                    }
+                }
+                else if (!Ship.IsCasemateGun(data))
+                {
+                    if (max_sec_gun_count != -1)
+                    {
+                        int gunCounts = new();
+
+                        foreach (var part in ship.parts)
+                        {
+                            if (ship.IsMainCal(part.data)) continue;
+
+                            if (part.data != data) continue;
+
+                            gunCounts++;
+                        }
+
+                        if (gunCounts > max_sec_gun_count)
+                        {
+                            // Melon<TweaksAndFixes>.Logger.Msg($"Sec gun cnt {gunCounts} outside range N/A ~ {max_sec_gun_count}");
+                            __result = false;
+                            denyReason = "count";
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            if (data.isFunnel)
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg($"CanPlaceGeneric: {data.nameUi}! ({__instance?.Name() ?? "NULL"})");
 
                 if (!ship.statsValid)
                     ship.CStats();
