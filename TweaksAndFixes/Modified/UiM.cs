@@ -944,7 +944,7 @@ namespace TweaksAndFixes
                             }
 
                             // Cleanup multi-ship popup
-                            popup.transform.SetParent(null, false);
+                            popup.GetComponent<MessageBoxUI>().Hide();
                         }));
                     }
                 }
