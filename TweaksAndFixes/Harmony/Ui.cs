@@ -7,6 +7,7 @@ using static TweaksAndFixes.ModUtils;
 using System.Text;
 using TweaksAndFixes.Data;
 using TweaksAndFixes.Modified;
+using UnityEngine.EventSystems;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -443,6 +444,11 @@ namespace TweaksAndFixes
             Patch_GameManager.Update();
             CampaignControllerM.Update();
             ConstructorM.Update();
+
+            if (GameManager.IsWorldMap && GameManager.isScrollMove && !EventSystem.current.IsPointerOverGameObject())
+            {
+                GameManager.isScrollMove = false;
+            }
 
             // PredefinedDesignsDataAsync.UpdatePredefLoading();
 
@@ -2469,44 +2475,43 @@ namespace TweaksAndFixes
     {
         public static bool overrideCamBounds = false;
         public static Vector3 camBounds = Vector3.zero;
-        // public static List<BasePopupWindow> windows = new();
-        // 
-        // [HarmonyPatch(nameof(Cam.Update))]
-        // [HarmonyPrefix]
-        // internal static void Prefix_Update(Cam __instance)
-        // {
-        //     if (!UiM.showPopups)
-        //     {
-        //         foreach (var window in BasePopupWindow.AllActivePopup)
-        //         {
-        //             windows.Add(window);
-        //         }
-        // 
-        //         BasePopupWindow.AllActivePopup.Clear();
-        // 
-        //         Melon<TweaksAndFixes>.Logger.Msg($"Cam control allowed:");
-        //         Melon<TweaksAndFixes>.Logger.Msg($"  {GameManager.IsCampaign}");
-        //         Melon<TweaksAndFixes>.Logger.Msg($"  {GameManager.IsWorld}");
-        //         Melon<TweaksAndFixes>.Logger.Msg($"  {Input.GetMouseButton(0)}");
-        //         Melon<TweaksAndFixes>.Logger.Msg($"  {GameManager.IsWorldMap}");
-        //         Melon<TweaksAndFixes>.Logger.Msg($"  {BasePopupWindow.IsAnyPopupActive}");
-        //         Melon<TweaksAndFixes>.Logger.Msg($"  {GameManager.CanHandleMouseInput()}");
-        //     }
-        // }
 
-        [HarmonyPatch(nameof(Cam.Update))]
-        [HarmonyPostfix]
-        internal static void Postfix_Update(Cam __instance)
+        [HarmonyPatch(nameof(Cam.LookAtPointEx))]
+        [HarmonyPrefix]
+        internal static bool Prefix_LookAtPointEx(Cam __instance, Vector3 position, bool forceRefresh, bool changeFov, float changeFovValue)
         {
-            // Only works for battles and shipbuilder, there's a custom script for the map
-            if (Config.Param("taf_camera_disable_edge_scroll", 1) == 1)
+            if (!UiM.showPopups) return false;
+
+            if (changeFov)
             {
-                __instance.borderScrollSize = 0;
-                __instance.borderScrollSensitivity = 0;
+                float fov = 5;
+
+                if (changeFovValue != -1)
+                {
+                    fov = Mathf.Lerp(__instance.MinFov, __instance.MaxFov, changeFovValue);
+                }
+
+                __instance.fov = fov;
+                __instance.cameraComp.orthographicSize = fov;
+                __instance.CampaignMapFovPercents = (fov - __instance.MinFov) / (__instance.MaxFov - __instance.MinFov);
             }
 
-            // __instance.transform.position = Vector3.zero;
+            __instance.transform.position = new(position.x, __instance.transform.position.y, position.z);
 
+            if (forceRefresh)
+            {
+                MapUI.ForceRefresh = true;
+            }
+
+            __instance.CheckCameraBorders();
+
+            return false;
+        }
+
+        [HarmonyPatch(nameof(Cam.Update))]
+        [HarmonyPrefix]
+        internal static bool Prefix_Update(Cam __instance)
+        {
             // Only works for the map, no clue why the other two use a different system
             __instance.CampaignZoomSpeed = 30;
             __instance.BattleZoomSpeed = 1;
@@ -2528,15 +2533,9 @@ namespace TweaksAndFixes
                 __instance.limitMinRotationX = 0;
             }
 
-            // if (!UiM.showPopups)
-            // {
-            //     foreach (var window in windows)
-            //     {
-            //         BasePopupWindow.AllActivePopup.Add(window);
-            //     }
-            // 
-            //     windows.Clear();
-            // }
+            UiM.CamUpdate(__instance);
+
+            return false;
         }
     }
 }

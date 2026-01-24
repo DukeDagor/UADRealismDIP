@@ -2330,6 +2330,360 @@ namespace TweaksAndFixes
             );
         }
 
+        private static void UpdateCampaignCamera(Cam _this)
+        {
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Campaign:");
+
+            // ========== Configuration ========== //
+
+            // Update width/height
+            if (Screen.width != _this.width || Screen.height != _this.height)
+            {
+                _this.CampaignModePositionChanged = true;
+                _this.width = Screen.width;
+                _this.height = Screen.height;
+                _this.screenSizeRation = Screen.width / Screen.height;
+            }
+
+            // Orthographic config
+            if (!_this.cameraComp.orthographic)
+            {
+                _this.cameraComp.orthographic = true;
+
+                _this.cameraComp.transform.eulerAngles = new(90, 180, 0);
+            }
+
+            // ========== Get Input ========== //
+
+            Vector3 mp = Input.mousePosition;
+            bool isMouseOverGame = !(0 > mp.x || 0 > mp.y || Screen.width < mp.x || Screen.height < mp.y);
+
+            bool canZoomWithScrollWheel = 
+                (BasePopupWindow.AllowScroll || !UiM.showPopups)
+                && GameManager.IsWorldMap
+                && GameManager.CanHandleMouseInput() && isMouseOverGame;
+
+            bool canPan =
+                (!BasePopupWindow.IsAnyPopupActive || !UiM.showPopups)
+                && GameManager.IsWorldMap && isMouseOverGame;
+
+            if (canZoomWithScrollWheel)
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg($"    Scroll {Input.mouseScrollDelta.y}");
+
+                _this.MinFov = 3;
+                _this.MaxFov = 45;
+
+                _this.fov -= Input.mouseScrollDelta.y * _this.Sensitivity * (_this.fov / _this.distanceBase);
+                // Melon<TweaksAndFixes>.Logger.Msg($"    Fov {_this.fov}");
+                _this.fov = Mathf.Clamp(_this.fov, _this.MinFov, _this.MaxFov);
+                // Melon<TweaksAndFixes>.Logger.Msg($"    Fov Clamped {_this.fov}");
+            }
+
+            if (Input.GetMouseButtonDown(0) && GameManager.IsWorldMap)
+            {
+                _this.prevMousePos = Input.mousePosition;
+            }
+
+            _this.newCameraPos = _this.transform.position;
+
+            // Mouse map pan
+            if (Input.GetMouseButton(0) && canPan && (GameManager.CanHandleMouseInput() || Cam.IsDrag))
+            {
+                _this.newCameraPos =
+                    _this.transform.position +
+                    new Vector3(Input.mousePosition.x - _this.prevMousePos.x, 0, Input.mousePosition.y - _this.prevMousePos.y) * Time.deltaTime * _this.CampaignMapMoveSpeed;
+
+                _this.prevMousePos = Input.mousePosition;
+                _this.CampaignModePositionChanged = true;
+                Cam.IsDrag = true;
+            }
+            else
+            {
+                Cam.IsDrag = false;
+            }
+
+            // Keyboard map pan
+            if (canPan && GameManager.CanHandleKeyboardInput())
+            {
+                Vector3 keyboardInput = _this.GetKeyboardInputForMoveCam(false, true);
+
+                if (keyboardInput != Vector3.zero)
+                {
+                    _this.newCameraPos =
+                        _this.transform.position + new Vector3(keyboardInput.x, 0, keyboardInput.y) * Time.deltaTime * _this.CampaignMapMoveSpeed;
+                    _this.CampaignModePositionChanged = true;
+                }
+            }
+
+            // ========== Update Cam ========== //
+
+            float newFov = Mathf.Lerp(_this.cameraComp.orthographicSize, _this.fov, _this.zoomDampen * Time.deltaTime);
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"    Target {newFov}");
+
+            _this.cameraComp.orthographicSize = newFov;
+            _this.prevFov = _this.fov;
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"    Ortho {_this.cameraComp.orthographicSize}");
+
+            if (_this.CampaignMapPrevOrthoSize != newFov)
+            {
+                _this.CampaignModePositionChanged = true;
+                _this.CampaignMapPrevOrthoSize = newFov;
+            }
+
+            _this.CampaignMapFovPercents = (newFov - _this.MinFov) / (_this.MaxFov - _this.MinFov);
+            _this.CampaignMapMoveSpeed = 2.5f * _this.CampaignMapFovPercents + 0.25f;
+
+            // Check minimap position
+            if (_this.newPosFromMiniMap != Vector3.zero)
+            {
+                _this.newCameraPos = new(_this.newPosFromMiniMap.x, _this.transform.position.y, _this.newPosFromMiniMap.z);
+                _this.newPosFromMiniMap = Vector3.zero;
+                _this.CampaignModePositionChanged = true;
+            }
+
+            // Update position and clamp to map bounds
+            _this.transform.position = _this.newCameraPos;
+            _this.CheckCameraBorders();
+
+            // Configure grid alpha
+            if (_this.Grid != null)
+            {
+                _this.grid3Alpha = Mathf.Clamp01((_this.CampaignMapFovPercents - 0.5f) + (_this.CampaignMapFovPercents + 0.5f));
+                _this.Grid.SetColor("_LineColor1", new Color(0, 0, 0, _this.grid1Alpha * _this.MaxAlpha));
+                _this.grid2Alpha = Mathf.Clamp01((_this.CampaignMapFovPercents / 0.66f) - _this.grid3Alpha + 0.1f);
+                _this.Grid.SetColor("_LineColor2", new Color(0, 0, 0, _this.grid2Alpha * _this.MaxAlpha));
+                _this.grid1Alpha = 1.5f - Mathf.Clamp01(_this.CampaignMapFovPercents / 0.33f) - _this.grid3Alpha;
+                _this.Grid.SetColor("_LineColor3", new Color(0, 0, 0, _this.grid3Alpha * _this.MaxAlpha));
+            }
+        }
+
+        private static bool isRmbDrag = false;
+        private static bool isMmbDrag = false;
+
+        private static void UpdateOrbitCamera(Cam _this)
+        {
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Not Campaign:");
+
+            // ========== Configuration ========== //
+
+            // Orthographic config
+            if (_this.cameraComp.orthographic)
+            {
+                _this.cameraComp.orthographic = false;
+            }
+
+            _this.startingRotationX = 60;
+
+            // ========== Get Input ========== //
+
+            float dt = Mathf.Clamp(Time.unscaledDeltaTime, 0.0f, 0.05f);
+
+            Vector3 mp = Input.mousePosition;
+            bool isMouseOverGame = !(0 > mp.x || 0 > mp.y || Screen.width < mp.x || Screen.height < mp.y);
+
+            bool allowCameraControl = G.ui.AllowCameraControl() && isMouseOverGame;
+
+            Vector3 deltaPan = new Vector3();
+
+            if (allowCameraControl && GameManager.CanHandleMouseInput())
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg($"    Allow cam control & can handle mouse input:");
+
+                // Calculate zoom
+                float mouseDelta = _this.allowMouseScroll.Invoke() ? -Input.mouseScrollDelta.y : 0;
+                float zoomDelta = _this.zoomSensitivity * mouseDelta;
+                bool camUpPressed = Input.GetKey(G.settings.Bindings.CameraUp.Code);
+                bool camDownPressed = Input.GetKey(G.settings.Bindings.CameraDown.Code);
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"    Calc Zoom: {_this.allowMouseScroll.Invoke()} | {-Input.mouseScrollDelta.y} | {_this.zoomSensitivity} | {zoomDelta}");
+
+                float zoomTo = Mathf.Clamp(
+                    ((camUpPressed ? 3 : 0) - (camDownPressed ? 3 : 0) + zoomDelta) * (_this.distance / _this.distanceBase) + _this.distanceDesired,
+                    _this.distanceMin,
+                    _this.distanceMax
+                );
+
+                _this.distanceDesired = zoomTo;
+                // Melon<TweaksAndFixes>.Logger.Msg($"      {_this.distanceDesired} && {_this.distance}");
+            }
+
+            // Mouse camera rotation
+            if (allowCameraControl && (GameManager.CanHandleMouseInput() || isRmbDrag) && Input.GetMouseButton(1))
+            {
+                _this.rotationX +=
+                    (_this.allowRotateX ?
+                        (Input.mousePosition.y - _this.prevMousePos.y) * dt * _this.rotationSensitivityX : 0);
+
+                _this.rotationY +=
+                    (_this.allowRotateY ?
+                        (Input.mousePosition.x - _this.prevMousePos.x) * dt * _this.rotationSensitivityY : 0);
+
+                _this.rotationX = Mathf.Clamp(_this.rotationX, _this.limitMinRotationX, _this.limitMaxRotationX);
+
+                isRmbDrag = true;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"      {Input.mousePosition} -> {_this.prevMousePos}");
+            }
+            else
+            {
+                isRmbDrag = false;
+            }
+
+            if (allowCameraControl && (GameManager.CanHandleMouseInput() || isMmbDrag) && Input.GetMouseButton(2))
+            {
+                deltaPan += -Vector3.forward * (Input.mousePosition.y - _this.prevMousePos.y) / Screen.height * _this.panSensitivityX +
+                            -Vector3.right * (Input.mousePosition.x - _this.prevMousePos.x) / Screen.width * _this.panSensitivityY;
+
+                isMmbDrag = true;
+            }
+            else
+            {
+                isMmbDrag = false;
+            }
+
+            // Keyboard camera rotation
+            if (allowCameraControl && !Util.FocusIsInInputField() && GameManager.CanHandleKeyboardInput())
+            {
+                if (Input.GetKey(GameManager.IsBattle ?
+                    G.settings.Bindings.BattleCameraRotationLeft.Code :
+                    G.settings.Bindings.ConstructorCameraRotationLeft.Code))
+                    _this.rotationY = (dt * _this.rotationSensitivityKeyMod * _this.rotationSensitivityY) + _this.rotationY;
+
+                if (Input.GetKey(GameManager.IsBattle ?
+                    G.settings.Bindings.BattleCameraRotationRight.Code :
+                    G.settings.Bindings.ConstructorCameraRotationRight.Code))
+                    _this.rotationY = -(dt * _this.rotationSensitivityKeyMod * _this.rotationSensitivityY) + _this.rotationY;
+            }
+
+            if (allowCameraControl && !Util.FocusIsInInputField())
+            {
+                Vector3 keyboardInput = _this.GetKeyboardInputForMoveCam(false, false);
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"      X: {_this.rotationX} | Y: {_this.rotationY}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"      In: {keyboardInput}");
+
+                deltaPan += keyboardInput;
+            }
+
+            // Zoom transition
+            if (_this.transition != null)
+            {
+                if (_this.transition.isRunning)
+                {
+                    Vector3 ease = Util.EaseInOut(
+                        _this.transitionFrom,
+                        _this.transitionTo,
+                        _this.transition.progress
+                    );
+
+                    _this.lookingAt = ease;
+
+                    float zoomTo = Util.Clamp(
+                        (ease - _this.transitionFrom).magnitude
+                            * Mathf.Sin(_this.transition.progress * 3.14159265f) * 0.2f
+                            + _this.transitionDistance, 0, 4000
+                    );
+
+                    _this.distance = zoomTo;
+                    _this.distanceDesired = zoomTo;
+                }
+                else
+                {
+                    _this.lookingAt = _this.transitionTo;
+                    _this.distance = _this.transitionDistance;
+                    _this.transition = null;
+                }
+            }
+
+            if (_this.plane != null)
+            {
+                // Check if the camera has been panned
+                _this.inputScroll = deltaPan != Vector3.zero;
+
+                // Parse Pan input
+                float radX = _this.rotationX / 180f * Mathf.PI;
+                float radY = (_this.rotationY - 90f) / 180f * Mathf.PI;
+
+                float panMult = _this.scrollSensitivity *
+                    Mathf.Pow(1.2f, G.settings.panSensitivity) *
+                    Mathf.Pow(_this.distance / _this.distanceBase, 0.8f);
+
+                deltaPan *= panMult * dt;
+
+                _this.lookingAt += new Vector3(
+                    -deltaPan.x * Mathf.Sin(radY) + deltaPan.z * Mathf.Cos(radY),
+                    0,
+                    -deltaPan.x * Mathf.Cos(radY) - deltaPan.z * Mathf.Sin(radY)
+                );
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"      Pan: {deltaPan} : {Mathf.Sin(radY)} | {Mathf.Cos(radY)}");
+
+                _this.distance = Mathf.Lerp(_this.distance, _this.distanceDesired, _this.zoomDampen * dt);
+
+                // Clamp lookingAt to bounds
+                if (_this.transition == null)
+                {
+                    Vector3 planeCollider = _this.plane.size;
+
+                    _this.lookingAt =
+                        Mathf.Clamp(_this.lookingAt.x, -planeCollider.x * 0.5f, planeCollider.x * 0.5f) * Vector3.right +
+                        Mathf.Clamp(_this.lookingAt.z, -planeCollider.z * 0.5f, planeCollider.z * 0.5f) * Vector3.forward;
+                }
+
+                // Update position & rotation
+                Vector3 originalPosition = _this.transform.position;
+                Vector3 offset = new Vector3(
+                    _this.distance * _this.distanceMod * Mathf.Sin(-radX) * Mathf.Cos(-radY),
+                    _this.distance * _this.distanceMod * Mathf.Cos(-radX),
+                    _this.distance * _this.distanceMod * Mathf.Sin(-radX) * Mathf.Sin(-radY)
+                );
+
+                _this.transform.position =
+                    _this.plane.transform.position + _this.plane.transform.TransformDirection(_this.plane.center) +
+                    _this.lookingAt + offset;
+                _this.transform.forward = -offset;
+
+                // Update tracking variables
+                _this.cameraMovement = _this.transform.position - originalPosition;
+                _this.prevMousePos = Input.mousePosition;
+                _this.lookingAtPosition = _this.transform.TransformPoint(_this.lookingAt);
+
+                var dof = _this.GetComponent<UnityStandardAssets.ImageEffects.DepthOfField>();
+                if (dof != null)
+                {
+                    dof.focalLength = _this.distance * _this.distanceMod;
+                    // Melon<TweaksAndFixes>.Logger.Msg($"      F-Len: {dof.focalLength}");
+                }
+            }
+        }
+
+        public static void CamUpdate(Cam _this)
+        {
+            _this.CampaignModePositionChanged = false;
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Update: {GameManager.Instance.CurrentState} : {_this.transform.position} : {_this.transform.eulerAngles}");
+
+            if (GameManager.IsCampaign && !GameManager.IsBattle && !GameManager.IsConstructor
+                && GameManager.Instance.CurrentState != GameManager.GameState.LoadingCustom)
+            {
+                UpdateCampaignCamera(_this);
+            }
+            else
+            {
+                if (GameManager.Instance.CurrentState == GameManager.GameState.LoadingCustom)
+                {
+                    _this.rotationX = _this.startingRotationX;
+                    _this.rotationY = _this.startingRotationY;
+                    _this.distance = _this.distanceStart;
+                }
+
+                UpdateOrbitCamera(_this);
+            }
+        }
+
         // private static Slider beamSliderComp;
         // 
         // public static void OnConstructorShipChanged()
