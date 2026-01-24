@@ -926,14 +926,14 @@ namespace TweaksAndFixes
                 if (eff == null)
                     return true;
 
-                if (eff.total < Config.Param("taf_generate_funnel_maxefficiency", 150f))
+                if (eff.total < Config.Param("taf_shipgen_target_funnel_cap", 150f))
                     return true;
 
-                // Melon<TweaksAndFixes>.Logger.Msg($"  FCap {eff.total} >= {Config.Param("taf_generate_funnel_maxefficiency", 150f)}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"  FCap {eff.total} >= {Config.Param("taf_shipgen_target_funnel_cap", 150f)}");
 
                 int count = 0;
-                // Dictionary<PartData, float> funnelCaps = new();
-                // float total = 0;
+                float thisFunnelCap = 0;
+                float total = 0;
 
                 foreach (var part in ship.parts)
                 {
@@ -941,26 +941,25 @@ namespace TweaksAndFixes
 
                     count++;
 
-                    // funnelCaps.Add(part.data, part.data.statsx[G.GameData.stats["fcap"]]);
-                    // total += part.data.statsx[G.GameData.stats["fcap"]];
-                    // 
+                    total += part.data.statsx[G.GameData.stats["fcap"]];
+
+                    if (part.data != data) continue;
+
+                    thisFunnelCap = part.data.statsx[G.GameData.stats["fcap"]];
+
                     // Melon<TweaksAndFixes>.Logger.Msg($"    {part.data.nameUi} -> {part.data.statsx[G.GameData.stats["fcap"]]} fcap");
                 }
 
-                if (count <= 2)
+                if (thisFunnelCap == 0)
                     return true;
 
                 // Melon<TweaksAndFixes>.Logger.Msg($"  {count} funnels : {total} fCap stat");
-                // 
-                // foreach (var fcap in funnelCaps)
-                // {
-                //     funnelCaps[fcap.Key] /= total;
-                // 
-                //     Melon<TweaksAndFixes>.Logger.Msg($"    {fcap.Key.nameUi} -> {funnelCaps[fcap.Key] * 100}% of fcap");
-                // }
-                // 
-                // if (eff.total * (1f - funnelCaps[data]) < Config.Param("taf_generate_funnel_maxefficiency", 150f))
-                //     return true;
+
+                if (count <= 1)
+                    return true;
+
+                if (eff.total * (1f - (thisFunnelCap / total)) < Config.Param("taf_shipgen_target_funnel_cap", 150f))
+                    return true;
 
                 // Melon<TweaksAndFixes>.Logger.Msg($"  Denying mounting of {data.nameUi}!");
 
