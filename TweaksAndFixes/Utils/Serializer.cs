@@ -1577,13 +1577,14 @@ namespace TweaksAndFixes
                 bool allSucceeded = true;
                 foreach (var s in split)
                 {
-                    int parenL = input.IndexOf('(');
+                    int parenL = s.IndexOf('(');
                     if (parenL < 0)
                         continue;
                     var fieldName = s.Substring(0, parenL);
                     if (!cache.TryGetValue(fieldName, out var data))
                     {
                         allSucceeded = false;
+                        Melon<TweaksAndFixes>.Logger.Msg($"Could not find {fieldName} in dict!");
                         continue;
                     }
 

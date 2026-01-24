@@ -42,7 +42,8 @@ namespace TweaksAndFixes
                 param = param.Replace("accuracy(", "accuracies(");
                 param = param.Replace("penetration(", "penetrations(");
 
-                Serializer.Human.FillIndexedDicts(gd, param, true);
+                if (!Serializer.Human.FillIndexedDicts(gd, param, true))
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to parse params for gun data {gd.name}!");
 
                 int max = GetMaxGrade(gd);
                 Config.MaxGunGrade = Math.Max(Config.MaxGunGrade, max);
