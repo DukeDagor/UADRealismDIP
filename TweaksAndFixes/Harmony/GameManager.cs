@@ -275,12 +275,19 @@ namespace TweaksAndFixes
                         || ship.designId != Il2CppSystem.Guid.Empty)
                         continue;
 
+                    // Null ID shared design
                     if (ship.id == Il2CppSystem.Guid.Empty)
                     {
                         ship.id = Il2CppSystem.Guid.NewGuid();
                         Melon<TweaksAndFixes>.Logger.Msg($"  Design '{ship.vesselName}' now has ID {ship.id}");
                         designs.Add(ship);
                     }
+                    // Normal shared design
+                    else if (ship.status == VesselEntity.Status.None)
+                    {
+                        designs.Add(ship);
+                    }
+                    // Null ID ship
                     else
                     {
                         total++;
@@ -314,7 +321,10 @@ namespace TweaksAndFixes
                     }
 
                     if (!found)
-                        Melon<TweaksAndFixes>.Logger.Msg($"  Ship {ship.vesselName} has no matching design!");
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"  Ship {ship.vesselName} has no matching design. Deleting from save.");
+                        __instance.__8__1.store.Ships.Remove(ship);
+                    }
                 }
             }
 
