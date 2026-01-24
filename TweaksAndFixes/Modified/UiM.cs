@@ -1985,6 +1985,8 @@ namespace TweaksAndFixes
             Serializer.JSON.SaveJsonFile<TAF_Settings>(SavePath.path, TAF_Settings.settings);
         }
 
+        // ========== Function Overrides ========== //
+
         public static void CheckForPeace(Ui _this)
         {
             int monthsForLowVPWarEnd = Config.Param("taf_war_max_months_for_low_vp_war", 12);
@@ -2072,12 +2074,12 @@ namespace TweaksAndFixes
                     Melon<TweaksAndFixes>.Logger.Msg($"    Chose loser: {loserPlayer.Name(false)}");
                 }
 
-                else if (Mathf.Max((vpB + 1f) / (vpA + 1f), (vpB + 1f) / (vpA + 1f)) > 5)
-                {
-                    Melon<TweaksAndFixes>.Logger.Msg($"  Rel A {vpA} vp / Rel B {vpB} vp >= {peace_enemy_vp_ratio} (VP Ratio)");
-                    loserPlayer = vpB > vpA ? a : b;
-                    Melon<TweaksAndFixes>.Logger.Msg($"    Chose loser: {loserPlayer.Name(false)}");
-                }
+                // else if (Mathf.Max((vpB + 1f) / (vpA + 1f), (vpB + 1f) / (vpA + 1f)) > 5)
+                // {
+                //     Melon<TweaksAndFixes>.Logger.Msg($"  Rel A {vpA} vp / Rel B {vpB} vp >= {peace_enemy_vp_ratio} (VP Ratio)");
+                //     loserPlayer = vpB > vpA ? a : b;
+                //     Melon<TweaksAndFixes>.Logger.Msg($"    Chose loser: {loserPlayer.Name(false)}");
+                // }
 
                 else if (turnsSinceStart >= monthsForEconCollapse)
                 {
