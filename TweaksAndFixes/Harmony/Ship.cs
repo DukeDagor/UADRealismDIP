@@ -1107,7 +1107,7 @@ namespace TweaksAndFixes
                         case "draught_min": draught_min = Math.Clamp(val, sd.draughtMin, sd.draughtMax); break;
                         case "draught_max": draught_max = Math.Clamp(val, sd.draughtMin, sd.draughtMax); break;
                         default:
-                            Melon<TweaksAndFixes>.Logger.Error($"Invalid `parts.csv` `shipgen_clamp` param: `{stat}` for ID `{st.name}`. Unsuported stat. Can only be [speed_min, speed_max, beam_min, beam_max, draught_min, draught_max]");
+                            Melon<TweaksAndFixes>.Logger.Error($"Invalid `shipTypes.csv` `shipgen_clamp` param: `{stat}` for ID `{st.name}`. Unsuported stat. Can only be [speed_min, speed_max, beam_min, beam_max, draught_min, draught_max]");
                             break;
                     }
                 }
