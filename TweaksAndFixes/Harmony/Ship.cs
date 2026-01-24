@@ -557,6 +557,11 @@ namespace TweaksAndFixes
         [HarmonyPatch(nameof(Ship.Update))]
         internal static void Postfix_Update(Ship __instance)
         {
+            // Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name(false, false, false, false, true)} : Show deck props {UiM.TAF_Settings.settings.deckPropSpacing != float.MaxValue}");
+            __instance.hull.gameObject.GetChild("DeckProps").SetActive(
+                UiM.TAF_Settings.settings.deckPropSpacing != float.MaxValue
+            );
+
             if (__instance.floatUpsCont != null && __instance.floatUpsCont.transform.localPosition.y < 100)
             {
                 __instance.floatUpsCont.transform.localPosition = new Vector3(0, 120, 0);
@@ -928,6 +933,20 @@ namespace TweaksAndFixes
                 _TempDatas.Clear();
             }
         }
+
+        // SizeRatio
+
+        [HarmonyPatch(typeof(Ship.__c__DisplayClass870_1))]
+        [HarmonyPatch("_RefreshHull_b__21")]
+        [HarmonyPrefix]
+        internal static bool Prefix__RefreshHull_b__21(__c__DisplayClass870_1 __instance, DeckProp p, ref bool __result)
+        {
+            __result = UiM.TAF_Settings.settings.deckPropSpacing == float.MaxValue ||
+                Vector3.Distance(p.transform.position, __instance.pos1) <= UiM.TAF_Settings.settings.deckPropSpacing;
+
+            return false;
+        }
+
     }
 
     // We can't target ref arguments in an attribute, so

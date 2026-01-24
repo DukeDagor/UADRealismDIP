@@ -1761,13 +1761,97 @@ namespace TweaksAndFixes
 
         private static void ApplySettingsMenuModifications()
         {
-            // Global/Ui/UiMain/Popup/Options Window/Root/RightSide/Sound/Viewport/Content/General Volume
-
-            // Global/Ui/UiMain/Popup/Options Window/Root/RightSide/Graphic Options/Viewport/Content
-
             GameObject SettingsRoot = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/Options Window/Root");
 
             SettingsRoot.GetParent().transform.SetSiblingIndex(0);
+
+            // Global/Ui/UiMain/Popup/Options Window/Root/RightSide/General/Viewport/Content/ArmorQualityValue -> ArmorQualityInPenetrationData
+
+            GameObject GeneralOptionsContent = ModUtils.GetChildAtPath("RightSide/General/Viewport/Content", SettingsRoot);
+
+            GameObject ArmorQualityInPenetrationData = GeneralOptionsContent.GetChild("ArmorQualityInPenetrationData");
+            ArmorQualityInPenetrationData.TryDestroyComponent<HorizontalLayoutGroup>();
+
+            GameObject ArmorQualityValue = GeneralOptionsContent.GetChild("ArmorQualityValue");
+            ArmorQualityValue.transform.SetParent(ArmorQualityInPenetrationData);
+            ArmorQualityValue.transform.localPosition = Vector3.zero;
+            RectTransform ArmorQualityValueRT = ArmorQualityValue.GetComponent<RectTransform>();
+            ArmorQualityValueRT.offsetMax = new(0, 0);
+            ArmorQualityValueRT.offsetMin = new(0, -24);
+
+            GameObject ArmorQualityInPenetrationDataSlider = ArmorQualityInPenetrationData.GetChild("ArmorQualityInPenetrationDataSlider");
+            ArmorQualityInPenetrationDataSlider.transform.localPosition = new(90, 0, 0);
+            Slider ArmorQualityInPenetrationDataSliderS = ArmorQualityInPenetrationDataSlider.GetComponent<Slider>();
+            ArmorQualityInPenetrationDataSliderS.maxValue = Config.Param("taf_settings_max_armor_quality", 400);
+
+            // Show Map Image toggle
+
+            GameObject ShowMapImage = GameObject.Instantiate(GeneralOptionsContent.GetChild("Analytics"));
+            ShowMapImage.name = "Show Map Image";
+            ShowMapImage.SetParent(GeneralOptionsContent);
+            ShowMapImage.transform.SetScale(1, 1, 1);
+            SetLocalizedTextTag(ShowMapImage.GetChild("Label"), "$TAF_Ui_Settings_ShowMapImage");
+            Toggle ShowMapImageT = ShowMapImage.GetChild("Campaign Toggle").GetComponent<Toggle>();
+            ShowMapImageT.onValueChanged.RemoveAllListeners();
+            ShowMapImageT.Set(TAF_Settings.settings.showMapImage);
+            ShowMapImageT.onValueChanged.AddListener(new System.Action<bool>((bool val) => {
+                SetSaveSettingsButtonActive();
+
+                Melon<TweaksAndFixes>.Logger.Msg($"Show map image: {val}");
+                WorldCampaign.instance.worldEx.GetChild("2DMap").GetChild("Map").SetActive(val);
+            }));
+
+            // Deck Prop Spacing
+
+            GameObject deckPropSpacing = GameObject.Instantiate(ArmorQualityInPenetrationData);
+            deckPropSpacing.name = "Deck Prop Spacing";
+            deckPropSpacing.SetParent(GeneralOptionsContent);
+            deckPropSpacing.transform.SetScale(1, 1, 1);
+            SetLocalizedTextTag(deckPropSpacing.GetChild("Label"), "$TAF_Ui_Settings_DeckPropSpacing");
+
+            GameObject deckPropSpacingV = deckPropSpacing.GetChild("ArmorQualityValue");
+            TMP_Text deckPropSpacingVT = deckPropSpacingV.GetChild("Label").GetComponent<TMP_Text>();
+            deckPropSpacingVT.text = $"{TAF_Settings.settings.deckPropSpacing:0.0}m";
+
+            GameObject deckPropSpacingS = deckPropSpacing.GetChild("ArmorQualityInPenetrationDataSlider");
+            deckPropSpacingS.name = "DeckPropSpacingSlider";
+            Slider deckPropSpacingSC = deckPropSpacingS.GetComponent<Slider>();
+            float deckPropSpacingSCMax = 251;
+            deckPropSpacingSC.minValue = 30;
+            deckPropSpacingSC.maxValue = deckPropSpacingSCMax;
+            deckPropSpacingSC.onValueChanged.RemoveAllListeners();
+            deckPropSpacingSC.onValueChanged.AddListener(new System.Action<float>((float val) => {
+                if (val == deckPropSpacingSCMax)
+                {
+                    TAF_Settings.settings.deckPropSpacing = float.MaxValue;
+                    deckPropSpacingVT.text = $"No Props";
+                    return;
+                }
+
+                TAF_Settings.settings.deckPropSpacing = val / 10;
+                deckPropSpacingVT.text = $"{val/10:0.0}m";
+            }));
+            deckPropSpacingSC.OnMouseUp(new System.Action(() => {
+                SetSaveSettingsButtonActive();
+
+                float val = TAF_Settings.settings.deckPropSpacing;
+
+                if (val == deckPropSpacingSCMax / 10)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Disable deck props");
+                    return;
+                }
+
+                Melon<TweaksAndFixes>.Logger.Msg($"Set deck prop spacing: {val}");
+            }));
+            deckPropSpacingSC.Set(
+                TAF_Settings.settings.deckPropSpacing == float.MaxValue ?
+                deckPropSpacingSCMax :
+                TAF_Settings.settings.deckPropSpacing * 10);
+
+            // Global/Ui/UiMain/Popup/Options Window/Root/RightSide/Sound/Viewport/Content/General Volume
+
+            // Global/Ui/UiMain/Popup/Options Window/Root/RightSide/Graphic Options/Viewport/Content
 
             GameObject GraphicsOptionsContent = ModUtils.GetChildAtPath("RightSide/Graphic Options/Viewport/Content", SettingsRoot);
 
@@ -1831,17 +1915,21 @@ namespace TweaksAndFixes
 
         public class TAF_Settings
         {
-            public static TAF_Settings settings;
+            public static TAF_Settings settings = new();
             public static int CurrentSettingsVersion = 1;
             public int version { get; set; }
             public float uiScale { get; set; }
             public float uiScaleDefault { get; set; }
+            public bool showMapImage { get; set; }
+            public float deckPropSpacing { get; set; }
 
             public TAF_Settings()
             {
                 version = CurrentSettingsVersion;
                 uiScale = 2f;
                 uiScaleDefault = -1;
+                showMapImage = true;
+                deckPropSpacing = 3.6f;
             }
         }
 
@@ -1872,6 +1960,10 @@ namespace TweaksAndFixes
                         Melon<TweaksAndFixes>.Logger.Msg($"         version : {TAF_Settings.settings.version}");
                         Melon<TweaksAndFixes>.Logger.Msg($"         uiScale : {TAF_Settings.settings.uiScale}");
                         Melon<TweaksAndFixes>.Logger.Msg($"  uiScaleDefault : {TAF_Settings.settings.uiScaleDefault}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"    showMapImage : {TAF_Settings.settings.showMapImage}");
+                        Melon<TweaksAndFixes>.Logger.Msg($" deckPropSpacing : " +
+                            $"{(TAF_Settings.settings.deckPropSpacing == float.MaxValue ? "No Props" : TAF_Settings.settings.deckPropSpacing)}"
+                        );
                     }
                 }
                 catch (Exception e)
