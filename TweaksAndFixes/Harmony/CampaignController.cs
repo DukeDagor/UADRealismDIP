@@ -132,6 +132,24 @@ namespace TweaksAndFixes
             isLoadingNewTurn = false;
         }
 
+        [HarmonyPatch(nameof(CampaignController.DeleteDesign))]
+        [HarmonyPrefix]
+        internal static bool Prefix_DeleteDesign(CampaignController __instance, Ship ship)
+        {
+            if (!ship.player.isAi) return true;
+
+            foreach (Ship s in ship.player.GetFleetAll())
+            {
+                if (s.design != ship) continue;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"AI attempted to delete design {ship.Name(false, false)} despite having ships of this class afloat.");
+
+                return false;
+            }
+
+            return true;
+        }
+
         private static float AnswerEventWealth = 0;
 
         [HarmonyPatch(nameof(CampaignController.AnswerEvent))]
