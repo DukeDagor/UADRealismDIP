@@ -2454,6 +2454,12 @@ namespace TweaksAndFixes
 
         private static bool isRmbDrag = false;
         private static bool isMmbDrag = false;
+        private static bool ignoreNextCameraMove = false;
+
+        public static void IgnoreNextCamereMove()
+        {
+            ignoreNextCameraMove = true;
+        }
 
         private static void UpdateOrbitCamera(Cam _this)
         {
@@ -2505,6 +2511,14 @@ namespace TweaksAndFixes
             // Mouse camera rotation
             if (allowCameraControl && (GameManager.CanHandleMouseInput() || isRmbDrag) && Input.GetMouseButton(1))
             {
+                if (ignoreNextCameraMove)
+                {
+                    _this.prevMousePos = Input.mousePosition;
+                    ignoreNextCameraMove = false;
+                }
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"{Input.mousePosition.ToString("F0"),-16} -> {_this.prevMousePos.ToString("F0"),-16} = {(Input.mousePosition - _this.prevMousePos).ToString("F0"),-16} : dt = {dt}");
+
                 _this.rotationX +=
                     (_this.allowRotateX ?
                         (Input.mousePosition.y - _this.prevMousePos.y) * dt * _this.rotationSensitivityX : 0);
@@ -2642,6 +2656,8 @@ namespace TweaksAndFixes
                 _this.cameraMovement = _this.transform.position - originalPosition;
                 _this.prevMousePos = Input.mousePosition;
                 _this.lookingAtPosition = _this.transform.TransformPoint(_this.lookingAt);
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"{_this.prevMousePos.ToString("F0"),-16}");
 
                 var dof = _this.GetComponent<UnityStandardAssets.ImageEffects.DepthOfField>();
                 if (dof != null)

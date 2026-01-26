@@ -1925,6 +1925,15 @@ namespace TweaksAndFixes
         }
 
 
+        // ClearPlacingPart
+
+        [HarmonyPatch(nameof(Ui.ClearPlacingPart))]
+        [HarmonyPostfix]
+        internal static void Prefix_ClearPlacingPart(Ui __instance)
+        {
+            UiM.IgnoreNextCamereMove();
+        }
+
 
         // ########## SHIP PREVIEWS ########## //
 
