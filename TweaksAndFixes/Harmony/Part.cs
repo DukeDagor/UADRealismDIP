@@ -775,7 +775,7 @@ namespace TweaksAndFixes
         // TODO: Actually check FCAP ratios to better match the desired FCAP.
         internal static bool Prefix(Part __instance, PartData data, Ship ship, bool partIsReal, ref string denyReason, ref bool __result)
         {
-            // if (!GameManager.IsAutodesignActive) return true;
+            if (!GameManager.IsAutodesignActive) return true;
 
             if (data.isGun)
             {
