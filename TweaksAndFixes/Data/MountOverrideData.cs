@@ -208,13 +208,7 @@ namespace TweaksAndFixes
             mount.rotateForwardBack = mountOverride.orientation == "fore/aft";
             mount.rotateLeftRight = mountOverride.orientation == "starboard/port";
 
-            mount.rotateSame =
-                mount.casemate
-                || mount.siBarbette
-                || mount.funnel
-                || mount.barbette
-                || mount.subTorpedo
-                || mount.deckTorpedo;
+            mount.rotateSame = true;
         }
 
         private static void UpdateMountParamiters(Mount mount, MountOverrideData mountOverride)
@@ -274,13 +268,7 @@ namespace TweaksAndFixes
             mount.rotateForwardBack = mountOverride.orientation == "fore/aft";
             mount.rotateLeftRight = mountOverride.orientation == "starboard/port";
 
-            mount.rotateSame =
-                mount.casemate
-                || mount.siBarbette
-                || mount.funnel
-                || mount.barbette
-                || mount.subTorpedo
-                || mount.deckTorpedo;
+            mount.rotateSame = true;
         }
 
         public static StringBuilder path = new(1024);
