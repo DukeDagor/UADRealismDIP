@@ -70,6 +70,11 @@ namespace TweaksAndFixes.Harmony
                 {
                     element.Value.Year.text = $"{s.dateCreated.AsDate().Year}";
                 }
+
+                if (G.ui.FleetWindow.selectedElements.Count > 0 && G.ui.FleetWindow.selectedElements[0] == element.Value)
+                {
+                    G.ui.FleetWindow.Delete.interactable = element.Value.ShipCount.text == "0";
+                }
             }
 
             if (G.ui.FleetWindow.selectedElements.Count == 0)
