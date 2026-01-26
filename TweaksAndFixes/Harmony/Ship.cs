@@ -557,10 +557,7 @@ namespace TweaksAndFixes
         [HarmonyPatch(nameof(Ship.Update))]
         internal static void Postfix_Update(Ship __instance)
         {
-            // Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name(false, false, false, false, true)} : Show deck props {UiM.TAF_Settings.settings.deckPropSpacing != float.MaxValue}");
-            __instance.hull.gameObject.GetChild("DeckProps").SetActive(
-                UiM.TAF_Settings.settings.deckPropSpacing != float.MaxValue
-            );
+            // Melon<TweaksAndFixes>.Logger.Msg($"{__instance.Name(false, false, false, false, true)} : Show deck props {UiM.TAF_Settings.settings.deckPropCoverage != float.MaxValue}");
 
             if (__instance.floatUpsCont != null && __instance.floatUpsCont.transform.localPosition.y < 100)
             {
@@ -934,19 +931,53 @@ namespace TweaksAndFixes
             }
         }
 
-        // SizeRatio
-
-        [HarmonyPatch(typeof(Ship.__c__DisplayClass870_1))]
-        [HarmonyPatch("_RefreshHull_b__21")]
-        [HarmonyPrefix]
-        internal static bool Prefix__RefreshHull_b__21(__c__DisplayClass870_1 __instance, DeckProp p, ref bool __result)
+        public static void UpdateDeckClutter(Ship ship)
         {
-            __result = UiM.TAF_Settings.settings.deckPropSpacing == float.MaxValue ||
-                Vector3.Distance(p.transform.position, __instance.pos1) <= UiM.TAF_Settings.settings.deckPropSpacing;
+            if (UiM.TAF_Settings.settings.deckPropCoverage == 0)
+            {
+                ship.hull.gameObject.GetChild("DeckProps").SetActive(false);
+            }
+            else
+            {
+                ship.hull.gameObject.GetChild("DeckProps").SetActive(true);
 
-            return false;
+                var props = ship.hull.gameObject.GetChild("DeckProps").GetChildren();
+
+                for (int i = 0; i < props.Count; i += 2)
+                {
+                    if ((i / 2) % 4 >= UiM.TAF_Settings.settings.deckPropCoverage / 25)
+                    {
+                        props[i].SetActive(false);
+                        props[i + 1].SetActive(false);
+                    }
+                    else
+                    {
+                        props[i].SetActive(true);
+                        props[i + 1].SetActive(true);
+                    }
+                }
+            }
         }
 
+        // SizeRatio
+        // chosen.
+        [HarmonyPatch(nameof(Ship.RefreshHull))]
+        [HarmonyPostfix]
+        internal static void Postfix_RefreshHull(Ship __instance)
+        {
+            UpdateDeckClutter(__instance);
+        }
+
+        // [HarmonyPatch(typeof(Ship.__c__DisplayClass870_1))]
+        // [HarmonyPatch("_RefreshHull_b__21")]
+        // [HarmonyPrefix]
+        // internal static bool Prefix__RefreshHull_b__21(__c__DisplayClass870_1 __instance, DeckProp p, ref bool __result)
+        // {
+        //     __result = UiM.TAF_Settings.settings.deckPropCoverage == float.MaxValue ||
+        //         Vector3.SqrMagnitude(p.transform.position - __instance.pos1) <= UiM.TAF_Settings.settings.deckPropCoverage * UiM.TAF_Settings.settings.deckPropCoverage;
+        // 
+        //     return false;
+        // }
     }
 
     // We can't target ref arguments in an attribute, so

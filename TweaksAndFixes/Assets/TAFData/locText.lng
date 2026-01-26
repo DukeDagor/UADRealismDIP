@@ -86,4 +86,4 @@ $TAF_Ui_ReportShipScuttled;{0} was ordered to set scuttling charges due to high 
 $TAF_Ui_ReportShipSurrendered;{0} has surrendered due to high casualties!
 $TAF_Ui_ReportShipScuttling;{0} is setting off it's scuttling charges!
 $TAF_Ui_Settings_ShowMapImage;Show Map Image
-$TAF_Ui_Settings_DeckPropSpacing;Deck Prop Spacing
+$TAF_Ui_Settings_DeckPropCoverage;Deck Prop Coverage

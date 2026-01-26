@@ -1803,51 +1803,40 @@ namespace TweaksAndFixes
 
             // Deck Prop Spacing
 
-            GameObject deckPropSpacing = GameObject.Instantiate(ArmorQualityInPenetrationData);
-            deckPropSpacing.name = "Deck Prop Spacing";
-            deckPropSpacing.SetParent(GeneralOptionsContent);
-            deckPropSpacing.transform.SetScale(1, 1, 1);
-            SetLocalizedTextTag(deckPropSpacing.GetChild("Label"), "$TAF_Ui_Settings_DeckPropSpacing");
+            GameObject deckPropCoverage = GameObject.Instantiate(ArmorQualityInPenetrationData);
+            deckPropCoverage.name = "Deck Prop Coverage";
+            deckPropCoverage.SetParent(GeneralOptionsContent);
+            deckPropCoverage.transform.SetScale(1, 1, 1);
+            SetLocalizedTextTag(deckPropCoverage.GetChild("Label"), "$TAF_Ui_Settings_DeckPropCoverage");
 
-            GameObject deckPropSpacingV = deckPropSpacing.GetChild("ArmorQualityValue");
-            TMP_Text deckPropSpacingVT = deckPropSpacingV.GetChild("Label").GetComponent<TMP_Text>();
-            deckPropSpacingVT.text = $"{TAF_Settings.settings.deckPropSpacing:0.0}m";
+            GameObject deckPropCoverageV = deckPropCoverage.GetChild("ArmorQualityValue");
+            TMP_Text deckPropCoverageVT = deckPropCoverageV.GetChild("Label").GetComponent<TMP_Text>();
+            deckPropCoverageVT.text = $"{TAF_Settings.settings.deckPropCoverage}%";
 
-            GameObject deckPropSpacingS = deckPropSpacing.GetChild("ArmorQualityInPenetrationDataSlider");
-            deckPropSpacingS.name = "DeckPropSpacingSlider";
-            Slider deckPropSpacingSC = deckPropSpacingS.GetComponent<Slider>();
-            float deckPropSpacingSCMax = 251;
-            deckPropSpacingSC.minValue = 30;
-            deckPropSpacingSC.maxValue = deckPropSpacingSCMax;
-            deckPropSpacingSC.onValueChanged.RemoveAllListeners();
-            deckPropSpacingSC.onValueChanged.AddListener(new System.Action<float>((float val) => {
-                if (val == deckPropSpacingSCMax)
-                {
-                    TAF_Settings.settings.deckPropSpacing = float.MaxValue;
-                    deckPropSpacingVT.text = $"No Props";
-                    return;
-                }
-
-                TAF_Settings.settings.deckPropSpacing = val / 10;
-                deckPropSpacingVT.text = $"{val/10:0.0}m";
+            GameObject deckPropCoverageS = deckPropCoverage.GetChild("ArmorQualityInPenetrationDataSlider");
+            deckPropCoverageS.name = "DeckPropCoverageSlider";
+            Slider deckPropCoverageSC = deckPropCoverageS.GetComponent<Slider>();
+            deckPropCoverageSC.minValue = 0;
+            deckPropCoverageSC.maxValue = 4;
+            deckPropCoverageSC.onValueChanged.RemoveAllListeners();
+            deckPropCoverageSC.onValueChanged.AddListener(new System.Action<float>((float val) => {
+                TAF_Settings.settings.deckPropCoverage = ModUtils.toInt(val * 25);
+                deckPropCoverageVT.text = $"{val*25}%";
             }));
-            deckPropSpacingSC.OnMouseUp(new System.Action(() => {
+            deckPropCoverageSC.OnMouseUp(new System.Action(() => {
                 SetSaveSettingsButtonActive();
 
-                float val = TAF_Settings.settings.deckPropSpacing;
+                float val = TAF_Settings.settings.deckPropCoverage;
 
-                if (val == deckPropSpacingSCMax / 10)
+                Melon<TweaksAndFixes>.Logger.Msg($"Set deck prop percent: {val}");
+
+                foreach (var ship in ShipM.GetActiveShips())
                 {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Disable deck props");
-                    return;
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Update clutter for ship {ship.Name(false, false)}");
+                    Patch_Ship.UpdateDeckClutter(ship);
                 }
-
-                Melon<TweaksAndFixes>.Logger.Msg($"Set deck prop spacing: {val}");
             }));
-            deckPropSpacingSC.Set(
-                TAF_Settings.settings.deckPropSpacing == float.MaxValue ?
-                deckPropSpacingSCMax :
-                TAF_Settings.settings.deckPropSpacing * 10);
+            deckPropCoverageSC.Set(TAF_Settings.settings.deckPropCoverage / 25);
 
             // Global/Ui/UiMain/Popup/Options Window/Root/RightSide/Sound/Viewport/Content/General Volume
 
@@ -1921,7 +1910,7 @@ namespace TweaksAndFixes
             public float uiScale { get; set; }
             public float uiScaleDefault { get; set; }
             public bool showMapImage { get; set; }
-            public float deckPropSpacing { get; set; }
+            public int deckPropCoverage { get; set; }
 
             public TAF_Settings()
             {
@@ -1929,7 +1918,7 @@ namespace TweaksAndFixes
                 uiScale = 2f;
                 uiScaleDefault = -1;
                 showMapImage = true;
-                deckPropSpacing = 3.6f;
+                deckPropCoverage = 50;
             }
         }
 
@@ -1957,13 +1946,11 @@ namespace TweaksAndFixes
                     }
                     else
                     {
-                        Melon<TweaksAndFixes>.Logger.Msg($"         version : {TAF_Settings.settings.version}");
-                        Melon<TweaksAndFixes>.Logger.Msg($"         uiScale : {TAF_Settings.settings.uiScale}");
-                        Melon<TweaksAndFixes>.Logger.Msg($"  uiScaleDefault : {TAF_Settings.settings.uiScaleDefault}");
-                        Melon<TweaksAndFixes>.Logger.Msg($"    showMapImage : {TAF_Settings.settings.showMapImage}");
-                        Melon<TweaksAndFixes>.Logger.Msg($" deckPropSpacing : " +
-                            $"{(TAF_Settings.settings.deckPropSpacing == float.MaxValue ? "No Props" : TAF_Settings.settings.deckPropSpacing)}"
-                        );
+                        Melon<TweaksAndFixes>.Logger.Msg($"          version : {TAF_Settings.settings.version}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"          uiScale : {TAF_Settings.settings.uiScale}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"   uiScaleDefault : {TAF_Settings.settings.uiScaleDefault}");
+                        Melon<TweaksAndFixes>.Logger.Msg($"     showMapImage : {TAF_Settings.settings.showMapImage}");
+                        Melon<TweaksAndFixes>.Logger.Msg($" deckPropCoverage : {TAF_Settings.settings.deckPropCoverage}%");
                     }
                 }
                 catch (Exception e)
