@@ -46,8 +46,25 @@ namespace TweaksAndFixes
                     || __result.Ships[i].status == VesselEntity.Status.Sunk
                     || __result.Ships[i].status == VesselEntity.Status.Scrapped)
                 {
-                    // Melon<TweaksAndFixes>.Logger.Msg($"  Removing {__rsult.Ships[i].status} ship '{__result.Ships[i].vesselName}'");
-                    __result.Ships.RemoveAt(i);
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Removing {__result.Ships[i].status} ship/design '{__result.Ships[i].vesselName}'");
+
+                    bool hasDesign = false;
+
+                    if (__result.Ships[i].designId == Il2CppSystem.Guid.Empty)
+                    {
+                        for (int j = __result.Ships.Count - 1; j >= 0; j--)
+                        {
+                            if (__result.Ships[j].designId == __result.Ships[i].id)
+                            {
+                                // Melon<TweaksAndFixes>.Logger.Msg($"    Erased design has {__result.Ships[j].status} ship '{__result.Ships[j].vesselName}'");
+                                hasDesign = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!hasDesign)
+                        __result.Ships.RemoveAt(i);
                 }
             }
         }
@@ -123,8 +140,25 @@ namespace TweaksAndFixes
                     || vessels[i].status == VesselEntity.Status.Sunk
                     || vessels[i].status == VesselEntity.Status.Scrapped)
                 {
-                    // Melon<TweaksAndFixes>.Logger.Msg($"Removing {vessels[i].status} ship '{vessels[i].vesselName}'");
-                    Ship.TryToEraseVessel(vessels[i]);
+                    if (vessels[i].vesselType == VesselEntity.VesselType.Submarine)
+                        continue;
+
+                    Melon<TweaksAndFixes>.Logger.Msg($"Removing {vessels[i].status} ship '{vessels[i].vesselName}'");
+
+                    bool hasDesign = false;
+
+                    for (int j = vessels.Count - 1; j >= 0; j--)
+                    {
+                        if (((Ship)vessels[j]).design == vessels[i])
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"    Erased design has {vessels[j].status} ship '{vessels[j].vesselName}'");
+                            hasDesign = true;
+                            break;
+                        }
+                    }
+
+                    if (!hasDesign)
+                        Ship.TryToEraseVessel(vessels[i]);
                 }
             }
 
@@ -143,6 +177,8 @@ namespace TweaksAndFixes
                 if (s.design != ship) continue;
 
                 // Melon<TweaksAndFixes>.Logger.Msg($"AI attempted to delete design {ship.Name(false, false)} despite having ships of this class afloat.");
+
+                ship.SetStatus(VesselEntity.Status.Erased);
 
                 return false;
             }
