@@ -36,6 +36,8 @@ namespace TweaksAndFixes
 
                 HasDestroyedSubmarineButton = true;
             }
+
+            WorldCampaign.instance.worldEx.GetChild("2DMap").GetChild("Map").SetActive(UiM.TAF_Settings.settings.showMapImage);
         }
     }
 }

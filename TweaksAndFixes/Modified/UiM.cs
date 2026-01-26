@@ -1798,7 +1798,12 @@ namespace TweaksAndFixes
                 SetSaveSettingsButtonActive();
 
                 Melon<TweaksAndFixes>.Logger.Msg($"Show map image: {val}");
-                WorldCampaign.instance.worldEx.GetChild("2DMap").GetChild("Map").SetActive(val);
+                TAF_Settings.settings.showMapImage = val;
+
+                if (GameManager.IsWorld)
+                {
+                    WorldCampaign.instance.worldEx.GetChild("2DMap").GetChild("Map").SetActive(val);
+                }
             }));
 
             // Deck Prop Spacing
