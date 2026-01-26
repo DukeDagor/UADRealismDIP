@@ -880,7 +880,7 @@ namespace TweaksAndFixes
                         return false;
                     }
 
-                    if ((max_main_gun_count != -1 && ship.mainGuns.Count > max_main_gun_count))
+                    if ((max_main_gun_count != -1 && ship.mainGuns?.Count > max_main_gun_count))
                     {
                         // Melon<TweaksAndFixes>.Logger.Msg($"Main gun cnt {ship.mainGuns.Count} outside range N/A ~ {max_main_gun_count}");
                         __result = false;
