@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
@@ -560,7 +560,120 @@ namespace TweaksAndFixes
             return uiModifications.ContainsKey(ui);
         }
 
+        /// <summary>
+        /// Re-enable the TAF_LoadGame button when the options menu (PopupMenu) is open.
+        /// Call at end of Ui.Update so it runs after any game logic that disables our button.
+        /// </summary>
+        public static void EnsureLoadButtonEnabled()
+        {
+            GameObject activeWindow = GetActivePopupMenuWindow();
+            if (activeWindow == null) return;
+            GameObject ourBtn = activeWindow.GetChild("TAF_LoadGame");
+            if (ourBtn == null)
+            {
+                for (int i = 0; i < activeWindow.transform.childCount; i++)
+                {
+                    GameObject c = activeWindow.transform.GetChild(i).gameObject;
+                    if (c.name == "TAF_LoadGame" || c.name.StartsWith("TAF_LoadGame"))
+                    { ourBtn = c; break; }
+                }
+            }
+            if (ourBtn != null)
+            {
+                ourBtn.SetActive(true);
+                if (ourBtn.TryGetComponent(out Button b))
+                    b.interactable = true;
+            }
+        }
 
+        /// <summary>
+        /// Returns the Window of the currently active PopupMenu (template or clone under PopWindows).
+        /// Clone name is typically "PopupMenu(Clone)".
+        /// </summary>
+        private static GameObject GetActivePopupMenuWindow()
+        {
+            GameObject template = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/PopupMenu");
+            if (template != null && template.active)
+            {
+                GameObject w = template.GetChild("Window");
+                if (w != null) return w;
+            }
+            GameObject popWindows = ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/PopWindows");
+            if (popWindows != null)
+            {
+                for (int i = 0; i < popWindows.transform.childCount; i++)
+                {
+                    GameObject child = popWindows.transform.GetChild(i).gameObject;
+                    if (child.active && (child.name == "PopupMenu" || child.name.StartsWith("PopupMenu(")))
+                    {
+                        GameObject w = child.GetChild("Window");
+                        if (w != null) return w;
+                        break;
+                    }
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Add a "Load Game" button to the options menu (PopupMenu) after SaveCampaign; click opens the load-game popup.
+        /// Registers an update to keep the button enabled when the menu is shown (template or clone).
+        /// </summary>
+        public static void AddLoadButton()
+        {
+            GameObject popupMenu = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/PopupMenu");
+            if (popupMenu == null) return;
+            GameObject window = popupMenu.GetChild("Window");
+            if (window == null) return;
+            GameObject buttonTemplate = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/PopupMenu/Window/ButtonBase");
+            if (buttonTemplate == null) return;
+
+            GameObject after = window.GetChild("SaveCampaign");
+            int siblingIndex = after != null ? after.transform.GetSiblingIndex() + 1 : -1;
+
+            GameObject btn = GameObject.Instantiate(buttonTemplate);
+            btn.transform.SetParent(window, false);
+            btn.name = "TAF_LoadGame";
+            btn.SetActive(true);
+            btn.transform.localPosition = Vector3.zero;
+            btn.transform.localScale = Vector3.one;
+
+            GameObject textObj = btn.GetChild("Text (TMP)");
+            if (textObj != null)
+            {
+                textObj.TryDestroyComponent<LocalizeText>();
+                if (textObj.TryGetComponent(out TMP_Text tmp))
+                    tmp.text = "Load Game";
+            }
+            if (btn.TryGetComponent(out Button buttonComp))
+            {
+                buttonComp.onClick.RemoveAllListeners();
+                buttonComp.onClick.AddListener(new System.Action(() =>
+                {
+                    GameObject activeWindow = GetActivePopupMenuWindow();
+                    Button loadButton = null;
+                    if (activeWindow != null)
+                    {
+                        GameObject popupMenu = activeWindow.transform.parent != null ? activeWindow.transform.parent.gameObject : null;
+                        if (popupMenu != null)
+                            popupMenu.SetActive(false);
+                        GameObject loadBtn = activeWindow.GetChild("LoadCampaign");
+                        if (loadBtn != null && loadBtn.TryGetComponent(out Button lb))
+                            loadButton = lb;
+                    }
+                    if (loadButton != null)
+                        loadButton.onClick.Invoke();
+                    else
+                    {
+                        GameObject saveWindow = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/SaveWindow");
+                        if (saveWindow != null)
+                            saveWindow.SetActive(true);
+                    }
+                }));
+            }
+            if (siblingIndex >= 0)
+                btn.transform.SetSiblingIndex(siblingIndex);
+        }
 
         ////////////////////// MODIFICATIONS //////////////////////
 
@@ -576,6 +689,8 @@ namespace TweaksAndFixes
 
             ApplyCampaignWindowModifications();
             ApplyDockyardModifications();
+            
+            AddLoadButton();
 
             G.GameData.tooltips["file_converter"] = new TooltipData();
 

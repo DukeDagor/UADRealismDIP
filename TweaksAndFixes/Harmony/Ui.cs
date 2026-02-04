@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
@@ -1351,6 +1351,8 @@ namespace TweaksAndFixes
                     CampaignControllerM.RequestForcedGameSave = true;
                 }
             }
+
+            UiM.EnsureLoadButtonEnabled();
         }
 
         [HarmonyPatch(nameof(Ui.ChoosePartCategory))]
