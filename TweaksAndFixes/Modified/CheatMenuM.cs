@@ -8,6 +8,7 @@ using Il2Cpp;
 using UnityEngine.UI;
 using Il2CppTMPro;
 using Il2CppUiExt;
+using TweaksAndFixes.Data;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8603
@@ -22,9 +23,6 @@ namespace TweaksAndFixes
     {
         public static void Start()
         {
-
-
-            
             int cheatMenuEnabled = Config.Param("taf_cheatMenuEnabled", 0);
             if (cheatMenuEnabled == 1)
             {
@@ -37,10 +35,10 @@ namespace TweaksAndFixes
         // Global/Ui/UiMain/Popup/Generic
         private static GameObject cheatMenuEvent;
         private static Button _cheatMenuButton;
-
         private static Player cheatPlayer;
         private static float currentAmount;
         private static float newAmount;
+        private static bool _isInitialized = false;
 
         public static void SetupCheatMenu()
         {
@@ -51,6 +49,10 @@ namespace TweaksAndFixes
             cheatMenuButton.transform.SetParent(options.transform);
             cheatMenuButton.name = "CheatMenuButton";
             cheatMenuButton.SetActive(true);
+            // Remove Help button's tooltip so hover doesn't run its logic (causes NullReferenceException on our clone)
+            cheatMenuButton.TryDestroyComponent<OnEnter>();
+            cheatMenuButton.TryDestroyComponent<OnLeave>();
+            UiM.AddTooltip(cheatMenuButton, "$TAF_UI_CheatMod_CheatMenu_Tooltip");
 
             Sprite sprite = TryLoadCheatButtonSpriteFromGame();
             if (sprite == null)
@@ -88,14 +90,22 @@ namespace TweaksAndFixes
                 _cheatMenuButton = btn;
                 btn.onClick.AddListener(new System.Action(() =>
                 {
+                    if (!GameManager.IsCampaign && !GameManager.IsConstructor)
+                        return;
                     if (GameManager.IsCampaign)
                         CampaignCheatMenu();
                     else if (GameManager.IsConstructor)
                         ConstructorCheatMenu();
-                    else if (GameManager.IsBattle)
-                        BattleCheatMenu();
                 }));
+                UpdateCheatButtonInteractable();
             }
+        }
+
+        /// <summary>Updates the cheat menu button so it is only clickable in Campaign or Constructor.</summary>
+        public static void UpdateCheatButtonInteractable()
+        {
+            if (_cheatMenuButton != null)
+                _cheatMenuButton.interactable = GameManager.IsCampaign || GameManager.IsConstructor;
         }
 
         /// <summary>Tries to load the cheat button sprite from the game's assets; returns null if not found.</summary>
@@ -110,10 +120,15 @@ namespace TweaksAndFixes
             }
             return null;
         }
-
         public static void CampaignCheatMenu()
         {
-            // Only open on world map to avoid NullRef in game's NewGameUI (event system hits null when popup opens during new-game flow).
+
+            // Fix for multiple menus
+            if (_isInitialized) {
+                cheatMenuEvent.SetActive(true);
+                return;
+            };
+
 
             MelonLoader.MelonLogger.Msg("CampaignCheatMenu");
             cheatPlayer = ExtraGameData.MainPlayer();
@@ -145,112 +160,93 @@ namespace TweaksAndFixes
                 return;
             }
 
-            void SetButton(GameObject btn, string label, System.Action onPress)
+            void MakeAndConfigButton(GameObject window, string label, string tag, string tooltip, System.Action onPress)
             {
-                if (btn == null) return;
-                GameObject textObj = btn.GetChild("Text (TMP)");
-                if (textObj != null)
-                {
-                    textObj.TryDestroyComponent<LocalizeText>(); //Fix Later to Add Localization
-                    TMP_Text tmp = textObj.GetComponent<TMP_Text>();
-                    if (tmp != null) tmp.text = label;
-                }
-                Button b = btn.GetComponent<Button>();
-                if (b != null)
-                {
-                    b.onClick.RemoveAllListeners();
-                    if (label == "Cheat Menu"){
-                        b.transition = Button.Transition.None;
-                        return;
-                    }
-                    if (label == "Close"){
-                        b.onClick.AddListener(new System.Action(() =>
-                        {
-                            cheatMenuEvent.SetActive(false);
-                            if (_cheatMenuButton != null) _cheatMenuButton.interactable = true;
-                        }));
+                string displayText = LocalizeManager.Localize(tag);
+                GameObject spacerTemplate = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/PopupMenu/Window/Spacer");
+                GameObject buttonTemplate = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/PopupMenu/Window/SaveCampaign");
+                if (buttonTemplate == null) return;
 
+                GameObject btn = GameObject.Instantiate(buttonTemplate);
+                btn.transform.SetParent(window, false);
+                btn.name = "TAF_CheatMenu_" + label.Replace(" ", "_");
+                btn.SetActive(true);
+                btn.transform.localPosition = Vector3.zero;
+                btn.transform.localScale = Vector3.one;
+
+                UiM.SetLocalizedTextTag(btn.GetChild("Text (TMP)"), tag);
+                UiM.AddTooltip(btn, tooltip);
+                Button b = btn.GetComponent<Button>();
+                if (label == "Cheat Menu")
+                {  
+
+                    if (b != null) b.transition = Button.Transition.None;
+                    // Spacer after header
+                    if (spacerTemplate != null)
+                    {
+                        GameObject spacer = GameObject.Instantiate(spacerTemplate);
+                        spacer.transform.SetParent(window.transform, false);
+                        spacer.transform.SetSiblingIndex(b.transform.GetSiblingIndex() + 1);
+                        spacer.SetActive(true);
                     }
-                    else{
-                        b.onClick.AddListener(new System.Action(onPress));
+                }
+                else if (label == "Close")
+                {
+                    if (spacerTemplate != null)
+                    {
+                        GameObject spacer = GameObject.Instantiate(spacerTemplate);
+                        spacer.transform.SetParent(window.transform, false);
+                        spacer.transform.SetSiblingIndex(b.transform.GetSiblingIndex() + 0);
+                        spacer.SetActive(true);
                     }
+                   b.onClick.AddListener(new System.Action(() => 
+                   { 
+                    cheatMenuEvent.SetActive(false); 
+                    if (_cheatMenuButton != null) {
+                        _cheatMenuButton.interactable = true;
+                     } 
+                    }
+                   )
+                   ); 
+                }
+                else 
+                {
+                    b.onClick.AddListener(new System.Action(onPress));
                 }
             }
 
             int idx = 0;
-            var labelsAndActions = new (string label, System.Action onPress)[]
+            
+            var labelsAndActions = new (string label, string tag, string tooltip, System.Action onPress)[]
             {
-                ("Cheat Menu", () => Melon<TweaksAndFixes>.Logger.Msg("Cheat Menu pressed")),
-                ("Give 10 Million", () => GivePlayerMoney(cheatPlayer, 10000000)),
-                ("Instant Build Ships", () => InstantBuildShips(cheatPlayer)),
-                ("Instant Repair", () =>   InstantRepair(cheatPlayer)),
-                ("Research Focuses", () => ResearchFocuses(cheatPlayer)),
-                ("Close", () => Melon<TweaksAndFixes>.Logger.Msg("Cheat Menu closed")),
+                ("Cheat Menu", "$TAF_UI_CheatMod_CheatMenu", "$TAF_UI_CheatMod_CheatMenu_Tooltip", () => Melon<TweaksAndFixes>.Logger.Msg("Cheat Menu pressed")),
+                ("Give 100 Million", "$TAF_UI_CheatMod_Give100Million", "$TAF_UI_CheatMod_Give100Million_Tooltip", () => GivePlayerMoney(cheatPlayer, 100000000)),
+                ("Give 1 Billion", "$TAF_UI_CheatMod_Give1Billion", "$TAF_UI_CheatMod_Give1Billion_Tooltip", () => GivePlayerMoney(cheatPlayer, 1000000000)),
+                ("Instant Build Ships", "$TAF_UI_CheatMod_InstantBuildShips", "$TAF_UI_CheatMod_InstantBuildShips_Tooltip", () => InstantBuildShips(cheatPlayer)),
+                ("Instant Repair", "$TAF_UI_CheatMod_InstantRepair", "$TAF_UI_CheatMod_InstantRepair_Tooltip", () => InstantRepair(cheatPlayer)),
+                ("Instant Research", "$TAF_UI_CheatMod_InstantResearch", "$TAF_UI_CheatMod_InstantResearch_Tooltip", () => ResearchFocuses(cheatPlayer)),
+                ("Close", "$TAF_UI_CheatMod_Close", "$TAF_UI_CheatMod_Close_Tooltip", () => Melon<TweaksAndFixes>.Logger.Msg("Cheat Menu closed")),
             };
             for (int i = 0; i < window.transform.childCount; i++)
             {
                 GameObject child = window.transform.GetChild(i).gameObject;
                 Button b = child.GetComponent<Button>();
                 if (b == null) continue;
-                if (idx < labelsAndActions.Length)
-                {
-                    var la = labelsAndActions[idx];
-                    SetButton(child, la.label, la.onPress);
-                    child.SetActive(true);
-                    idx++;
-                }
-                else
-                    child.SetActive(false);
+                //Delete Buttons, then create new ones
+                child.TryDestroy();
             }
-
-            GameObject header = window.GetChild("Header");
-            if (header != null) header.GetComponent<TMP_Text>().text = "Campaign Cheats";
-
-            cheatMenuEvent.SetActive(true);
-            if (_cheatMenuButton != null) _cheatMenuButton.interactable = false;
-        }
-
-        public static void CampaignCheatMenu2()
-        {
-            // Global/Ui/UiMain/Popup/Generic — popup with three buttons
-            MelonLoader.MelonLogger.Msg("CampaignCheatMenu");
-            cheatMenuEvent = GameObject.Instantiate(ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/Generic"));
-            cheatMenuEvent.transform.SetParent(ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/PopWindows"));
-            cheatMenuEvent.name = "Cheat Menu";
-            cheatMenuEvent.transform.SetScale(2, 2, 2);
-            cheatMenuEvent.transform.localPosition = Vector3.zero;
-
-            GameObject window = cheatMenuEvent.GetChild("Window");
-            GameObject buttons = window.GetChild("Buttons");
-            GameObject yesTemplate = buttons.GetChild("Yes");
-
-            ModUtils.GetChildAtPath("Buttons/Ok", window).TryDestroy();
-            ModUtils.GetChildAtPath("Buttons/No", window).TryDestroy();
-
-            void SetButton(GameObject btn, string label, System.Action onPress)
+            for (int i = 0; i < labelsAndActions.Length; i++)
             {
-                GameObject textObj = btn.GetChild("Text (TMP)");
-                if (textObj != null) textObj.TryDestroyComponent<LocalizeText>();
-                TMP_Text tmp = btn.GetComponentInChildren<TMP_Text>(true);
-                if (tmp != null) tmp.text = label;
-                Button b = btn.GetComponent<Button>();
-                if (b != null) { b.onClick.RemoveAllListeners(); b.onClick.AddListener(new System.Action(onPress)); }
+                var la = labelsAndActions[i];
+                MakeAndConfigButton(window, la.label, la.tag, la.tooltip, la.onPress);
+
             }
 
-            SetButton(yesTemplate, "Give 1 Million", () => Melon<TweaksAndFixes>.Logger.Msg("Cheat: Give 1 Million pressed"));
-            GameObject btn2 = GameObject.Instantiate(yesTemplate);
-            btn2.transform.SetParent(buttons.transform);
-            btn2.name = "InstantBuildShips";
-            SetButton(btn2, "Instant Build Ships", () => Melon<TweaksAndFixes>.Logger.Msg("Cheat: Instant Build Ships pressed"));
-            GameObject btn3 = GameObject.Instantiate(yesTemplate);
-            btn3.transform.SetParent(buttons.transform);
-            btn3.name = "InstantRepair";
-            SetButton(btn3, "Instant Repair", () => Melon<TweaksAndFixes>.Logger.Msg("Cheat: Instant Repair pressed"));
-
-            GameObject header = window.GetChild("Header");
-            if (header != null) header.GetComponent<TMP_Text>().text = "Campaign Cheats";
 
             cheatMenuEvent.SetActive(true);
+            _isInitialized = true;
+
+            if (_cheatMenuButton != null) _cheatMenuButton.interactable = false;
         }
         public static void ConstructorCheatMenu()
         {
@@ -276,13 +272,18 @@ namespace TweaksAndFixes
             currentAmount = player.cash;
             newAmount = currentAmount + amount;
             player.cash = newAmount;
-            MelonLoader.MelonLogger.Msg("Player given " + amount + " money from " + currentAmount + " to " + newAmount);
+            //Convert to readable format
+            string amountString = amount.ToString("C2");
+            string newAmountString = newAmount.ToString("C2");
+            string currentAmountString = currentAmount.ToString("C2");
+            MelonLoader.MelonLogger.Msg("Player given " + amountString + " money from " + currentAmountString + " to " + newAmountString);
             RefreshFinancesUI();
         }
 
         /// <summary>
         /// Refreshes the Finances Window (e.g. Naval Funds under WorldEx/Finances Window/Root).
         /// Uses G.ui.RefreshCampaignUI() to refresh campaign UI; optionally can update Naval Funds text manually.
+        /// Doesn't work.
         /// </summary>
         public static void RefreshFinancesUI()
         {
@@ -307,7 +308,6 @@ namespace TweaksAndFixes
                     
                 }
                 else if (ship.isDesign != null) {
-                   // MelonLoader.MelonLogger.Msg("Ship " + ship.name + " is a design and is not building " + ship.isBuilding + " and is design " + ship.isDesign + " id " + ship.id);
                 }
             }
 
@@ -333,7 +333,7 @@ namespace TweaksAndFixes
                     
                 }
                 else if (ship.isDesign != null) {
-                //    MelonLoader.MelonLogger.Msg("Ship " + ship.name + " is a design and is not repairing " + ship.isRepairing + " and is design " + ship.isDesign + " id " + ship.id);
+
                 }
             }
             //FutureOptions??  isRepairing is readonly.
@@ -349,9 +349,16 @@ namespace TweaksAndFixes
                 }
             }
 
-
             MelonLoader.MelonLogger.Msg("Player instant repaired ships");
             RefreshFinancesUI();
+        }
+        
+        public static void ListChildren(GameObject obj)
+        {
+            for (int i = 0; i < obj.transform.childCount; i++)
+            {
+                MelonLoader.MelonLogger.Msg(obj.transform.GetChild(i).name);
+            }
         }
         public static void ResearchFocuses(Player player)
         {
@@ -378,24 +385,6 @@ namespace TweaksAndFixes
                         break;
                     }
                 }
-            }
-        }
-
-        /// <summary>Log all public instance/static fields and methods for an object so we can see what to manipulate.</summary>
-        public static void DumpTypeFieldsAndMethods(string label, object obj)
-        {
-            if (obj == null) { MelonLoader.MelonLogger.Msg($"[{label}] null"); return; }
-            Type t = obj.GetType();
-            MelonLoader.MelonLogger.Msg($"[{label}] Type: {t.FullName}");
-            const BindingFlags bf = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.FlattenHierarchy;
-            foreach (FieldInfo f in t.GetFields(bf))
-                MelonLoader.MelonLogger.Msg($"  Field: {f.FieldType.Name} {f.Name}");
-            foreach (MethodInfo m in t.GetMethods(bf))
-            {
-                if (m.IsSpecialName && (m.Name.StartsWith("get_") || m.Name.StartsWith("set_"))) continue;
-                var ps = m.GetParameters();
-                string pstr = ps.Length == 0 ? "" : "(" + string.Join(", ", System.Linq.Enumerable.Select(ps, p => p.ParameterType.Name + " " + p.Name)) + ")";
-                MelonLoader.MelonLogger.Msg($"  Method: {m.ReturnType.Name} {m.Name}{pstr}");
             }
         }
     }
