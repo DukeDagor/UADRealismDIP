@@ -444,6 +444,7 @@ namespace TweaksAndFixes
             Patch_GameManager.Update();
             CampaignControllerM.Update();
             ConstructorM.Update();
+            CheatMenu.UpdateCheatButtonInteractable();
 
             if (GameManager.IsWorldMap && GameManager.isScrollMove && !EventSystem.current.IsPointerOverGameObject())
             {

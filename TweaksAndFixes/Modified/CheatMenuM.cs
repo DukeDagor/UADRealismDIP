@@ -64,7 +64,7 @@ namespace TweaksAndFixes
                     byte[] rawData = File.ReadAllBytes(spritePath);
                     var tex = new Texture2D(2, 2, TextureFormat.DXT5, true);
                     if (ImageConversion.LoadImage(tex, rawData))
-                        sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+                        sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.7f, 0.7f));
                 }
             }
 
@@ -123,9 +123,11 @@ namespace TweaksAndFixes
         public static void CampaignCheatMenu()
         {
 
-            // Fix for multiple menus
+            // Fix for multiple menus — reuse existing, bring to front
             if (_isInitialized) {
+                cheatMenuEvent.transform.SetAsLastSibling();
                 cheatMenuEvent.SetActive(true);
+                if (_cheatMenuButton != null) _cheatMenuButton.interactable = false;
                 return;
             };
 
@@ -133,23 +135,55 @@ namespace TweaksAndFixes
             MelonLoader.MelonLogger.Msg("CampaignCheatMenu");
             cheatPlayer = ExtraGameData.MainPlayer();
             GameObject popupTemplate = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/PopupMenu");
+            GameObject popupBg = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/PopupMenu/Bg");
+            GameObject worldEx = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/");
             if (popupTemplate == null)
             {
                 Melon<TweaksAndFixes>.Logger.Error("CampaignCheatMenu: PopupMenu template not found.");
                 return;
             }
-            GameObject popWindows = ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/PopWindows");
+            GameObject popWindows = ModUtils.GetChildAtPath("Global/Ui/UiMain/WorldEx/");
             if (popWindows == null)
             {
                 Melon<TweaksAndFixes>.Logger.Error("CampaignCheatMenu: PopWindows not found.");
                 return;
-            }
+            }           
 
             cheatMenuEvent = GameObject.Instantiate(popupTemplate);
-            cheatMenuEvent.transform.SetParent(popWindows);
+            //cheatMenuEvent.transform.SetParent(popupBg);
+            //cheatMenuEvent.transform.SetParent(popWindows);
+            cheatMenuEvent.transform.SetParent(worldEx);
             cheatMenuEvent.name = "Cheat Menu";
             cheatMenuEvent.transform.SetScale(1, 1, 1);
             cheatMenuEvent.transform.localPosition = Vector3.zero;
+            // Root popup full-screen so overlay and blocking work
+            RectTransform rootRect = cheatMenuEvent.GetComponent<RectTransform>();
+            if (rootRect != null)
+            {
+                rootRect.anchorMin = Vector2.zero;
+                rootRect.anchorMax = Vector2.one;
+                rootRect.offsetMin = Vector2.zero;
+                rootRect.offsetMax = Vector2.zero;
+            }
+
+            // Bg: full-screen, visible dim, blocks clicks (options-menu style)
+            GameObject bg = cheatMenuEvent.GetChild("Bg");
+            if (bg != null)
+            {
+                bg.transform.SetAsFirstSibling();
+                RectTransform bgRect = bg.GetComponent<RectTransform>();
+                if (bgRect != null)
+                {
+                    bgRect.anchorMin = Vector2.zero;
+                    bgRect.anchorMax = Vector2.one;
+                    bgRect.offsetMin = Vector2.zero;
+                    bgRect.offsetMax = Vector2.zero;
+                }
+                Image bgImage = bg.GetComponent<Image>();
+                if (bgImage == null) bgImage = bg.AddComponent<Image>();
+                bgImage.color = new Color(0f, 0f, 0f, 0.6f);
+                bgImage.raycastTarget = true;
+            }
 
             GameObject window = cheatMenuEvent.GetChild("Window");
             if (window == null)
@@ -175,12 +209,18 @@ namespace TweaksAndFixes
                 btn.transform.localScale = Vector3.one;
 
                 UiM.SetLocalizedTextTag(btn.GetChild("Text (TMP)"), tag);
-                UiM.AddTooltip(btn, tooltip);
+                if (tooltip != "") {
+                    UiM.AddTooltip(btn, tooltip);
+                }
                 Button b = btn.GetComponent<Button>();
                 if (label == "Cheat Menu")
                 {  
 
                     if (b != null) b.transition = Button.Transition.None;
+                    // UI.Image -> Graphic.color reference (1, 0.8, 0.55, 1)
+                    if (btn != null && btn.TryGetComponent<Image>(out var headerImg))
+                        headerImg.color = new Color(0.9f, 0.2f, 0.2f, 1f);
+
                     // Spacer after header
                     if (spacerTemplate != null)
                     {
@@ -219,13 +259,13 @@ namespace TweaksAndFixes
             
             var labelsAndActions = new (string label, string tag, string tooltip, System.Action onPress)[]
             {
-                ("Cheat Menu", "$TAF_UI_CheatMod_CheatMenu", "$TAF_UI_CheatMod_CheatMenu_Tooltip", () => Melon<TweaksAndFixes>.Logger.Msg("Cheat Menu pressed")),
+                ("Cheat Menu", "$TAF_UI_CheatMod_CheatMenu", "", () => Melon<TweaksAndFixes>.Logger.Msg("Cheat Menu pressed")),
                 ("Give 100 Million", "$TAF_UI_CheatMod_Give100Million", "$TAF_UI_CheatMod_Give100Million_Tooltip", () => GivePlayerMoney(cheatPlayer, 100000000)),
                 ("Give 1 Billion", "$TAF_UI_CheatMod_Give1Billion", "$TAF_UI_CheatMod_Give1Billion_Tooltip", () => GivePlayerMoney(cheatPlayer, 1000000000)),
                 ("Instant Build Ships", "$TAF_UI_CheatMod_InstantBuildShips", "$TAF_UI_CheatMod_InstantBuildShips_Tooltip", () => InstantBuildShips(cheatPlayer)),
                 ("Instant Repair", "$TAF_UI_CheatMod_InstantRepair", "$TAF_UI_CheatMod_InstantRepair_Tooltip", () => InstantRepair(cheatPlayer)),
                 ("Instant Research", "$TAF_UI_CheatMod_InstantResearch", "$TAF_UI_CheatMod_InstantResearch_Tooltip", () => ResearchFocuses(cheatPlayer)),
-                ("Close", "$TAF_UI_CheatMod_Close", "$TAF_UI_CheatMod_Close_Tooltip", () => Melon<TweaksAndFixes>.Logger.Msg("Cheat Menu closed")),
+                ("Close", "$TAF_UI_CheatMod_Close", "", () => Melon<TweaksAndFixes>.Logger.Msg("Cheat Menu closed")),
             };
             for (int i = 0; i < window.transform.childCount; i++)
             {
@@ -243,7 +283,10 @@ namespace TweaksAndFixes
             }
 
 
+            // Bring popup to front so it receives raycasts and blocks game input (options menu style)
+            cheatMenuEvent.transform.SetAsLastSibling();
             cheatMenuEvent.SetActive(true);
+            //cheatMenuEvent.transform.SetSiblingIndex(0);
             _isInitialized = true;
 
             if (_cheatMenuButton != null) _cheatMenuButton.interactable = false;
@@ -369,20 +412,65 @@ namespace TweaksAndFixes
             }
             foreach (string priorityName in player.techPriorities)
             {
+                MelonLoader.MelonLogger.Msg("Research Item: " + priorityName);
+
                 var pattern = new Regex("^" + Regex.Escape(priorityName) + @"(_\d+)?$");
                 foreach (Technology playerTech in player.technologies)
                 {
+                    if (playerTech.progress == 100f || playerTech.IsEndTechResearched)
+                        continue;
                     var techData = playerTech.data;
                     if (techData == null || playerTech.progress == 100f || playerTech.IsEndTechResearched)
                         continue;
                     string techName = techData.name;
-                    if (pattern.IsMatch(techName))
+                    // Category fallback: priority "gun_main" can match tech "gun_large" (same category "gun_")
+                    string priorityCategory = priorityName.Split('_')[0];
+                    bool categoryMatch = priorityCategory.Length > 0 && techName.StartsWith(priorityCategory + "_", System.StringComparison.OrdinalIgnoreCase);
+                    if (pattern.IsMatch(techName) || categoryMatch)
                     {
                         MelonLoader.MelonLogger.Msg(playerTech.ToString());
                         float curProg = playerTech.progress;
                         playerTech.progress = 99.9f;
                         MelonLoader.MelonLogger.Msg("Tech " + techName + " (priority " + priorityName + ") progress set to 99.9% from " + curProg);
                         break;
+                    }
+                    //DIP Mod Fix (its not fixed lol)
+                    if (!pattern.IsMatch(techName) && categoryMatch) {
+                        if (techName == "gun_sec" && priorityName == "gun_small") {
+                            MelonLoader.MelonLogger.Msg("Tech " + techName + " (priority " + priorityName + ") is a small gun, setting to 99.9%");
+                            float curProg = playerTech.progress;
+                            playerTech.progress = 99.9f;
+                            MelonLoader.MelonLogger.Msg("Tech " + techName + " (priority " + priorityName + ") progress set to 99.9% from " + curProg);
+                            break;
+                        }
+                        else if (techName == "gun_sec" && priorityName == "gun_medium") {
+                            MelonLoader.MelonLogger.Msg("Tech " + techName + " (priority " + priorityName + ") is a medium gun, setting to 99.9%");
+                            float curProg = playerTech.progress;
+                            playerTech.progress = 99.9f;
+                            MelonLoader.MelonLogger.Msg("Tech " + techName + " (priority " + priorityName + ") progress set to 99.9% from " + curProg);
+                            break;
+                        }
+                        else if (techName == "gun_main" && priorityName == "gun_large") {
+                            MelonLoader.MelonLogger.Msg("Tech " + techName + " (priority " + priorityName + ") is a large gun, setting to 99.9%");
+                            float curProg = playerTech.progress;
+                            playerTech.progress = 99.9f;
+                            MelonLoader.MelonLogger.Msg("Tech " + techName + " (priority " + priorityName + ") progress set to 99.9% from " + curProg);
+                            break;
+                        }
+                        else if (techName == "gun_main" && priorityName == "gun_verylarge") {
+                            MelonLoader.MelonLogger.Msg("Tech " + techName + " (priority " + priorityName + ") is a xlarge gun, setting to 99.9%");
+                            float curProg = playerTech.progress;
+                            playerTech.progress = 99.9f;
+                            MelonLoader.MelonLogger.Msg("Tech " + techName + " (priority " + priorityName + ") progress set to 99.9% from " + curProg);
+                            break;
+                        }
+                        else if (techName == "gun_main" && priorityName == "gun_xlarge") {
+                            MelonLoader.MelonLogger.Msg("Tech " + techName + " (priority " + priorityName + ") is a verylarge gun, setting to 99.9%");
+                            float curProg = playerTech.progress;
+                            playerTech.progress = 99.9f;
+                            MelonLoader.MelonLogger.Msg("Tech " + techName + " (priority " + priorityName + ") progress set to 99.9% from " + curProg);
+                            break;
+                        }
                     }
                 }
             }
