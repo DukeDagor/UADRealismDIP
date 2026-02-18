@@ -426,7 +426,7 @@ namespace TweaksAndFixes
                     // Category fallback: priority "gun_main" can match tech "gun_large" (same category "gun_")
                     string priorityCategory = priorityName.Split('_')[0];
                     bool categoryMatch = priorityCategory.Length > 0 && techName.StartsWith(priorityCategory + "_", System.StringComparison.OrdinalIgnoreCase);
-                    if (pattern.IsMatch(techName) || categoryMatch)
+                    if (pattern.IsMatch(techName))
                     {
                         MelonLoader.MelonLogger.Msg(playerTech.ToString());
                         float curProg = playerTech.progress;
