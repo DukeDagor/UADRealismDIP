@@ -159,8 +159,12 @@ namespace TweaksAndFixes
 
             foreach (var spy in predefs.shipsPerYear)
             {
+                Melon<TweaksAndFixes>.Logger.Msg($"Parsing year: {spy.Key}");
+
                 foreach (var spp in spy.Value.shipsPerPlayer)
                 {
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Parsing player: {spp.Key}");
+
                     foreach (var spt in spp.Value.shipsPerType)
                     {
                         foreach (var s in spt.Value)
@@ -189,8 +193,8 @@ namespace TweaksAndFixes
                                 }
                             }
                             ++sCount;
-                            if (useStock)
-                                s.vesselName += " " + sCount; // stock reuses names, which would clobber files
+                            // if (useStock)
+                            s.vesselName += " " + sCount; // stock reuses names, which would clobber files
                             string pName = s.playerName;
                             if (G.GameData.players.TryGetValue(s.playerName, out var data))
                                 pName = Player.GetNameUI(null, data, s.YearCreated);
@@ -201,7 +205,7 @@ namespace TweaksAndFixes
                     }
                 }
             }
-            if (sCount > 0)
+            if (sCount > 0 && sCount < 10_000)
                 G.GameData.LoadSharedDesigns();
 
             return sCount;
