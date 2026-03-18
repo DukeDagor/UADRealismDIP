@@ -253,6 +253,15 @@ namespace TweaksAndFixes
             );
         }
 
+        public static float distanceSquared(Vector3 a, Vector3 b)
+        {
+            return (float)(
+                (a.x - b.x) * (a.x - b.x) +
+                (a.y - b.y) * (a.y - b.y) +
+                (a.z - b.z) * (a.z - b.z)
+            );
+        }
+
         public static bool TryParse(string str, out int res)
         {
             return int.TryParse(str, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out res);
@@ -278,19 +287,19 @@ namespace TweaksAndFixes
             return (int)(x + 0.05);
         }
 
-        public static bool NearlyEqual(float a, float b)
+        public static bool NearlyEqual(float a, float b, float j = 0.01f)
         {
-            return Math.Abs(a - b) < 0.01f;
+            return Math.Abs(a - b) < j;
         }
 
-        public static bool NearlyEqual(Vector2 a, Vector2 b)
+        public static bool NearlyEqual(Vector2 a, Vector2 b, float jx = 0.01f, float jy = 0.01f)
         {
-            return NearlyEqual(a.x, b.x) && NearlyEqual(a.y, b.y);
+            return NearlyEqual(a.x, b.x, jx) && NearlyEqual(a.y, b.y, jy);
         }
 
-        public static bool NearlyEqual(Vector3 a, Vector3 b)
+        public static bool NearlyEqual(Vector3 a, Vector3 b, float jx = 0.01f, float jy = 0.01f, float jz = 0.01f)
         {
-            return NearlyEqual(a.x, b.x) && NearlyEqual(a.y, b.y) && NearlyEqual(a.z, b.z);
+            return NearlyEqual(a.x, b.x, jx) && NearlyEqual(a.y, b.y, jy) && NearlyEqual(a.z, b.z, jz);
         }
 
         public static string Vec3ToCSV(Vector3 vector)
