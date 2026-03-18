@@ -44,6 +44,9 @@ namespace TweaksAndFixes
             AccuraciesExInfo.LoadData();
             MountOverrideData.LoadData();
 
+            // Disable `Mising required mount ...` error when starting battle. It's harmless.
+            Part.flagCheckCorrectMounting = false;
+
             // TODO: Ew! Replace this trash!!!
             foreach (var ev in G.GameData.events)
             {

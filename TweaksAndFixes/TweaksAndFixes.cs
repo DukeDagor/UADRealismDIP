@@ -107,9 +107,18 @@ namespace TweaksAndFixes
                 case LogType.Error:
                 case LogType.Exception:
 
-                    // Silence warning: "failed to generate ship of type `type`, hull hull_name in X tries"
+                    // Silence error: "failed to generate ship of type `type`, hull hull_name in X tries"
                     if (condition != null && condition.StartsWith("failed to generate ship of type"))
                         break;
+
+                    // Replace error text: "S3"
+                    if (condition != null && condition == "S3")
+                    {
+                        condition = $"Failed to connect to the Steam API. Restart your computer and try again. (Error = 'S3')";
+
+                        LoadLoc();
+                        MessageBoxUI.Show(_localLoc["$TAF_LoadError_SteamFail_Title"], _localLoc["$TAF_LoadError_SteamFail_Text"], null, false, null, null, new System.Action(() => { GameManager.Quit(); }));
+                    }
 
                     Melon<TweaksAndFixes>.Logger.Error($"[Unity]: {condition}\n{stackTrace}");
                     //Melon<TweaksAndFixes>.Logger.Error(logStr);
