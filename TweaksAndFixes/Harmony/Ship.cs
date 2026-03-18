@@ -1200,13 +1200,33 @@ namespace TweaksAndFixes
             ship.SetDraught(Reratio(ship.draught, sd.draughtMin, sd.draughtMax, draught_min, draught_max));
         }
 
-        private static void OptimizeComponents(Ship ship)
+        private static bool CanModCompType(Ship ship, string key)
+        {
+            if (!G.GameData.compTypes.ContainsKey(key))
+                return false;
+
+            if (!ship.components.ContainsKey(G.GameData.compTypes[key]))
+                return false;
+
+            return true;
+        }
+
+        private static bool CanModComp(Ship ship, string key)
+        {
+            if (!G.GameData.components.ContainsKey(key))
+                return false;
+
+            if (!ship.components.ContainsKey(G.GameData.components[key].typex))
+                return false;
+
+            return true;
+        }
+
+        public static void OptimizeComponents(Ship ship)
         {
             var _this = ship;
 
-            if (G.GameData.compTypes.ContainsKey("boilers") &&
-                G.GameData.compTypes.ContainsKey("engine") &&
-                G.GameData.compTypes.ContainsKey("fuel"))
+            if (CanModCompType(ship, "boilers") && CanModCompType(ship, "engine") && CanModCompType(ship, "fuel"))
             {
                 float bestWeight = _this.Weight();
                 ComponentData bestEngine = _this.components[G.GameData.compTypes["boilers"]];
@@ -1256,17 +1276,17 @@ namespace TweaksAndFixes
                 // Melon<TweaksAndFixes>.Logger.Msg($"  Best Combo: {bestEngine.name} x {bestBoiler.name} x {bestFuel.name}: {_this.weight} t. / {_this.Tonnage()}");
             }
 
-            if (G.GameData.compTypes.ContainsKey("torpedo_prop") &&
-                G.GameData.components.ContainsKey("torpedo_prop_fast") &&
-                G.GameData.components.ContainsKey("torpedo_prop_normal") &&
+            if (CanModCompType(ship, "torpedo_prop") &&
+                CanModComp(ship, "torpedo_prop_fast") &&
+                CanModComp(ship, "torpedo_prop_normal") &&
                 _this.components[G.GameData.compTypes["torpedo_prop"]] == G.GameData.components["torpedo_prop_fast"])
             {
                 _this.InstallComponent(G.GameData.components["torpedo_prop_normal"]);
             }
 
-            if (G.GameData.compTypes.ContainsKey("shell") &&
-                G.GameData.components.ContainsKey("shell_light") &&
-                G.GameData.components.ContainsKey("shell_normal") &&
+            if (CanModCompType(ship, "shell") &&
+                CanModComp(ship, "shell_light") &&
+                CanModComp(ship, "shell_normal") &&
                 _this.components[G.GameData.compTypes["shell"]] == G.GameData.components["shell_light"])
             {
                 _this.InstallComponent(G.GameData.components["shell_normal"]);
