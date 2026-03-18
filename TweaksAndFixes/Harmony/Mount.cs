@@ -118,5 +118,31 @@ namespace TweaksAndFixes
 
             return false;
         }
+
+        public static Mount? GetClosestMount(Ship ship, Part part)
+        {
+            Mount? closest = null;
+            float closestDist = 10;
+
+            foreach (var mount in ship.mounts)
+            {
+                if (ship.mountsUsed.ContainsKey(mount))
+                    continue;
+
+                if (ModUtils.NearlyEqual(part.transform.position, mount.transform.position, 2.5f, 2.5f, 2.5f)
+                    && mount.Fits(part))
+                {
+                    float dist = ModUtils.distanceSquared(part.transform.position, mount.transform.position);
+
+                    if (closest == null || closestDist > dist)
+                    {
+                        closest = mount;
+                        closestDist = dist;
+                    }
+                }
+            }
+
+            return closest;
+        }
     }
 }
