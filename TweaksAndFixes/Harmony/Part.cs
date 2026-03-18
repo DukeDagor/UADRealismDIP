@@ -510,7 +510,7 @@ namespace TweaksAndFixes
 
         private static void CollectBigGunIgnoreSmallGun(Part bigGun)
         {
-            if (bigGun.data.type != "gun") return;
+            if (bigGun == null || bigGun.ship == null || bigGun.data.type != "gun") return;
 
             float ratio = Config.Param("taf_large_gun_ignore_small_gun_ratio", 0.25f);
             float skipableCaliber = bigGun.data.GetCaliberInch(bigGun.ship) * ratio + 0.05f;
@@ -521,6 +521,8 @@ namespace TweaksAndFixes
 
             foreach (Part part in bigGun.ship.parts)
             {
+                if (part == null) continue;
+
                 if (omitted_parts.Contains(part)) continue;
 
                 if (part.data.type != "gun") continue;
@@ -535,7 +537,7 @@ namespace TweaksAndFixes
 
         private static void CollectBigGunIgnoreTorpedoTubes(Part bigGun)
         {
-            if (bigGun.data.type != "gun") return;
+            if (bigGun == null || bigGun.ship == null || bigGun.data.type != "gun") return;
 
             float ratio = Config.Param("taf_large_gun_ignore_torpedo_tubes", 4);
 
@@ -545,6 +547,8 @@ namespace TweaksAndFixes
 
             foreach (Part part in bigGun.ship.parts)
             {
+                if (part == null) continue;
+
                 if (omitted_parts.Contains(part)) continue;
 
                 if (part.data.type != "torpedo") continue;
@@ -559,7 +563,7 @@ namespace TweaksAndFixes
 
         private static void CollectTorpedoTubesIgnoreBigGun(Part torpedoTube)
         {
-            if (torpedoTube.data.type != "torpedo") return;
+            if (torpedoTube == null || torpedoTube.ship == null || torpedoTube.data.type != "torpedo") return;
 
             float ratio = Config.Param("taf_torpedo_tubes_ignore_large_gun", 5);
 
@@ -569,6 +573,8 @@ namespace TweaksAndFixes
 
             foreach (Part part in torpedoTube.ship.parts)
             {
+                if (part == null) continue;
+
                 if (omitted_parts.Contains(part)) continue;
 
                 if (part.data.type != "gun") continue;
