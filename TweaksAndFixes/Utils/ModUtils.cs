@@ -966,6 +966,101 @@ namespace TweaksAndFixes
             else return s.Substring(0, len) + "...";
         }
 
+        public static Il2CppSystem.Collections.Generic.List<T> ToList<T>(this Il2CppSystem.Collections.Generic.IEnumerable<T> enumerable)
+        {
+            return new Il2CppSystem.Collections.Generic.List<T>(enumerable);
+        }
+
+        public static System.Collections.IEnumerator WrapIl2CppEnumerable(Il2CppSystem.Collections.IEnumerator e)
+        {
+            while (e.MoveNext())
+            {
+                yield return new WaitForEndOfFrame();
+            }
+        }
+
+        public static Ship? CreateFromStore(Ship.Store store, Player player)
+        {
+            var ship = Ship.Create(null, player, false, false, false);
+            var guidRet = new Il2CppSystem.Nullable<Il2CppSystem.Guid>();
+            if (!ship.FromStore(store, guidRet, null, player, false))
+            {
+                Melon<TweaksAndFixes>.Logger.Error($"Couldn't load {store.vesselName} ({store.hullName}, {store.YearCreated})");
+                ship.Erase();
+                return null;
+            }
+            Melon<TweaksAndFixes>.Logger.Msg($"    {ship.Name(false, false)}");
+            return ship;
+        }
+
+        public static U ValOrDef<T, U>(this Dictionary<T, U> dict, T key, U def)
+        {
+            if (dict.ContainsKey(key))
+            {
+                return dict[key];
+            }
+            else
+            {
+                return def;
+            }
+        }
+
+        public static U ValOrDef<T, U>(this Il2CppSystem.Collections.Generic.Dictionary<T, U> dict, T key, U def)
+        {
+            if (dict.ContainsKey(key))
+            {
+                return dict[key];
+            }
+            else
+            {
+                return def;
+            }
+        }
+
+        public static void AddOrSet<T,U>(this Dictionary<T,U> dict, T key, U val)
+        {
+            if (dict.ContainsKey(key))
+            {
+                dict[key] = val;
+            }
+            else
+            {
+                dict.Add(key, val);
+            }
+        }
+
+        public static void AddOrSet<T, U>(this Il2CppSystem.Collections.Generic.Dictionary<T, U> dict, T key, U val)
+        {
+            if (dict.ContainsKey(key))
+            {
+                dict[key] = val;
+            }
+            else
+            {
+                dict.Add(key, val);
+            }
+        }
+
+        public static bool HasValue<T, U>(this Dictionary<T, U> dict, T key)
+        {
+            if (dict.ContainsKey(key))
+            {
+                return dict[key] != null;
+            }
+
+            return false;
+        }
+
+        public static bool HasValue<T, U>(this Il2CppSystem.Collections.Generic.Dictionary<T, U> dict, T key)
+        {
+            if (dict.ContainsKey(key))
+            {
+                return dict[key] != null;
+            }
+
+            return false;
+        }
+
         private struct ObjectStack
         {
             public GameObject obj;
