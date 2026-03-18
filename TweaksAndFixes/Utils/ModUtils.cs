@@ -1169,7 +1169,7 @@ namespace TweaksAndFixes
             return hierarchy;
         }
 
-        public static GameObject GetChildAtPath(string path, GameObject root = null)
+        public static GameObject GetChildAtPath(string path, GameObject? root = null)
         {
             // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/ShipName
         
@@ -1197,12 +1197,12 @@ namespace TweaksAndFixes
 
                 if (root == null)
                 {
-                    root = new GameObject();
+                    root = G.ui.gameObject;
                     Melon<TweaksAndFixes>.Logger.Error($"GetChildAtPath: Failed to find `{entry}` in path `{path}`, valid children at `{lastValid.name}`:");
 
                     foreach (var child in lastValid.GetChildren())
                     {
-                        
+                        Melon<TweaksAndFixes>.Logger.Error($"  {child.name}");
                     }
 
                     break;
