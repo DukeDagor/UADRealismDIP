@@ -172,8 +172,8 @@ namespace TweaksAndFixes
             Melon<TweaksAndFixes>.Logger.Msg("**************************************** Loaded database and config");
             if (Config.Param("taf_hot_reload", 0f) > 0f)
                 GameDataReloader.Create();
-
             UiM.ApplyUiModifications();
+            CheatMenu.Start();
 
             //string path = Path.Combine(Config._BasePath, Config._PredefinedDesignsFile);
 

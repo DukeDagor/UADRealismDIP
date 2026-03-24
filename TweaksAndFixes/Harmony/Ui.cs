@@ -1,4 +1,4 @@
-﻿using MelonLoader;
+using MelonLoader;
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
@@ -426,6 +426,7 @@ namespace TweaksAndFixes
             Patch_GameManager.Update();
             CampaignControllerM.Update();
             ConstructorM.Update();
+            CheatMenu.UpdateCheatButtonInteractable();
 
             if (GameManager.IsWorldMap && GameManager.isScrollMove && !EventSystem.current.IsPointerOverGameObject())
             {
@@ -1333,6 +1334,8 @@ namespace TweaksAndFixes
                     CampaignControllerM.RequestForcedGameSave = true;
                 }
             }
+
+            UiM.EnsureLoadButtonEnabled();
         }
 
         [HarmonyPatch(nameof(Ui.ChoosePartCategory))]
