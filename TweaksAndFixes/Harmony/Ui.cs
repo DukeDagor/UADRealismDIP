@@ -139,9 +139,24 @@ namespace TweaksAndFixes
         //     hasLoadedPredefsAsync = true;
         // }
 
+        // ########## Shared Design Modifications ########## //
 
+        private static Ship SharedDesignToSave = null;
 
+        [HarmonyPatch(nameof(Ui.SaveSharedDesign))]
+        [HarmonyPrefix]
+        internal static void Prefix_SaveSharedDesign(Ui __instance)
+        {
+            SharedDesignToSave = ShipM.GetActiveShip();
+        }
 
+        [HarmonyPatch(nameof(Ui.SaveSharedDesign))]
+        [HarmonyPostfix]
+        internal static void Postfix_SaveSharedDesign(Ui __instance)
+        {
+            // Melon<TweaksAndFixes>.Logger.Msg($"Adding back {SharedDesignToSave.Name(false, false)}");
+            G.ui.allowEditShips.Add(SharedDesignToSave);
+        }
 
 
         // ########## Fixes by Crux10086 ########## //
