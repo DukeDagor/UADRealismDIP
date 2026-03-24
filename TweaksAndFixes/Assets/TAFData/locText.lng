@@ -2,6 +2,8 @@ $TAF_LoadError_HarmonyFail_Title;Version Mismatch
 $TAF_LoadError_HarmonyFail_Text;The installed version of <b>Tweaks and Fixes</b> doesn't match the installed version of Ultimate Admiral: Dreadnoughts. Patching has failed and your game will not funciton. Please either downgrade UAD to the correct version for your version of TAF, or download the correct version of TAF if available.
 $TAF_LoadError_DataFail_Title;TAF Installation Error
 $TAF_LoadError_DataFail_Text;<b>Tweaks and Fixes</b> was not installed properly and your game will not function. Please make sure you unzip the correct release of TAF to your Ultimate Admiral: Dreadnoughts folder and overwrite files if prompted. It is not enough to just copy the DLL.
+$TAF_LoadError_SteamFail_Title;Steam API Error
+$TAF_LoadError_SteamFail_Text;Failed to connect to the Steam API! Restart your computer and try again.
 $TAF_Ui_Constr_UpgradeMark;Upgrade Mark
 $TAF_Ui_Constr_UpgradeTorpMark;Upgrade\nTorpedo\nMark
 $TAF_Ui_Convert_ConvertedToJSON;Designs to JSON
