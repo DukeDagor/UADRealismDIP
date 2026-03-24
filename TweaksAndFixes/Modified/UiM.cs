@@ -1555,6 +1555,18 @@ namespace TweaksAndFixes
 
             ModifyUi(ConstructorLeftPannel).SetChildOrder("Scrollbar Vertical", "Scrollbar Horizontal", "Viewport");
 
+            // Global/Ui/UiMain/Constructor/Parts/ScrollRect/Viewport/Content/Part/Button/Image
+
+            // ScrollRect -> -400 -176 | 400 40
+            // Content -> padding.t = 72 * i
+
+            GameObject partSelector =
+                ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Parts/ScrollRect/Viewport/Content/Part/Button/Bg");
+            partSelector.TryDestroyComponent<Shadow>();
+            var partSelectorImage = partSelector.GetComponent<Image>();
+            partSelectorImage.material = new Material(Shader.Find("UI/Default"));
+            partSelectorImage.material.SetColor("_Color", new(0.5f, 0.5f, 0.5f, 0.5f));
+
             CreateTopBarRotationButton();
             CreateTopBarRotationText();
             CreateArmorQualityButton();
