@@ -2385,6 +2385,7 @@ namespace TweaksAndFixes
         internal static void Postfix_RefreshConstructorInfo(Ui __instance)
         {
             EnsureAllButtons(__instance);
+            UiM.UpdateConstructorUi();
         }
 
 

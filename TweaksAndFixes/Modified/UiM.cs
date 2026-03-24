@@ -761,6 +761,100 @@ namespace TweaksAndFixes
             // draughtSliderOld.SetActive(false);
         }
 
+        public static void UpdateConstructorUi()
+        {
+            var speedSlider = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Speed/Slider").GetComponent<Slider>();
+
+            float inc = Config.Param("speed_step", 0.1f);
+
+            speedSlider.minValue = G.ui.mainShip.shipType.speedMin / inc;
+            speedSlider.maxValue = G.ui.mainShip.shipType.speedMax / inc;
+
+            speedSlider.onValueChanged.RemoveAllListeners();
+            speedSlider.onValueChanged.AddListener(new System.Action<float>((float f) => {
+                
+                if (!G.ui.allowEdit)
+                    return;
+
+                f *= inc;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"Changed: {f}");
+
+                f = Mathf.Clamp(f,
+                    G.ui.mainShip.shipType.speedMin,
+                    G.ui.mainShip.shipType.speedMin
+                );
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Set speed: {f}");
+
+                G.ui.mainShip.SetSpeedMax(f * 0.51444399f);
+
+                G.ui.OnConShipChanged(true);
+            }));
+            
+            speedSlider.OnMouseUp(new System.Action(() => {}));
+
+            var speedText = ModUtils
+                .GetChildAtPath(
+                "Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Speed/Text"
+                ).GetComponent<Text>();
+
+            var speedEdit = ModUtils
+                .GetChildAtPath(
+                "Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Speed/Edit"
+                ).GetComponent<InputField>();
+
+            float lastGoodValue = G.ui.mainShip.speedMax / 0.51444399f;
+            // speedText.text = $"{lastGoodValue}";
+            // speedEdit.text = $"{lastGoodValue}";
+
+            var speedTextOnClick = speedText.gameObject.GetComponent<OnClickH>();
+            speedTextOnClick.action = new System.Action<PointerEventData>((PointerEventData ev) => {
+
+                if (!G.ui.allowEdit)
+                    return;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"Clicked!");
+                speedText.gameObject.SetActive(false);
+                speedEdit.gameObject.SetActive(true);
+                speedEdit.Select();
+                speedEdit.ActivateInputField();
+
+                speedEdit.SetText($"{lastGoodValue:0.0000}");
+            });
+
+            speedEdit.onEndEdit.RemoveAllListeners();
+            speedEdit.onEndEdit.AddListener(new System.Action<string>((string value) =>
+            {
+                if (!G.ui.allowEdit)
+                    return;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"Entered: `{value}`");
+                speedEdit.gameObject.SetActive(false);
+                speedEdit.DeactivateInputField();
+                speedText.gameObject.SetActive(true);
+
+                float parsedSpeed = 0;
+                
+                if (value.Length == 0 || !ModUtils.TryParse(value, out parsedSpeed))
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Parsed: `{parsedSpeed}`");
+                }
+                else
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Parsed: `{parsedSpeed}`");
+
+                    parsedSpeed = Mathf.Clamp(parsedSpeed, G.ui.mainShip.shipType.speedMin, G.ui.mainShip.shipType.speedMax);
+
+                    G.ui.mainShip.SetSpeedMax(parsedSpeed * 0.51444399f);
+
+                    lastGoodValue = parsedSpeed;
+
+                    G.ui.OnConShipChanged(true);
+                }
+            }));
+        }
+
         public static void AddConfirmPopupToButton(Button button, string text = default, System.Action before = null, System.Action after = null)
         {
 
