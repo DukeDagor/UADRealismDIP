@@ -73,6 +73,90 @@ namespace TweaksAndFixes
             return ActiveShips;
         }
 
+        public static Il2CppSystem.Collections.IEnumerator Ship_GenerateRandomShip(
+            Ship self,
+            System.Action<bool, int, float> onDone,
+            bool needWait,
+            bool adjustTonnage,
+            bool adjustBeam,
+            bool adjustDraught,
+            bool adjustDiameter,
+            bool adjustLength,
+            // float customTonnageRatio,
+            // float customSpeed,
+            // VesselEntity.OpRange customRange,
+            // Ship.Survivability customSurv,
+            // float customArmor,
+            // float limitCaliber,
+            // float limitArmor,
+            // float limitSpeed,
+            bool fromUi,
+            bool isSimpleRefit,
+            bool checkMainGunsCount,
+            bool useSmallAmountTries,
+            Il2CppSystem.Text.StringBuilder info)
+        {
+            // var lambda = new Ship._GenerateRandomShip_d__573(0);
+            // 
+            // lambda.__4__this = self;
+            // lambda.onDone = onDone;
+            // lambda.needWait = needWait;
+            // lambda.adjustTonnage = adjustTonnage;
+            // lambda.adjustBeam = adjustBeam;
+            // lambda.adjustDraught = adjustDraught;
+            // lambda.adjustDiameter = adjustDiameter;
+            // lambda.adjustLength = adjustLength;
+            // lambda.isSimpleRefit = isSimpleRefit;
+            // lambda.useSmallAmountTries = useSmallAmountTries;
+            // lambda.info = info;
+
+            var res = self.GenerateRandomShip(
+                onDone,
+                needWait,
+                new Il2CppSystem.Nullable<bool>(),
+                adjustTonnage,
+                adjustBeam,
+                adjustDraught,
+                adjustDiameter,
+                adjustLength,
+                new(), // new Il2CppSystem.Nullable<float>(customTonnageRatio),
+                new(), // new Il2CppSystem.Nullable<float>(customSpeed),
+                new(), // new Il2CppSystem.Nullable<VesselEntity.OpRange>(customRange),
+                new(), // new Il2CppSystem.Nullable<Ship.Survivability>(customSurv),
+                new(), // new Il2CppSystem.Nullable<float>(customArmor),
+                new(), // new Il2CppSystem.Nullable<float>(limitCaliber),
+                new(), // new Il2CppSystem.Nullable<float>(limitArmor),
+                new(), // new Il2CppSystem.Nullable<float>(limitSpeed),
+                fromUi,
+                isSimpleRefit,
+                checkMainGunsCount,
+                useSmallAmountTries,
+                info
+            );
+
+            return res; //ModUtils.WrapIl2CppEnumerable(lambda);
+        }
+
+        public static Il2CppSystem.Collections.IEnumerator Ship_CreateRandom(
+            ShipType type,
+            Player player,
+            bool ignoreHullAvailability,
+            bool isTempForBattle,
+            System.Action<Ship> onDone,
+            bool canUseShared,
+            bool useSmallAmountTries)
+        {
+            var res = Ship.CreateRandom(
+                type,
+                player,
+                new Il2CppSystem.Nullable<bool>(),
+                ignoreHullAvailability, isTempForBattle,
+                onDone, false, canUseShared, useSmallAmountTries
+            );
+
+            return res;
+        }
+
         public static Dictionary<TKey, TValue> GetParamDict<TKey, TValue>(Ship _this, string pName) where TKey : notnull
         {
             _this.shipType.paramx.TryGetValue(pName, out var paramST);
