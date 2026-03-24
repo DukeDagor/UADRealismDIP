@@ -202,7 +202,7 @@ namespace TweaksAndFixes
             return ret;
         }
 
-        public static Ship GetSharedDesign(CampaignController _this, Player player, ShipType shipType, int year, bool checkTech = true, bool isEarlySavedShip = false)
+        public static Ship GetSharedDesign(CampaignController _this, Player player, ShipType shipType, int year, bool checkTech = true, bool isEarlySavedShip = false, List<Il2CppSystem.Guid> ignore = null)
         {
             //Melon<TweaksAndFixes>.Logger.Msg($"Getting shared design for {shipType.name} of {player.data.name}");
 
@@ -233,7 +233,7 @@ namespace TweaksAndFixes
                 if (store.shipType != shipType.name)
                     continue;
 
-                if (ids.Contains(store.id))
+                if (ignore == null && ids.Contains(store.id) || ignore != null && ignore.Contains(store.id))
                     continue;
 
                 if (store.YearCreated > year + maxYearUp)
