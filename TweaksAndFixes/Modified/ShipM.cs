@@ -15,6 +15,27 @@ namespace TweaksAndFixes
 {
     public static class ShipM
     {
+        public static List<Ship> GetAllShips()
+        {
+            List<Ship> AllShips = new();
+
+            if (Ship.shipsActiveCont == null) return AllShips;
+
+            var children = Ship.shipsCont.GetChildren();
+
+            foreach (var child in children)
+            {
+                AllShips.Add(child.GetComponent<Ship>());
+            }
+
+            foreach (var ship in Ship.shipsActiveCont.GetChildren())
+            {
+                AllShips.Add(ship.GetComponent<Ship>());
+            }
+
+            return AllShips;
+        }
+
         public static List<Ship> ActiveShips = new(512); // TODO: If there's more active ships than this, then we have a problem...
 
         private static void UpdateActiveShipsList()
