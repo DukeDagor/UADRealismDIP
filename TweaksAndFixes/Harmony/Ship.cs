@@ -1087,10 +1087,12 @@ namespace TweaksAndFixes
 
         public static float Reratio(float v, float a1, float b1, float a2, float b2)
         {
-            if (a2 == b2) return a2;
-            if (a1 == b1) return (a2 + b2) / 2;
+            // Mapping onto a single point range always gives the same answer
+            //   Also prevents a devide-by-zero edge case
+            if (b1 == b2) return b1;
+            if (a1 == a2) return a1;
 
-            return b2 + Math.Abs(a2 - b2) * ((v - b1) / Math.Abs(a1 - b1));
+            return b1 + (b2 - b1) * ((v - a1) / (a2 - a1));
         }
 
         private static void ClampShipStats(Ship ship)
