@@ -1,10 +1,11 @@
-using MelonLoader;
+﻿using MelonLoader;
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
 using UnityEngine.UI;
 using Il2CppTMPro;
 using Il2CppUiExt;
+using UnityEngine.EventSystems;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8603
