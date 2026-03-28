@@ -1661,6 +1661,33 @@ namespace TweaksAndFixes
                     Patch_Part.applyMirrorFromTo.Remove(toRemove);
                 }
 
+                // Check for duplicate parts
+                var parts = Patch_Ship.LastCreatedShip.parts.ToArray();
+                for (int i = 0; i < parts.Count; i++)
+                {
+                    // Skip selected part
+                    if (parts[i] == SelectedPart)
+                        continue;
+
+                    for (int j = i + 1; j < parts.Count; j++)
+                    {
+                        // Skip selected parts
+                        if (parts[j] == SelectedPart)
+                            continue;
+
+                        // Only check parts with the same part data
+                        if (parts[i].data.name != parts[j].data.name)
+                            continue;
+
+                        // Check for co-location (within 0.01)
+                        if (ModUtils.NearlyEqual(parts[i].transform.position, parts[j].transform.position))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"Duplicate part: {parts[j].Name()}");
+                            ShipM.GetActiveShip().RemovePart(parts[j]);
+                        }
+                    }
+                }
+
                 // Loop over all current parts
                 foreach (Part part in Patch_Ship.LastCreatedShip.parts)
                 {
