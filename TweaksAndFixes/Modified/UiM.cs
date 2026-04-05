@@ -768,8 +768,12 @@ namespace TweaksAndFixes
 
             float inc = Config.Param("speed_step", 0.1f);
 
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Inc: `{inc}`");
+
             speedSlider.minValue = G.ui.mainShip.shipType.speedMin / inc;
             speedSlider.maxValue = G.ui.mainShip.shipType.speedMax / inc;
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Min / Max = {speedSlider.minValue} / {speedSlider.maxValue}");
 
             speedSlider.onValueChanged.RemoveAllListeners();
             speedSlider.onValueChanged.AddListener(new System.Action<float>((float f) => {
@@ -783,7 +787,7 @@ namespace TweaksAndFixes
 
                 f = Mathf.Clamp(f,
                     G.ui.mainShip.shipType.speedMin,
-                    G.ui.mainShip.shipType.speedMin
+                    G.ui.mainShip.shipType.speedMax
                 );
 
                 // Melon<TweaksAndFixes>.Logger.Msg($"  Set speed: {f}");
@@ -804,8 +808,8 @@ namespace TweaksAndFixes
                 .GetChildAtPath(
                 "Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Speed/Edit"
                 ).GetComponent<InputField>();
-
-            float lastGoodValue = G.ui.mainShip.speedMax / 0.51444399f;
+            
+            float lastGoodValue = Mathf.Round((G.ui.mainShip.speedMax / 0.51444399f) / inc) * inc;
             // speedText.text = $"{lastGoodValue}";
             // speedEdit.text = $"{lastGoodValue}";
 
@@ -821,7 +825,10 @@ namespace TweaksAndFixes
                 speedEdit.Select();
                 speedEdit.ActivateInputField();
 
-                speedEdit.SetText($"{lastGoodValue:0.0000}");
+                int numZeros = (int)(Math.Log10(1f / inc) + 1f);
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"{numZeros}");
+                speedEdit.SetText(lastGoodValue.ToString($"0:0.{new String('0', numZeros)}"));
             });
 
             speedEdit.onEndEdit.RemoveAllListeners();
@@ -844,8 +851,13 @@ namespace TweaksAndFixes
                 else
                 {
                     // Melon<TweaksAndFixes>.Logger.Msg($"  Parsed: `{parsedSpeed}`");
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  Stepped: `{Math.Round(parsedSpeed / inc) * inc}`");
 
-                    parsedSpeed = Mathf.Clamp(parsedSpeed, G.ui.mainShip.shipType.speedMin, G.ui.mainShip.shipType.speedMax);
+                    parsedSpeed = Mathf.Clamp(
+                        Mathf.Round(parsedSpeed / inc) * inc,
+                        G.ui.mainShip.shipType.speedMin,
+                        G.ui.mainShip.shipType.speedMax
+                    );
 
                     G.ui.mainShip.SetSpeedMax(parsedSpeed * 0.51444399f);
 
