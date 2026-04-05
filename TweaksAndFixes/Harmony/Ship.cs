@@ -1077,15 +1077,20 @@ namespace TweaksAndFixes
         {
             public int state;
             public int tryNum;
+            public float speed;
+            public float beam;
             public float beamMin;
             public float beamMax;
+            public float draught;
             public float draughtMin;
             public float draughtMax;
         }
 
+        public static GRSData lastState = new();
+
         public static bool shipGenActive = false;
 
-        public static float Reratio(float v, float a1, float b1, float a2, float b2)
+        public static float Reratio(float v, float a1, float a2, float b1, float b2)
         {
             // Mapping onto a single point range always gives the same answer
             //   Also prevents a devide-by-zero edge case
@@ -1190,16 +1195,59 @@ namespace TweaksAndFixes
             draught_min = draught_min > draught_max ? draught_max : draught_min;
 
             // Melon<TweaksAndFixes>.Logger.Msg($"Mod stats for ship {ship.Name(false, false)}:");
-            // Melon<TweaksAndFixes>.Logger.Msg($"  {speed_min} - {speed_max}");
-            // Melon<TweaksAndFixes>.Logger.Msg($"  {beam_min} - {beam_max}");
-            // Melon<TweaksAndFixes>.Logger.Msg($"  {draught_min} - {draught_max}");
-            // if (speed_min != float.MinValue)   Melon<TweaksAndFixes>.Logger.Msg($"  speed:     {ship.speedMax * 1.943844f,10} -> {Math.Clamp(ship.speedMax, speed_min * 0.5144444f, speed_max * 0.5144444f) * 1.943844f}");
-            // if (beam_min != float.MinValue)    Melon<TweaksAndFixes>.Logger.Msg($"  beam:      {ship.beam,10} -> {Util.Remap(ship.beam, sd.beamMin, sd.beamMax, beam_min, beam_max)}");
-            // if (draught_min != float.MinValue) Melon<TweaksAndFixes>.Logger.Msg($"  draught:   {ship.draught,10} -> {Util.Remap(ship.draught, sd.draughtMin, sd.draughtMax, draught_min, draught_max)}");
 
-            ship.SetSpeedMax(Math.Clamp(ship.speedMax, speed_min * 0.5144444f, speed_max * 0.5144444f));
-            ship.SetBeam(Reratio(ship.beam, sd.beamMin, sd.beamMax, beam_min, beam_max));
-            ship.SetDraught(Reratio(ship.draught, sd.draughtMin, sd.draughtMax, draught_min, draught_max));
+            if (lastState.speed != ship.SpeedMax())
+            {
+                float val =
+                    ModUtils.roundToInc(
+                        Math.Clamp(ship.speedMax, speed_min * 0.5144444f, speed_max * 0.5144444f),
+                        Config.Param("speed_step", 0.1f)
+                    );
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  {lastState.speed} != {ship.SpeedMax()}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"  {speed_min} / {st.speedMin} - {speed_max} / {st.speedMax}");
+                // if (speed_min != float.MinValue)
+                //     Melon<TweaksAndFixes>.Logger.Msg(
+                //         $"  speed:     {ship.speedMax * 1.943844f,10} -> {val * 1.943844f}"
+                //     );
+
+                ship.SetSpeedMax(val);
+                lastState.speed = ship.SpeedMax();
+            }
+            
+            if (lastState.beam != ship.Beam())
+            {
+                float val =
+                    ModUtils.roundToInc(
+                        Reratio(ship.beam, sd.beamMin, sd.beamMax, beam_min, beam_max),
+                        0.1f
+                    );
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  {lastState.beam} != {ship.Beam()}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"  {beam_min} / {sd.beamMin} - {beam_max} / {sd.beamMax}");
+                // if (beam_min != float.MinValue)
+                //     Melon<TweaksAndFixes>.Logger.Msg($"  beam:      {ship.beam,10} -> {val}");
+
+                ship.SetBeam(val);
+                lastState.beam = ship.Beam();
+            }
+
+            if (lastState.draught != ship.Draught())
+            {
+                float val =
+                    ModUtils.roundToInc(
+                        Reratio(ship.draught, sd.draughtMin, sd.draughtMax, draught_min, draught_max),
+                        0.1f
+                    );
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  {lastState.draught} != {ship.Draught()}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"  {draught_min} / {sd.draughtMin} - {draught_max} / {sd.draughtMax}");
+                // if (draught_min != float.MinValue)
+                //     Melon<TweaksAndFixes>.Logger.Msg($"  draught:   {ship.draught,10} -> {val}");
+
+                ship.SetDraught(val);
+                lastState.draught = ship.Draught();
+            }
         }
 
         private static bool CanModCompType(Ship ship, string key)
@@ -1451,10 +1499,14 @@ namespace TweaksAndFixes
             Patch_Ship._GenerateShipState = __state.state;
             var ship = __instance.__4__this;
             var hd = ship.hull.data;
+            __state.speed = ship.SpeedMax();
+            __state.beam = ship.Beam();
             __state.beamMin = hd.beamMin;
             __state.beamMax = hd.beamMax;
+            __state.draught = ship.Draught();
             __state.draughtMin = hd.draughtMin;
             __state.draughtMax = hd.draughtMax;
+            lastState = __state;
 
             if (__instance.__1__state > 1)
             {
