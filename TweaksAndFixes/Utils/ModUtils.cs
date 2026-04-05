@@ -262,6 +262,11 @@ namespace TweaksAndFixes
             );
         }
 
+        public static float roundToInc(float v, float inc)
+        {
+            return Mathf.Round(v / inc) * inc;
+        }
+
         public static bool TryParse(string str, out int res)
         {
             return int.TryParse(str, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out res);
