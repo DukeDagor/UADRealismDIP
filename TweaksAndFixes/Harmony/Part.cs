@@ -792,6 +792,10 @@ namespace TweaksAndFixes
                 float max_main_gun_barrels = -1;
                 float min_main_gun_barrels = -1;
                 float max_main_gun_count = -1;
+                float max_sec_gun_cal = -1;
+                float min_sec_gun_cal = -1;
+                float max_sec_gun_barrels = -1;
+                float min_sec_gun_barrels = -1;
                 float max_sec_gun_count = -1;
 
                 var st = ship.shipType;
@@ -823,6 +827,10 @@ namespace TweaksAndFixes
                             case "max_main_gun_barrels": max_main_gun_barrels = val; break;
                             case "min_main_gun_barrels": min_main_gun_barrels = val; break;
                             case "max_main_gun_count": max_main_gun_count = val; break;
+                            case "max_sec_gun_cal": max_sec_gun_cal = val; break;
+                            case "min_sec_gun_cal": min_sec_gun_cal = val; break;
+                            case "max_sec_gun_barrels": max_sec_gun_barrels = val; break;
+                            case "min_sec_gun_barrels": min_sec_gun_barrels = val; break;
                             case "max_sec_gun_count": max_sec_gun_count = val; break;
                             default:
                                 Melon<TweaksAndFixes>.Logger.Error($"Invalid `shipTypes.csv` `shipgen_limit` param: `{stat}` for ID `{st.name}`. Unsuported stat. Can only be [max_main_gun_cal, min_main_gun_cal, max_main_gun_barrels, min_main_gun_barrels, max_main_gun_count, max_sec_gun_count]");
@@ -860,6 +868,10 @@ namespace TweaksAndFixes
                             case "max_main_gun_barrels": max_main_gun_barrels = val; break;
                             case "min_main_gun_barrels": min_main_gun_barrels = val; break;
                             case "max_main_gun_count": max_main_gun_count = val; break;
+                            case "max_sec_gun_cal": max_sec_gun_cal = val; break;
+                            case "min_sec_gun_cal": min_sec_gun_cal = val; break;
+                            case "max_sec_gun_barrels": max_sec_gun_barrels = val; break;
+                            case "min_sec_gun_barrels": min_sec_gun_barrels = val; break;
                             case "max_sec_gun_count": max_sec_gun_count = val; break;
                             default:
                                 Melon<TweaksAndFixes>.Logger.Error($"Invalid `parts.csv` `shipgen_limit` param: `{stat}` for ID `{hd.name}`. Unsuported stat. Can only be [max_main_gun_cal, min_main_gun_cal, max_main_gun_barrels, min_main_gun_barrels, max_main_gun_count, max_sec_gun_count]");
@@ -898,6 +910,24 @@ namespace TweaksAndFixes
                 }
                 else if (!Ship.IsCasemateGun(data))
                 {
+                    if ((max_sec_gun_cal != -1 && data.GetCaliberInch(ship) > max_sec_gun_cal)
+                        || (min_sec_gun_cal != -1 && data.GetCaliberInch(ship) < min_sec_gun_cal))
+                    {
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Gun cal size {data.GetCaliberInch(ship)} outside range {min_main_gun_cal} ~ {max_main_gun_cal}");
+                        __result = false;
+                        denyReason = "size";
+                        return false;
+                    }
+
+                    if ((max_sec_gun_barrels != -1 && data.barrels > max_sec_gun_barrels)
+                        || (min_sec_gun_barrels != -1 && data.barrels < min_sec_gun_barrels))
+                    {
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Gun barrel cnt {data.barrels} outside range {min_main_gun_barrels} ~ {max_main_gun_barrels}");
+                        __result = false;
+                        denyReason = "barrel count";
+                        return false;
+                    }
+
                     if (max_sec_gun_count != -1)
                     {
                         int gunCounts = new();
