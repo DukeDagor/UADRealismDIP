@@ -67,6 +67,8 @@ namespace TweaksAndFixes.Data
         };
 
         private static readonly Dictionary<string, Dictionary<string, string>> _LocalizedKeys = new();
+        private static readonly Dictionary<string, HashSet<string>> _MissingNameWarnings = new();
+        private static readonly Dictionary<string, HashSet<string>> _MissingSubnameWarnings = new();
 
         [Serializer.Field] public string name = string.Empty;
         [Serializer.Field] public string subname = string.Empty;
@@ -206,6 +208,23 @@ namespace TweaksAndFixes.Data
             return s.Substring(start, end - start);
         }
 
+        private static void LogMissingLocalizedKeyOnce(Dictionary<string, HashSet<string>> seenByLanguage, string kind, string value)
+        {
+            string language = LocalizeManager.CurrentLanguage ?? string.Empty;
+            value ??= string.Empty;
+
+            if (!seenByLanguage.TryGetValue(language, out var seen))
+            {
+                seen = new HashSet<string>();
+                seenByLanguage[language] = seen;
+            }
+
+            if (seen.Add(value))
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Can't find {kind} `{value}`");
+            }
+        }
+
         public static bool UpdateAccuracyInfo(ref string name, ref string subname, ref float accuracy)
         {
             // Check if the language changed
@@ -228,7 +247,7 @@ namespace TweaksAndFixes.Data
 
             if (!localizedKeys.ContainsKey(name))
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"Can't find name `{name}`");
+                LogMissingLocalizedKeyOnce(_MissingNameWarnings, "name", name);
 
                 return false;
             }
@@ -244,7 +263,7 @@ namespace TweaksAndFixes.Data
 
             if (!localizedKeys.ContainsKey(subname) && !isBase)
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"Can't find subname `{subname}`");
+                LogMissingLocalizedKeyOnce(_MissingSubnameWarnings, "subname", subname);
 
                 return false;
             }

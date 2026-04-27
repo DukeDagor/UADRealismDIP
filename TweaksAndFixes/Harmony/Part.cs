@@ -73,6 +73,8 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_Place(Part __instance, Vector3 pos, bool autoRotate = true)
         {
+            Patch_Ship.TraceShipgenPlacement(__instance, pos, autoRotate);
+
             if (!Patch_Ui.UseNewConstructionLogic())
             {
                 return;
@@ -150,6 +152,27 @@ namespace TweaksAndFixes
 
                 // Melon<TweaksAndFixes>.Logger.Msg("");
             }
+        }
+
+        [HarmonyPatch(nameof(Part.OnPostAdd))]
+        [HarmonyPostfix]
+        internal static void Postfix_OnPostAdd(Part __instance)
+        {
+            Patch_Ship.TraceShipgenFinalPart(__instance);
+        }
+
+        [HarmonyPatch(nameof(Part.Mount), new Type[] { typeof(Mount), typeof(bool) })]
+        [HarmonyPostfix]
+        internal static void Postfix_Mount_ShipgenTrace(Part __instance, Mount mount, bool autoRotate)
+        {
+            Patch_Ship.TraceShipgenMount(__instance, mount, autoRotate);
+        }
+
+        [HarmonyPatch(nameof(Part.Unmount), new Type[] { typeof(bool) })]
+        [HarmonyPrefix]
+        internal static void Prefix_Unmount_ShipgenTrace(Part __instance, bool refreshMounts)
+        {
+            Patch_Ship.TraceShipgenUnmount(__instance, refreshMounts);
         }
 
         public static Stopwatch stopWatchTotal = new Stopwatch();
@@ -1008,6 +1031,21 @@ namespace TweaksAndFixes
 
             return true;
         }
+
+        internal static void Postfix(Part __instance, PartData data, Ship ship, bool partIsReal, string denyReason, bool __result)
+        {
+            if (__result)
+                return;
+
+            if (!Config.ShipGenTweaks || (Patch_Ship._GenerateRandomShipRoutine == null && Patch_Ship._AddRandomPartsRoutine == null))
+                return;
+
+            if (!Patch_Ship.IsShipgenMainGunCandidate(data))
+                return;
+
+            string reason = string.IsNullOrWhiteSpace(denyReason) ? "can_place_generic:false" : $"can_place_generic:{denyReason}";
+            Patch_Ship.RecordMainGunRejectReason(reason, data);
+        }
     }
 
     // We can't target ref arguments in an attribute, so
@@ -1055,4 +1093,28 @@ namespace TweaksAndFixes
     // 
     //     }
     // }
+    [HarmonyPatch(typeof(Part))]
+    internal class Patch_Part_CanPlace
+    {
+        internal static MethodBase TargetMethod()
+        {
+            var methods = AccessTools.GetDeclaredMethods(typeof(Part));
+            foreach (var m in methods)
+            {
+                if (m.Name != nameof(Part.CanPlace))
+                    continue;
+
+                var parameters = m.GetParameters();
+                if (parameters.Length == 1 && parameters[0].ParameterType.IsByRef && parameters[0].ParameterType.GetElementType() == typeof(string))
+                    return m;
+            }
+
+            return null;
+        }
+
+        internal static void Postfix(Part __instance, string denyReason, bool __result)
+        {
+            Patch_Ship.TraceShipgenCanPlace(__instance, __result, denyReason);
+        }
+    }
 }
