@@ -3,6 +3,8 @@ using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
 using UnityEngine.UI;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace TweaksAndFixes
 {
@@ -154,6 +156,36 @@ namespace TweaksAndFixes
         //     Melon<TweaksAndFixes>.Logger.Msg($"ChangeState: GameState newState {newState}, bool raiseEnterStateEvents {raiseEnterStateEvents}");
         // }
 
+        [HarmonyPatch(nameof(GameManager.ChangeStateUI))]
+        [HarmonyPrefix]
+        internal static void Prefix_ChangeStateUI(GameManager.UIState newState, bool raiseEvents, out Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            __state = Patch_CampaignController.BeginCampaignLoadMethodTiming(nameof(GameManager.ChangeStateUI), $"newState={newState}, raiseEvents={raiseEvents}");
+            Patch_CampaignController.EndCampaignLoadMethodPrefix(ref __state);
+        }
+
+        [HarmonyPatch(nameof(GameManager.ChangeStateUI))]
+        [HarmonyPostfix]
+        internal static void Postfix_ChangeStateUI(Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            Patch_CampaignController.EndCampaignLoadMethodTiming(__state);
+        }
+
+        [HarmonyPatch(nameof(GameManager.OnChangeStateUI))]
+        [HarmonyPrefix]
+        internal static void Prefix_OnChangeStateUI(out Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            __state = Patch_CampaignController.BeginCampaignLoadMethodTiming(nameof(GameManager.OnChangeStateUI));
+            Patch_CampaignController.EndCampaignLoadMethodPrefix(ref __state);
+        }
+
+        [HarmonyPatch(nameof(GameManager.OnChangeStateUI))]
+        [HarmonyPostfix]
+        internal static void Postfix_OnChangeStateUI(Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            Patch_CampaignController.EndCampaignLoadMethodTiming(__state);
+        }
+
         // [HarmonyPrefix]
         // [HarmonyPatch(nameof(GameManager.CanHandleMouseInput))]
         // internal static bool Prefix_CanHandleMouseInput(ref bool __result)
@@ -238,24 +270,201 @@ namespace TweaksAndFixes
     [HarmonyPatch(typeof(GameManager._LoadCampaign_d__98))]
     internal class Patch_GameManager_LoadCampaigndCoroutine
     {
-        // public static Stopwatch watch = new();
-        // public static int lastState = 0;
+        internal struct LoadCampaignTimingFrame
+        {
+            public bool Enabled;
+            public int State;
+            public long StartedAt;
+        }
+
+        private struct LoadCampaignTimingBucket
+        {
+            public int Calls;
+            public double TotalMs;
+            public double MaxMs;
+        }
+
+        private static readonly Dictionary<int, LoadCampaignTimingBucket> _LoadCampaignTimingBuckets = new();
+        private static bool _LoadCampaignTimingActive = false;
+        private static int _LoadCampaignTimingSession = 0;
+        private static int _LoadCampaignTimingLastState = int.MinValue;
+        private static long _LoadCampaignTimingStartedAt = 0;
+
+        internal static bool IsTimingActive => _LoadCampaignTimingActive;
+        internal static bool IsTimingEnabled => IsLoadCampaignTimingEnabled();
+        internal static int TimingSession => _LoadCampaignTimingSession;
+        internal static int TimingCurrentState => _LoadCampaignTimingLastState;
+        internal static string TimingCurrentStateLabel => GetLoadCampaignStateLabel(_LoadCampaignTimingLastState);
+
+        private static bool IsLoadCampaignTimingEnabled()
+        {
+            return Config.Param("taf_debug_campaign_load_timing", 0) != 0;
+        }
+
+        private static LoadCampaignTimingFrame BeginLoadCampaignTimingStep(GameManager._LoadCampaign_d__98 instance)
+        {
+            if (!IsLoadCampaignTimingEnabled())
+            {
+                return default;
+            }
+
+            int state = instance.__1__state;
+            long now = Stopwatch.GetTimestamp();
+
+            if (!_LoadCampaignTimingActive || state == 0)
+            {
+                _LoadCampaignTimingBuckets.Clear();
+                _LoadCampaignTimingActive = true;
+                _LoadCampaignTimingSession++;
+                _LoadCampaignTimingLastState = int.MinValue;
+                _LoadCampaignTimingStartedAt = now;
+                Melon<TweaksAndFixes>.Logger.Msg(
+                    $"Campaign load timing begin: session={_LoadCampaignTimingSession}, " +
+                    $"state={state} ({GetLoadCampaignStateLabel(state)})");
+            }
+
+            if (_LoadCampaignTimingLastState != state)
+            {
+                _LoadCampaignTimingLastState = state;
+                Melon<TweaksAndFixes>.Logger.Msg(
+                    $"Campaign load timing enter: session={_LoadCampaignTimingSession}, " +
+                    $"state={state} ({GetLoadCampaignStateLabel(state)}), loadingScreen={SafeIsLoadingScreenActive()}");
+            }
+
+            return new LoadCampaignTimingFrame
+            {
+                Enabled = true,
+                State = state,
+                StartedAt = now
+            };
+        }
+
+        private static void EndLoadCampaignTimingStep(GameManager._LoadCampaign_d__98 instance, bool moveNextResult, LoadCampaignTimingFrame frame)
+        {
+            if (!frame.Enabled)
+            {
+                return;
+            }
+
+            long now = Stopwatch.GetTimestamp();
+            double elapsedMs = ElapsedLoadCampaignMs(frame.StartedAt, now);
+
+            if (!_LoadCampaignTimingBuckets.TryGetValue(frame.State, out var bucket))
+            {
+                bucket = default;
+            }
+
+            bucket.Calls++;
+            bucket.TotalMs += elapsedMs;
+            bucket.MaxMs = Math.Max(bucket.MaxMs, elapsedMs);
+            _LoadCampaignTimingBuckets[frame.State] = bucket;
+
+            float thresholdMs = Config.Param("taf_debug_campaign_load_timing_threshold_ms", 250f);
+            if (elapsedMs >= thresholdMs)
+            {
+                int nextState = instance.__1__state;
+                Melon<TweaksAndFixes>.Logger.Msg(
+                    $"Campaign load timing slow step: session={_LoadCampaignTimingSession}, " +
+                    $"state={frame.State} ({GetLoadCampaignStateLabel(frame.State)}), " +
+                    $"next={nextState} ({GetLoadCampaignStateLabel(nextState)}), " +
+                    $"elapsedMs={elapsedMs:0.0}, loadingScreen={SafeIsLoadingScreenActive()}, result={moveNextResult}");
+            }
+
+            if (!moveNextResult)
+            {
+                LogLoadCampaignTimingSummary(now);
+                _LoadCampaignTimingActive = false;
+            }
+        }
+
+        private static double ElapsedLoadCampaignMs(long startedAt, long endedAt)
+        {
+            return (endedAt - startedAt) * 1000.0 / Stopwatch.Frequency;
+        }
+
+        private static bool SafeIsLoadingScreenActive()
+        {
+            try
+            {
+                return GameManager.IsLoadingScreenActive;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static void LogLoadCampaignTimingSummary(long endedAt)
+        {
+            double totalMs = ElapsedLoadCampaignMs(_LoadCampaignTimingStartedAt, endedAt);
+            Melon<TweaksAndFixes>.Logger.Msg(
+                $"Campaign load timing summary: session={_LoadCampaignTimingSession}, totalMs={totalMs:0.0}");
+
+            for (int state = -1; state <= 20; state++)
+            {
+                LogLoadCampaignTimingBucket(state);
+            }
+
+            foreach (var entry in _LoadCampaignTimingBuckets)
+            {
+                if (entry.Key < -1 || entry.Key > 20)
+                {
+                    LogLoadCampaignTimingBucket(entry.Key);
+                }
+            }
+        }
+
+        private static void LogLoadCampaignTimingBucket(int state)
+        {
+            if (!_LoadCampaignTimingBuckets.TryGetValue(state, out var bucket))
+            {
+                return;
+            }
+
+            Melon<TweaksAndFixes>.Logger.Msg(
+                $"Campaign load timing state: session={_LoadCampaignTimingSession}, " +
+                $"state={state} ({GetLoadCampaignStateLabel(state)}), " +
+                $"calls={bucket.Calls}, totalMs={bucket.TotalMs:0.0}, maxMs={bucket.MaxMs:0.0}");
+        }
+
+        private static string GetLoadCampaignStateLabel(int state)
+        {
+            return state switch
+            {
+                -1 => "not-started-or-done",
+                0 => "start",
+                1 => "load-save-entry",
+                2 => "decode-save",
+                3 => "campaign-controller-and-world",
+                4 => "players",
+                5 => "player-country-loop",
+                6 => "map-data",
+                7 => "world-map-data",
+                8 => "ships-start",
+                9 => "ships-design-id-fixups",
+                10 => "other-vessels",
+                11 => "battles",
+                12 => "submarine-battles-log-date",
+                13 => "blockades-task-forces",
+                14 => "map-init-enter-world",
+                15 => "post-world-mapui-log-tech-province-battles",
+                16 => "player-ship-textures",
+                17 => "player-ship-texture-continuation",
+                18 => "navmesh-passable-areas-first",
+                19 => "navmesh-passable-areas-second-and-predefs",
+                _ => "unknown"
+            };
+        }
 
         // This method calls CampaignController.PrepareProvinces *before* CampaignMap.PreInit
         // So we patch here and skip the preinit patch.
         [HarmonyPatch(nameof(GameManager._LoadCampaign_d__98.MoveNext))]
         [HarmonyPrefix]
-        internal static void Prefix_MoveNext(GameManager._LoadCampaign_d__98 __instance)
+        internal static void Prefix_MoveNext(GameManager._LoadCampaign_d__98 __instance, out LoadCampaignTimingFrame __state)
         {
+            __state = default;
+
             // TODO: Patch state 17 (G.ui.PrepareShipAllTex(ship))
-            // watch.Start();
-            // 
-            // if (__instance.__1__state != lastState)
-            // {
-            //     Melon<TweaksAndFixes>.Logger.Msg($"{__instance.__1__state} -> {lastState} : {watch.ElapsedMilliseconds}");
-            //     watch.Restart();
-            //     lastState = __instance.__1__state;
-            // }
 
             // Skip generating previews. They don't generate right anyway...
             if (__instance.__1__state == 17)
@@ -361,13 +570,49 @@ namespace TweaksAndFixes
                 MapData.LoadMapData();
                 Patch_CampaignMap._SkipNextMapPatch = true;
             }
+
+            __state = BeginLoadCampaignTimingStep(__instance);
         }
 
-        // [HarmonyPatch(nameof(GameManager._LoadCampaign_d__98.MoveNext))]
-        // [HarmonyPostfix]
-        // internal static void Postfix_MoveNext(GameManager._LoadCampaign_d__98 __instance)
-        // {
-        //     watch.Stop();
-        // }
+        [HarmonyPatch(nameof(GameManager._LoadCampaign_d__98.MoveNext))]
+        [HarmonyPostfix]
+        internal static void Postfix_MoveNext(GameManager._LoadCampaign_d__98 __instance, bool __result, LoadCampaignTimingFrame __state)
+        {
+            EndLoadCampaignTimingStep(__instance, __result, __state);
+        }
+    }
+
+    [HarmonyPatch]
+    internal class Patch_GameManager_LoadCampaignFinalCallback
+    {
+        private static MethodBase TargetMethod()
+        {
+            foreach (var nestedType in typeof(GameManager).GetNestedTypes(AccessTools.all))
+            {
+                if (!nestedType.Name.Contains("DisplayClass98_0"))
+                    continue;
+
+                foreach (var method in nestedType.GetMethods(AccessTools.all))
+                {
+                    if (method.Name.Contains("LoadCampaign") && method.Name.Contains("24"))
+                        return method;
+                }
+            }
+
+            throw new MissingMethodException("Could not find GameManager LoadCampaign final callback <LoadCampaign>b__24.");
+        }
+
+        [HarmonyPrefix]
+        internal static void Prefix_FinalCallback(out Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            __state = Patch_CampaignController.BeginCampaignLoadMethodTiming("GameManager.LoadCampaign.finalCallback");
+            Patch_CampaignController.EndCampaignLoadMethodPrefix(ref __state);
+        }
+
+        [HarmonyPostfix]
+        internal static void Postfix_FinalCallback(Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            Patch_CampaignController.EndCampaignLoadMethodTiming(__state);
+        }
     }
 }

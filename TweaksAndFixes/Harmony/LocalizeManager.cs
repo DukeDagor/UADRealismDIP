@@ -80,6 +80,14 @@ namespace TweaksAndFixes
         })]
         internal static void FixLocalize(ref string tag, Il2CppReferenceArray<Il2CppSystem.Object> p)
         {
+            if (tag == "$tooltip_campaign_new_game_fleet_creation" &&
+                LocalizeManager.Instance != null &&
+                LocalizeManager.Instance.Language.Data.ContainsKey("$TAF_tooltip_campaign_new_game_fleet_creation"))
+            {
+                tag = "$TAF_tooltip_campaign_new_game_fleet_creation";
+                return;
+            }
+
             if (GameManager.Instance != null && GameManager.IsConstructor && 
                 (p == null || ((Il2CppArrayBase<Il2CppSystem.Object>)(object)p).Length <= 0) && 
                 !(tag != "$Ui_World_PopWindows_Port") && LocalizeManager.Instance.Language.Data.ContainsKey("$TAF_Ui_Constr_Port")

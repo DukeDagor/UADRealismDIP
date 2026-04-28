@@ -291,6 +291,33 @@ namespace TweaksAndFixes
                     }
                 }
 
+                didChange |= SyncTurretArmorFromCurrent(ship);
+
+                if (didChange)
+                    InvalidateArmorCaches(ship);
+
+                return didChange;
+            }
+
+            public bool SyncTurretArmor(Ship ship, float portionOfMax)
+            {
+                if (ship == null || ship.shipTurretArmor == null || ship.shipTurretArmor.Count == 0)
+                    return false;
+
+                float t = Mathf.Clamp01(portionOfMax);
+                if (t != _lastLerpVal)
+                    UpdateForLerp(ship, t);
+
+                bool didChange = SyncTurretArmorFromCurrent(ship);
+                if (didChange)
+                    InvalidateArmorCaches(ship);
+
+                return didChange;
+            }
+
+            private bool SyncTurretArmorFromCurrent(Ship ship)
+            {
+                bool didChange = false;
                 Ship.TurretArmor mainGun = null;
                 if (ship.shipTurretArmor != null && ship.shipTurretArmor.Count > 0)
                 {
@@ -303,43 +330,43 @@ namespace TweaksAndFixes
                     }
                 }
 
-                if (mainGun != null)
+                if (mainGun == null)
+                    return false;
+
+                foreach (var ta in ship.shipTurretArmor)
                 {
-                    foreach (var ta in ship.shipTurretArmor)
-                    {
-                        Ship.A area = Ship.A.TurretSide;
-                        float mult = GetTurretArmorMultiplier(ship, area, ta.turretPartData, mainGun);
-                        float nVal = G.settings.RoundToArmorStep(Mathf.Clamp(_current[area] * mult, ship.MinArmorForZone(area), ship.MaxArmorForZone(area, ta.turretPartData)));
-                        if (nVal != ta.sideTurretArmor)
-                            didChange = true;
-                        ta.sideTurretArmor = nVal;
+                    Ship.A area = Ship.A.TurretSide;
+                    float mult = GetTurretArmorMultiplier(ship, area, ta.turretPartData, mainGun);
+                    float nVal = G.settings.RoundToArmorStep(Mathf.Clamp(_current[area] * mult, ship.MinArmorForZone(area), ship.MaxArmorForZone(area, ta.turretPartData)));
+                    if (nVal != ta.sideTurretArmor)
+                        didChange = true;
+                    ta.sideTurretArmor = nVal;
 
-                        area = Ship.A.TurretTop;
-                        mult = GetTurretArmorMultiplier(ship, area, ta.turretPartData, mainGun);
-                        nVal = G.settings.RoundToArmorStep(Mathf.Clamp(_current[area] * mult, ship.MinArmorForZone(area), ship.MaxArmorForZone(area, ta.turretPartData)));
-                        if (nVal != ta.topTurretArmor)
-                            didChange = true;
-                        ta.topTurretArmor = nVal;
+                    area = Ship.A.TurretTop;
+                    mult = GetTurretArmorMultiplier(ship, area, ta.turretPartData, mainGun);
+                    nVal = G.settings.RoundToArmorStep(Mathf.Clamp(_current[area] * mult, ship.MinArmorForZone(area), ship.MaxArmorForZone(area, ta.turretPartData)));
+                    if (nVal != ta.topTurretArmor)
+                        didChange = true;
+                    ta.topTurretArmor = nVal;
 
-                        area = Ship.A.Barbette;
-                        mult = GetTurretArmorMultiplier(ship, area, ta.turretPartData, mainGun);
-                        nVal = G.settings.RoundToArmorStep(Mathf.Clamp(_current[area] * mult, ship.MinArmorForZone(area), ship.MaxArmorForZone(area, ta.turretPartData)));
-                        if (nVal != ta.barbetteArmor)
-                            didChange = true;
-                        ta.barbetteArmor = nVal;
-                    }
-                }
-
-                if (didChange)
-                {
-                    if (ship.matsCache != null)
-                        ship.matsCache.Clear();
-                    ship.NeedRecalcCache(null);
-                    ship.statsValid = false;
-                    ship.RefreshGunsStats();
+                    area = Ship.A.Barbette;
+                    mult = GetTurretArmorMultiplier(ship, area, ta.turretPartData, mainGun);
+                    nVal = G.settings.RoundToArmorStep(Mathf.Clamp(_current[area] * mult, ship.MinArmorForZone(area), ship.MaxArmorForZone(area, ta.turretPartData)));
+                    if (nVal != ta.barbetteArmor)
+                        didChange = true;
+                    ta.barbetteArmor = nVal;
                 }
 
                 return didChange;
+            }
+
+            private static void InvalidateArmorCaches(Ship ship)
+            {
+                if (ship.matsCache != null)
+                    ship.matsCache.Clear();
+                ship.NeedRecalcCache(null);
+                ship.statsValid = false;
+                ship.RefreshGunsStats();
             }
 
             private static readonly Ship.A[] _CheckVals = new Ship.A[] { Ship.A.Belt, Ship.A.Deck, Ship.A.Barbette, Ship.A.TurretSide };

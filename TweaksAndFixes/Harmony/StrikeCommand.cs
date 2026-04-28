@@ -2,6 +2,7 @@ using HarmonyLib;
 using Il2Cpp;
 using MelonLoader;
 using UnityEngine;
+using UnityEngine.UI;
 
 #pragma warning disable CS8603
 #pragma warning disable CS8604
@@ -75,7 +76,7 @@ namespace TweaksAndFixes
             _Orders.Clear();
         }
 
-        private static void ToggleFromSelectedDivision()
+        internal static void ToggleFromSelectedDivision()
         {
             Division source = SelectedDivision();
             if (source == null || !HasReadyStrikeShip(source))
@@ -92,6 +93,18 @@ namespace TweaksAndFixes
 
             _Orders[source.Pointer] = new StrikeOrder(source);
             Melon<TweaksAndFixes>.Logger.Msg($"Strike command enabled for {DivisionName(source)}. Using current weapon target.");
+        }
+
+        internal static bool CanSelectedDivisionStrike()
+        {
+            Division source = SelectedDivision();
+            return source != null && HasReadyStrikeShip(source);
+        }
+
+        internal static bool IsSelectedDivisionStrikeActive()
+        {
+            Division source = SelectedDivision();
+            return source != null && _Orders.ContainsKey(source.Pointer);
         }
 
         private static bool UpdateOrder(StrikeOrder order)
@@ -338,6 +351,117 @@ namespace TweaksAndFixes
 
     }
 
+    internal static class StrikeCommandUi
+    {
+        private static GameObject _Root;
+        private static Button _Button;
+        private static Image _Background;
+        private static Text _Label;
+
+        internal static void Update()
+        {
+            if (!GameManager.IsBattle)
+            {
+                if (_Root != null)
+                    _Root.SetActive(false);
+                return;
+            }
+
+            Ensure();
+            if (_Root == null)
+                return;
+
+            bool canStrike = StrikeCommand.CanSelectedDivisionStrike();
+            bool active = StrikeCommand.IsSelectedDivisionStrikeActive();
+
+            _Root.SetActive(true);
+            _Root.transform.SetAsLastSibling();
+
+            if (_Button != null)
+                _Button.interactable = canStrike;
+
+            if (_Background != null)
+                _Background.color = active
+                    ? new Color(0.95f, 0.72f, 0.18f, 0.92f)
+                    : canStrike
+                        ? new Color(0.12f, 0.16f, 0.18f, 0.86f)
+                        : new Color(0.08f, 0.08f, 0.08f, 0.42f);
+
+            if (_Label != null)
+            {
+                _Label.text = active ? "STRIKE ON" : "STRIKE K";
+                _Label.color = canStrike ? Color.white : new Color(0.72f, 0.72f, 0.72f, 0.85f);
+            }
+        }
+
+        private static void Ensure()
+        {
+            if (_Root != null)
+                return;
+
+            if (G.ui == null)
+                return;
+
+            _Root = new GameObject("TAF_StrikeCommandButton");
+            _Root.transform.SetParent(G.ui.gameObject.transform, false);
+
+            RectTransform rect = _Root.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 1f);
+            rect.anchorMax = new Vector2(1f, 1f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.anchoredPosition = new Vector2(-18f, -118f);
+            rect.sizeDelta = new Vector2(108f, 30f);
+
+            CanvasGroup canvasGroup = _Root.AddComponent<CanvasGroup>();
+            canvasGroup.alpha = 1f;
+            canvasGroup.interactable = true;
+            canvasGroup.blocksRaycasts = true;
+
+            _Background = _Root.AddComponent<Image>();
+            _Background.color = new Color(0.12f, 0.16f, 0.18f, 0.86f);
+
+            Outline outline = _Root.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            outline.effectDistance = new Vector2(1f, -1f);
+
+            _Button = _Root.AddComponent<Button>();
+            _Button.targetGraphic = _Background;
+            _Button.onClick.AddListener(new System.Action(() => StrikeCommand.ToggleFromSelectedDivision()));
+
+            GameObject labelObject = new("Label");
+            labelObject.transform.SetParent(_Root.transform, false);
+            RectTransform labelRect = labelObject.AddComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = Vector2.zero;
+            labelRect.offsetMax = Vector2.zero;
+
+            _Label = labelObject.AddComponent<Text>();
+            _Label.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            _Label.fontSize = 13;
+            _Label.alignment = TextAnchor.MiddleCenter;
+            _Label.text = "STRIKE K";
+            _Label.color = Color.white;
+
+            OnEnter onEnter = _Root.AddComponent<OnEnter>();
+            onEnter.action = new System.Action(() => G.ui.ShowTooltip(BuildTooltip(), _Root));
+
+            OnLeave onLeave = _Root.AddComponent<OnLeave>();
+            onLeave.action = new System.Action(() => G.ui.HideTooltip());
+        }
+
+        private static string BuildTooltip()
+        {
+            if (!StrikeCommand.CanSelectedDivisionStrike())
+                return "Select a player division with torpedoes to use strike command.\nHotkey: K";
+
+            if (StrikeCommand.IsSelectedDivisionStrikeActive())
+                return "Strike command active.\nClick or press K to cancel. Manual movement also cancels.";
+
+            return "Toggle torpedo strike for the selected division.\nApproaches the current weapon target, then withdraws after reaching launch range.\nHotkey: K";
+        }
+    }
+
     [HarmonyPatch(typeof(Ui), nameof(Ui.UpdateBattle))]
     internal static class Patch_Ui_UpdateBattle_StrikeCommand
     {
@@ -345,6 +469,7 @@ namespace TweaksAndFixes
         internal static void Postfix()
         {
             StrikeCommand.Update();
+            StrikeCommandUi.Update();
         }
     }
 

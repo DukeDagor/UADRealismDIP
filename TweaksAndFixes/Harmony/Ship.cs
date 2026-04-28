@@ -99,6 +99,140 @@ namespace TweaksAndFixes
 
         public static Ship LastCreatedShip;
         public static float LastClonedShipWeight = 0;
+        private static int _SkippedCampaignPrestartShipgenCount = 0;
+        private static int _SkippedCampaignPrestartCreateRandomCount = 0;
+
+        internal static bool ShouldUseBlankSlateCampaignStart()
+        {
+            return Patch_CampaignNewGame.BlankSlateCampaignSelected && Config.Param("taf_campaign_skip_prewarm_shipbuilding", 1) != 0;
+        }
+
+        internal static bool ShouldSkipCampaignPrestartCreateRandom()
+        {
+            if (!ShouldUseBlankSlateCampaignStart())
+                return false;
+
+            if (CampaignController.Instance == null || GameManager.Instance == null || !GameManager.Instance.isCampaign)
+                return false;
+
+            var current = CampaignController.Instance.CurrentDate.AsDate();
+            return current.Year < CampaignController.Instance.StartYear;
+        }
+
+        internal static bool ShouldSkipCampaignPrestartShipgen(Ship ship)
+        {
+            return ship != null && ShouldSkipCampaignPrestartCreateRandom();
+        }
+
+        internal static void LogSkippedCampaignPrestartCreateRandom(ShipType shipType, Player player)
+        {
+            _SkippedCampaignPrestartCreateRandomCount++;
+            if (_SkippedCampaignPrestartCreateRandomCount > 12 && _SkippedCampaignPrestartCreateRandomCount % 25 != 0)
+                return;
+
+            string typeName = shipType?.name ?? "?";
+            string nation = player?.data?.name ?? "?";
+            int year = CampaignController.Instance?.CurrentDate.AsDate().Year ?? 0;
+            Melon<TweaksAndFixes>.Logger.Msg($"Skipping campaign pre-start CreateRandom: shipType={typeName}, nation={nation}, year={year}, skipped={_SkippedCampaignPrestartCreateRandomCount}.");
+        }
+
+        internal static void LogSkippedCampaignPrestartShipgen(Ship ship)
+        {
+            _SkippedCampaignPrestartShipgenCount++;
+            if (_SkippedCampaignPrestartShipgenCount > 12 && _SkippedCampaignPrestartShipgenCount % 25 != 0)
+                return;
+
+            string shipType = ship?.shipType?.name ?? "?";
+            string hull = ship?.hull?.data?.name ?? "?";
+            string nation = ship?.player?.data?.name ?? "?";
+            int year = CampaignController.Instance?.CurrentDate.AsDate().Year ?? 0;
+            Melon<TweaksAndFixes>.Logger.Msg($"Skipping campaign pre-start shipgen: shipType={shipType}, hull={hull}, nation={nation}, year={year}, skipped={_SkippedCampaignPrestartShipgenCount}.");
+        }
+
+        internal static bool IsAiShipbuildingDebugEnabled()
+            => Config.Param("taf_debug_ai_shipbuilding", 0) != 0;
+
+        internal struct CreateRandomTrace
+        {
+            public bool Enabled;
+            public bool Started;
+            public Player Player;
+            public ShipType ShipType;
+            public string PlayerName;
+            public string TypeName;
+            public int Year;
+            public int Month;
+            public int DesignsBefore;
+            public int BuildingBefore;
+        }
+
+        internal static CreateRandomTrace CaptureCreateRandomTrace(Ship._CreateRandom_d__571 routine)
+        {
+            CreateRandomTrace trace = new()
+            {
+                Enabled = IsAiShipbuildingDebugEnabled() && routine != null && routine.player != null && routine.player.isAi,
+                Started = routine != null && routine.__1__state == 0
+            };
+
+            if (!trace.Enabled)
+                return trace;
+
+            trace.Player = routine.player;
+            trace.ShipType = routine.shipType;
+            trace.PlayerName = trace.Player.Name(false);
+            trace.TypeName = trace.ShipType?.name?.ToUpperInvariant() ?? "?";
+            trace.Year = CampaignController.Instance?.CurrentDate.AsDate().Year ?? 0;
+            trace.Month = CampaignController.Instance?.CurrentDate.AsDate().Month ?? 0;
+            trace.DesignsBefore = CountPlayerDesigns(trace.Player);
+            trace.BuildingBefore = CountPlayerBuilding(trace.Player);
+            return trace;
+        }
+
+        internal static void LogCreateRandomBegin(CreateRandomTrace trace)
+        {
+            if (!trace.Enabled || !trace.Started)
+                return;
+
+            Melon<TweaksAndFixes>.Logger.Msg($"AI CreateRandom begin: {trace.PlayerName}, type={trace.TypeName}, date={trace.Year:D4}-{trace.Month:D2}, designs={trace.DesignsBefore}, building={trace.BuildingBefore}");
+        }
+
+        internal static void LogCreateRandomEnd(CreateRandomTrace trace)
+        {
+            if (!trace.Enabled)
+                return;
+
+            int designsAfter = CountPlayerDesigns(trace.Player);
+            int buildingAfter = CountPlayerBuilding(trace.Player);
+            Melon<TweaksAndFixes>.Logger.Msg($"AI CreateRandom end: {trace.PlayerName}, type={trace.TypeName}, date={trace.Year:D4}-{trace.Month:D2}, started={trace.Started}, designs={trace.DesignsBefore}->{designsAfter}, building={trace.BuildingBefore}->{buildingAfter}");
+        }
+
+        private static int CountPlayerDesigns(Player player)
+        {
+            if (player == null)
+                return 0;
+
+            int count = 0;
+            foreach (Ship design in new Il2CppSystem.Collections.Generic.List<Ship>(player.designs))
+            {
+                if (design != null && design.isDesign)
+                    count++;
+            }
+            return count;
+        }
+
+        private static int CountPlayerBuilding(Player player)
+        {
+            if (player == null)
+                return 0;
+
+            int count = 0;
+            foreach (Ship ship in player.GetFleetAll())
+            {
+                if (ship != null && !ship.isDesign && (ship.isBuilding || ship.isCommissioning))
+                    count++;
+            }
+            return count;
+        }
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Ship.Create))]
@@ -1902,7 +2036,11 @@ namespace TweaksAndFixes
         internal static readonly HashSet<string> _AttemptRandPartsSkipped = new();
         internal static string _AttemptCurrentRandPartName = string.Empty;
         internal static string _AttemptCurrentRandPartBucket = string.Empty;
+        internal static string _AttemptLastRandPartBucket = string.Empty;
+        internal static string _AttemptFastRetryReason = string.Empty;
         internal static float _AttemptCurrentRandPartStartedAt = 0f;
+        internal static float _LastGenerateRandomShipMoveNextEndedAt = 0f;
+        internal static float _LastAddRandomPartsMoveNextEndedAt = 0f;
         internal static readonly Dictionary<string, ShipgenPhaseStats> _AttemptShipgenPhaseStats = new();
         internal static readonly HashSet<string> _ShipgenRandPartsReorderedForShipTypes = new();
         internal static readonly HashSet<string> _HardBannedShipgenMainGunRandParts = new()
@@ -2776,12 +2914,111 @@ namespace TweaksAndFixes
             }
         }
 
-        internal static bool ShouldFastRetryTowerBeforeMainGun(Ship ship)
+        internal static bool TryGetUnmetCostReq(Ship ship, string statName, out string detail)
         {
+            detail = string.Empty;
+            if (ship == null || string.IsNullOrWhiteSpace(statName))
+                return false;
+
+            bool isValid = ship.IsValidCostReqParts(
+                out string _,
+                out Il2CppSystem.Collections.Generic.List<ShipType.ReqInfo> notPassed,
+                out Il2CppSystem.Collections.Generic.Dictionary<Part, string> __);
+
+            if (isValid || notPassed == null || notPassed.Count == 0)
+                return false;
+
+            foreach (var req in notPassed)
+            {
+                if (req?.stat == null || req.stat.name != statName)
+                    continue;
+
+                float total = 0f;
+                var stat = ship.stats?.GetValueOrDefault(req.stat);
+                if (stat != null)
+                    total = stat.total;
+
+                detail = $"{statName}={total:0.#} ({req.min}~{req.max})";
+                return true;
+            }
+
+            return false;
+        }
+
+        internal static bool IgnoreShipgenMinMainGunCounts()
+        {
+            return Config.ShipGenTweaks && Config.Param("taf_shipgen_ignore_min_main_gun_counts", 1) != 0;
+        }
+
+        internal static bool HasMissingShipgenMinMainGunCounts(
+            Ship ship,
+            out int numMainTurrets,
+            out int numMainBarrels,
+            out int minMainTurrets,
+            out int minMainBarrels)
+        {
+            numMainTurrets = 0;
+            numMainBarrels = 0;
+            minMainTurrets = 0;
+            minMainBarrels = 0;
+
+            if (ship == null || ship.hull == null || ship.hull.data == null)
+                return false;
+
+            CountMainGuns(ship, out numMainTurrets, out numMainBarrels);
+            minMainTurrets = ship.hull.data.minMainTurrets;
+            minMainBarrels = ship.hull.data.minMainBarrels;
+
+            return (minMainTurrets > 0 && numMainTurrets < minMainTurrets) ||
+                (minMainBarrels > 0 && numMainBarrels < minMainBarrels);
+        }
+
+        internal static bool ShouldSkipVanillaMainGunCountValidation(Ship ship, out string reason)
+        {
+            reason = string.Empty;
+            if (!IgnoreShipgenMinMainGunCounts())
+                return false;
+
+            if (!HasMissingShipgenMinMainGunCounts(
+                ship,
+                out int numMainTurrets,
+                out int numMainBarrels,
+                out int minMainTurrets,
+                out int minMainBarrels))
+                return false;
+
+            if (TryGetUnmetCostReq(ship, "gun_main", out string gunMainDetail))
+            {
+                reason = $"required main gun stat still missing: {gunMainDetail}";
+                return false;
+            }
+
+            List<string> ignored = new();
+            if (minMainTurrets > 0 && numMainTurrets < minMainTurrets)
+                ignored.Add($"main turrets {numMainTurrets}/{minMainTurrets}");
+            if (minMainBarrels > 0 && numMainBarrels < minMainBarrels)
+                ignored.Add($"main barrels {numMainBarrels}/{minMainBarrels}");
+
+            reason = string.Join(", ", ignored);
+            return true;
+        }
+
+        internal static bool IsShipgenFastRetryBoundaryBucket(string bucket)
+        {
+            return bucket == "tower_main" ||
+                bucket == "tower_sec" ||
+                bucket == "funnel" ||
+                bucket == "torpedo" ||
+                bucket == "gun_main";
+        }
+
+        internal static bool ShouldFastRetryAfterRandPartBucket(Ship ship, string completedBucket, out string reason)
+        {
+            reason = string.Empty;
             if (!Config.ShipGenTweaks || (_GenerateRandomShipRoutine == null && _AddRandomPartsRoutine == null))
                 return false;
 
-            if (Config.Param("taf_shipgen_fast_retry_tower_before_main_guns", 1) == 0)
+            if (Config.Param("taf_shipgen_fast_retry_category_boundaries", 1) == 0)
                 return false;
 
             if (_FastRetriedTowerBeforeMainGun)
@@ -2790,20 +3027,84 @@ namespace TweaksAndFixes
             if (ship == null || ship.hull == null || ship.hull.data == null)
                 return false;
 
-            if (ship.hull.data.minMainTurrets <= 0 && ship.hull.data.minMainBarrels <= 0)
-                return false;
-
-            CountMainGuns(ship, out int numMainTurrets, out int numMainBarrels);
-            if (numMainTurrets != 0 || numMainBarrels != 0 || !HasMainTower(ship) || !HasCheckedMainGunCandidates())
-                return false;
-
             float minSeconds = Config.Param("taf_shipgen_fast_retry_min_seconds", 3f);
             if (_AttemptStartedAt > 0f && Time.realtimeSinceStartup - _AttemptStartedAt < minSeconds)
                 return false;
 
-            CountMainGunCandidateStats(out int seen, out int accepted);
-            int minCandidateChecks = Config.Param("taf_shipgen_fast_retry_main_gun_candidate_checks", 60);
-            return seen >= minCandidateChecks && accepted > 0;
+            if (completedBucket == "tower_main" && TryGetUnmetCostReq(ship, "tower_main", out string towerMainDetail))
+            {
+                reason = $"missing required main tower after tower_main bucket: {towerMainDetail}";
+                return true;
+            }
+
+            if (completedBucket == "tower_sec" && TryGetUnmetCostReq(ship, "tower_sec", out string towerSecDetail))
+            {
+                reason = $"missing required secondary tower after tower_sec bucket: {towerSecDetail}";
+                return true;
+            }
+
+            if (completedBucket == "funnel" && TryGetUnmetCostReq(ship, "funnel", out string funnelDetail))
+            {
+                reason = $"missing required funnel after funnel bucket: {funnelDetail}";
+                return true;
+            }
+
+            if (completedBucket == "torpedo" && TryGetUnmetCostReq(ship, "torpedo", out string torpedoDetail))
+            {
+                reason = $"missing required torpedo after torpedo bucket: {torpedoDetail}";
+                return true;
+            }
+
+            if (completedBucket == "gun_main")
+            {
+                if (TryGetUnmetCostReq(ship, "gun_main", out string gunMainDetail))
+                {
+                    reason = $"missing required main gun stat after gun_main bucket: {gunMainDetail}";
+                    return true;
+                }
+
+                if (!IgnoreShipgenMinMainGunCounts() && HasMissingShipgenMinMainGunCounts(
+                    ship,
+                    out int numMainTurrets,
+                    out int numMainBarrels,
+                    out int minMainTurrets,
+                    out int minMainBarrels))
+                {
+                    List<string> missing = new();
+                    if (minMainTurrets > 0 && numMainTurrets < minMainTurrets)
+                        missing.Add($"main turrets {numMainTurrets}/{minMainTurrets}");
+                    if (minMainBarrels > 0 && numMainBarrels < minMainBarrels)
+                        missing.Add($"main barrels {numMainBarrels}/{minMainBarrels}");
+                    reason = $"missing required main guns after gun_main bucket: {string.Join(", ", missing)}";
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        internal static bool ShouldFastRetryAtRandPartBoundary(Ship ship, RandPart currentRandPart, out string reason)
+        {
+            reason = string.Empty;
+            if (!Config.ShipGenTweaks || currentRandPart == null)
+                return false;
+
+            string currentBucket = ShipgenRandPartBucket(currentRandPart);
+            string previousBucket = _AttemptLastRandPartBucket;
+            if (string.IsNullOrWhiteSpace(previousBucket))
+            {
+                _AttemptLastRandPartBucket = currentBucket;
+                return false;
+            }
+
+            if (currentBucket == previousBucket)
+                return false;
+
+            _AttemptLastRandPartBucket = currentBucket;
+            if (!IsShipgenFastRetryBoundaryBucket(previousBucket))
+                return false;
+
+            return ShouldFastRetryAfterRandPartBucket(ship, previousBucket, out reason);
         }
 
         internal static void ResetShipgenAttemptGunLimiter(Ship ship)
@@ -3256,10 +3557,14 @@ namespace TweaksAndFixes
             if (!Config.ShipGenTweaks || ship == null || ship.hull == null || ship.hull.data == null)
                 return;
 
-            CountMainGuns(ship, out int numMainTurrets, out int numMainBarrels);
-            bool missingRequiredMainGuns =
-                (ship.hull.data.minMainTurrets > 0 && numMainTurrets < ship.hull.data.minMainTurrets) ||
-                (ship.hull.data.minMainBarrels > 0 && numMainBarrels < ship.hull.data.minMainBarrels);
+            bool missingRequiredMainGuns = IgnoreShipgenMinMainGunCounts()
+                ? TryGetUnmetCostReq(ship, "gun_main", out _)
+                : HasMissingShipgenMinMainGunCounts(
+                    ship,
+                    out int ignoredMainTurrets,
+                    out int ignoredMainBarrels,
+                    out int ignoredMinMainTurrets,
+                    out int ignoredMinMainBarrels);
             bool overweight = ship.Weight() > ship.Tonnage();
             bool invalidWeightOffset = !IsWithinShipgenInstabilityTolerance(ship);
             bool invalidParts = false;
@@ -3783,7 +4088,7 @@ namespace TweaksAndFixes
                     continue;
                 }
 
-                if (Config.Param("taf_shipgen_skip_barbettes", 1) != 0 && rp.type == "barbette")
+                if (Config.Param("taf_shipgen_skip_barbettes", 0) != 0 && rp.type == "barbette")
                 {
                     prunedBarbettes++;
                     continue;
@@ -4021,12 +4326,16 @@ namespace TweaksAndFixes
             _AttemptRandPartsSkipped.Clear();
             _AttemptCurrentRandPartName = string.Empty;
             _AttemptCurrentRandPartBucket = string.Empty;
+            _AttemptLastRandPartBucket = string.Empty;
+            _AttemptFastRetryReason = string.Empty;
             _AttemptCurrentRandPartStartedAt = 0f;
         }
 
         internal static void ResetShipgenPhaseStats()
         {
             _AttemptShipgenPhaseStats.Clear();
+            _LastGenerateRandomShipMoveNextEndedAt = 0f;
+            _LastAddRandomPartsMoveNextEndedAt = 0f;
         }
 
         internal static void RecordShipgenPhase(string name, float elapsed)
@@ -4062,10 +4371,13 @@ namespace TweaksAndFixes
                 11 => "validate_guns",
                 12 => "reduce_validate",
                 13 => "validate_cost_req",
-                14 => "validate_weight",
-                15 => "validate_tonnage",
-                16 => "retry_or_finish",
-                17 => "finish",
+                14 => "fill_tonnage",
+                15 => "weight_tonnage_stabilize",
+                16 => "post_fill_weight_check",
+                17 => "post_reduce_refresh",
+                18 => "post_refresh_fill_check",
+                19 => "final_update_hull_stats",
+                20 => "final_validate",
                 _ => $"state_{state}"
             };
         }
@@ -4197,7 +4509,7 @@ namespace TweaksAndFixes
         internal static bool ShouldSkipShipgenBarbetteRandPart(RandPart rp, out string reason)
         {
             reason = string.Empty;
-            if (!Config.ShipGenTweaks || rp == null || Config.Param("taf_shipgen_skip_barbettes", 1) == 0)
+            if (!Config.ShipGenTweaks || rp == null || Config.Param("taf_shipgen_skip_barbettes", 0) == 0)
                 return false;
 
             if (rp.type != "barbette")
@@ -4345,6 +4657,12 @@ namespace TweaksAndFixes
         internal static bool Prefix_AddedAdditionalTonnageUsage(Ship __instance)
         {
             float startedAt = Time.realtimeSinceStartup;
+            if (Config.ShipGenTweaks && _GenerateRandomShipRoutine != null && Config.Param("taf_shipgen_skip_intermediate_tonnage_fill", 1) != 0)
+            {
+                RecordShipgenPhase("call_added_tonnage_usage_skipped", Time.realtimeSinceStartup - startedAt);
+                return false;
+            }
+
             ShipM.AddedAdditionalTonnageUsage(__instance);
             RecordShipgenPhase("call_added_tonnage_usage", Time.realtimeSinceStartup - startedAt);
             return false;
@@ -4842,6 +5160,36 @@ namespace TweaksAndFixes
         }
     }
 
+    [HarmonyPatch(typeof(Ship._CreateRandom_d__571))]
+    internal class Patch_Ship_CreateRandom
+    {
+        [HarmonyPatch(nameof(Ship._CreateRandom_d__571.MoveNext))]
+        [HarmonyPrefix]
+        internal static bool Prefix_MoveNext(Ship._CreateRandom_d__571 __instance, ref bool __result, out Patch_Ship.CreateRandomTrace __state)
+        {
+            __state = Patch_Ship.CaptureCreateRandomTrace(__instance);
+            if (__instance.__1__state == 0 && !Patch_Ship.ShouldSkipCampaignPrestartCreateRandom())
+                Patch_Ship.LogCreateRandomBegin(__state);
+
+            if (__instance.__1__state != 0 || !Patch_Ship.ShouldSkipCampaignPrestartCreateRandom())
+                return true;
+
+            Patch_Ship.LogSkippedCampaignPrestartCreateRandom(__instance.shipType, __instance.player);
+            __instance.onDone?.Invoke(null);
+            __instance.__1__state = -2;
+            __result = false;
+            return false;
+        }
+
+        [HarmonyPatch(nameof(Ship._CreateRandom_d__571.MoveNext))]
+        [HarmonyPostfix]
+        internal static void Postfix_MoveNext(bool __result, Patch_Ship.CreateRandomTrace __state)
+        {
+            if (!__result)
+                Patch_Ship.LogCreateRandomEnd(__state);
+        }
+    }
+
     [HarmonyPatch(typeof(Ship._GenerateRandomShip_d__573))]
     internal class Patch_ShipGenRandom
     {
@@ -5176,7 +5524,11 @@ namespace TweaksAndFixes
         {
             var routine = Patch_Ship._GenerateRandomShipRoutine;
             if (Config.ShipGenTweaks && routine != null && routine._tryN_5__5 != routine._triesTotal_5__4)
+            {
+                float startedAt = Time.realtimeSinceStartup;
                 ShipM.FillUnusedShipgenTonnageWithArmor(routine.__4__this);
+                Patch_Ship.RecordShipgenPhase("call_final_armor_fill", Time.realtimeSinceStartup - startedAt);
+            }
 
             PrintShipgenEnd(Patch_Ship._GenerateRandomShipRoutine);
             shipGenActive = false;
@@ -5192,10 +5544,11 @@ namespace TweaksAndFixes
                 return flags;
             }
 
+            bool ignoreMinMainGunCounts = Patch_Ship.IgnoreShipgenMinMainGunCounts();
             Patch_Ship.CountMainGuns(ship, out int numMainTurrets, out int numMainBarrels);
 
-            bool hasMinMainTurrets = ship.hull.data.minMainTurrets == -1 || ship.hull.data.minMainTurrets <= numMainTurrets;
-            bool hasMinMainBarrels = ship.hull.data.minMainBarrels == -1 || ship.hull.data.minMainBarrels <= numMainBarrels;
+            bool hasMinMainTurrets = ship.hull.data.minMainTurrets <= 0 || ship.hull.data.minMainTurrets <= numMainTurrets;
+            bool hasMinMainBarrels = ship.hull.data.minMainBarrels <= 0 || ship.hull.data.minMainBarrels <= numMainBarrels;
 
             bool isValidCostReqParts = ship.IsValidCostReqParts(
                 out string isValidCostReqPartsReason,
@@ -5210,10 +5563,10 @@ namespace TweaksAndFixes
 
             bool isValidWeightOffset = ship.IsValidWeightOffset();
 
-            if (!hasMinMainTurrets)
+            if (!ignoreMinMainGunCounts && !hasMinMainTurrets)
                 flags.Add($"main turrets {numMainTurrets}/{ship.hull.data.minMainTurrets}");
 
-            if (!hasMinMainBarrels)
+            if (!ignoreMinMainGunCounts && !hasMinMainBarrels)
                 flags.Add($"main barrels {numMainBarrels}/{ship.hull.data.minMainBarrels}");
 
             if (!isValidCostReqParts)
@@ -5427,6 +5780,15 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_MoveNext(Ship._GenerateRandomShip_d__573 __instance, out GRSData __state, ref bool __result)
         {
+            float prefixStartedAt = Time.realtimeSinceStartup;
+            int startingState = __instance.__1__state;
+            if (Patch_Ship._LastGenerateRandomShipMoveNextEndedAt > 0f)
+            {
+                float gap = prefixStartedAt - Patch_Ship._LastGenerateRandomShipMoveNextEndedAt;
+                if (gap > 0f)
+                    Patch_Ship.RecordShipgenPhase($"grs_gap_before_state_{startingState:00}_{Patch_Ship.ShipgenGeneratorStateLabel(startingState)}", gap);
+            }
+
             Patch_Ship._GenerateRandomShipRoutine = __instance;
             Patch_Ship.MarkShipgenGunNormalizationActive();
             ApplyShipgenAttemptCap(__instance);
@@ -5437,9 +5799,9 @@ namespace TweaksAndFixes
 
             // So we know what state we started in.
             __state = new GRSData();
-            __state.state = __instance.__1__state;
+            __state.state = startingState;
             __state.tryNum = __instance._tryN_5__5;
-            __state.startedAt = Time.realtimeSinceStartup;
+            __state.startedAt = prefixStartedAt;
             Patch_Ship._GenerateShipState = __state.state;
             var ship = __instance.__4__this;
             var hd = ship.hull.data;
@@ -5451,6 +5813,17 @@ namespace TweaksAndFixes
             __state.draughtMin = hd.draughtMin;
             __state.draughtMax = hd.draughtMax;
             lastState = __state;
+
+            if (__state.state == 0 && Patch_Ship.ShouldSkipCampaignPrestartShipgen(ship))
+            {
+                Patch_Ship.LogSkippedCampaignPrestartShipgen(ship);
+                __instance.onDone?.Invoke(false, __instance._tryN_5__5, 0f);
+                __instance.__1__state = -2;
+                __result = false;
+                Patch_Ship._GenerateRandomShipRoutine = null;
+                Patch_Ship._GenerateShipState = -1;
+                return false;
+            }
 
             if (__instance.__1__state > 1)
             {
@@ -5473,6 +5846,20 @@ namespace TweaksAndFixes
                     Patch_Ship.ResetShipgenAttemptGunLimiter(ship);
                     Patch_Ship._FastRetriedTowerBeforeMainGun = false;
                     Patch_Ship.ForceMaxShipgenDisplacement(ship);
+                    break;
+
+                case 2:
+                    if (Config.Param("taf_shipgen_skip_vanilla_beam_draught_state", 1) != 0)
+                    {
+                        float skipStartedAt = Time.realtimeSinceStartup;
+                        Patch_Ship.ForceMaxShipgenDisplacement(ship);
+                        ship.RefreshHull(true);
+                        ship.UpdateHullStats();
+                        Patch_Ship.RecordShipgenPhase("call_vanilla_beam_draught_state_skipped", Time.realtimeSinceStartup - skipStartedAt);
+                        __instance.__1__state = 3;
+                        __result = true;
+                        return false;
+                    }
                     break;
 
                 case 6:
@@ -5526,19 +5913,31 @@ namespace TweaksAndFixes
                     // so we cache off their values at the callsite (the
                     // only one that sets them).
 
-                    ShipM.AdjustHullStats(
-                      ship,
-                      1,
-                      1f,
-                      null,
-                      Patch_BattleManager_d115._ShipGenInfo.customSpeed <= 0f,
-                      Patch_BattleManager_d115._ShipGenInfo.customArmor <= 0f,
-                      true,
-                      true,
-                      true,
-                      __instance.__8__1.rnd,
-                      Patch_BattleManager_d115._ShipGenInfo.limitArmor,
-                      __instance._savedSpeedMinValue_5__3);
+                    if (Config.Param("taf_shipgen_skip_post_parts_adjust_hull_stats", 1) != 0)
+                    {
+                        float turretArmorSyncStartedAt = Time.realtimeSinceStartup;
+                        ShipM.SyncShipgenTurretArmor(ship);
+                        Patch_Ship.RecordShipgenPhase("call_post_parts_turret_armor_sync", Time.realtimeSinceStartup - turretArmorSyncStartedAt);
+                        Patch_Ship.RecordShipgenPhase("call_post_parts_adjust_hull_stats_skipped", 0f);
+                    }
+                    else
+                    {
+                        float postPartsAdjustStartedAt = Time.realtimeSinceStartup;
+                        ShipM.AdjustHullStats(
+                          ship,
+                          1,
+                          1f,
+                          null,
+                          Patch_BattleManager_d115._ShipGenInfo.customSpeed <= 0f,
+                          Patch_BattleManager_d115._ShipGenInfo.customArmor <= 0f,
+                          true,
+                          true,
+                          true,
+                          __instance.__8__1.rnd,
+                          Patch_BattleManager_d115._ShipGenInfo.limitArmor,
+                          __instance._savedSpeedMinValue_5__3);
+                        Patch_Ship.RecordShipgenPhase("call_post_parts_adjust_hull_stats", Time.realtimeSinceStartup - postPartsAdjustStartedAt);
+                    }
 
                     ship.UpdateHullStats();
                     Patch_Ship.NormalizeShipgenSpeed(ship, true);
@@ -5549,8 +5948,32 @@ namespace TweaksAndFixes
                     foreach (var p in ship.parts)
                         Part.GunBarrelLength(p.data, ship, true);
 
-                    // We can't do the frame-wait thing easily, let's just advance straight-away
-                    __instance.__1__state = 11;
+                    // We can't do the frame-wait thing easily, let's just advance straight-away.
+                    // Vanilla state 11 rejects layouts that miss hull minMainTurrets/minMainBarrels;
+                    // keep that state only when the real gun_main requirement is still missing.
+                    if (Patch_Ship.ShouldSkipVanillaMainGunCountValidation(ship, out string ignoredMainGunCounts))
+                    {
+                        if (Patch_Ship.IsShipgenDebugEnabled() && !IsShipgenSummaryOnly())
+                            Melon<TweaksAndFixes>.Logger.Msg($"  Skipping vanilla main-gun count validation: {ignoredMainGunCounts}");
+                        Patch_Ship.RecordShipgenPhase("call_vanilla_validate_guns_skipped", 0f);
+                        __instance.__1__state = 12;
+                    }
+                    else
+                    {
+                        __instance.__1__state = 11;
+                    }
+                    break;
+
+                case 11:
+                    if (Patch_Ship.ShouldSkipVanillaMainGunCountValidation(ship, out string directIgnoredMainGunCounts))
+                    {
+                        if (Patch_Ship.IsShipgenDebugEnabled() && !IsShipgenSummaryOnly())
+                            Melon<TweaksAndFixes>.Logger.Msg($"  Skipping vanilla main-gun count validation: {directIgnoredMainGunCounts}");
+                        Patch_Ship.RecordShipgenPhase("call_vanilla_validate_guns_skipped", 0f);
+                        __instance.__1__state = 12;
+                        __result = true;
+                        return false;
+                    }
                     break;
             }
             return true;
@@ -5562,6 +5985,7 @@ namespace TweaksAndFixes
         {
             if (Config.ShipGenTweaks)
                 Patch_Ship.RecordShipgenPhase($"grs_state_{__state.state:00}_{Patch_Ship.ShipgenGeneratorStateLabel(__state.state)}", Time.realtimeSinceStartup - __state.startedAt);
+            Patch_Ship._LastGenerateRandomShipMoveNextEndedAt = Time.realtimeSinceStartup;
 
             var ship = __instance.__4__this;
             var hd = ship.hull.data;
@@ -5622,7 +6046,6 @@ namespace TweaksAndFixes
         }
     }
 
-
     [HarmonyPatch(typeof(Ship._AddRandomPartsNew_d__591))]
     internal class Patch_Ship_AddRandParts
     {
@@ -5636,15 +6059,27 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static void Prefix_MoveNext(Ship._AddRandomPartsNew_d__591 __instance, out ARPData __state)
         {
+            float prefixStartedAt = Time.realtimeSinceStartup;
+            int startingState = __instance.__1__state;
+            if (Patch_Ship._LastAddRandomPartsMoveNextEndedAt > 0f)
+            {
+                float gap = prefixStartedAt - Patch_Ship._LastAddRandomPartsMoveNextEndedAt;
+                if (gap > 0f)
+                    Patch_Ship.RecordShipgenPhase($"addparts_gap_before_state_{startingState:00}_{Patch_Ship.ShipgenAddPartsStateLabel(startingState)}", gap);
+            }
+
             Patch_Ship._AddRandomPartsRoutine = __instance;
             Patch_Ship.MarkShipgenGunNormalizationActive();
             __state = new ARPData
             {
-                state = __instance.__1__state,
-                startedAt = Time.realtimeSinceStartup
+                state = startingState,
+                startedAt = prefixStartedAt
             };
             if (__state.state == 0)
+            {
+                Patch_Ship._LastAddRandomPartsMoveNextEndedAt = 0f;
                 Patch_Ship.ResetShipgenRandPartAttemptStatsForAddPass();
+            }
             //Melon<TweaksAndFixes>.Logger.Msg($"Iteraing AddRandomPartsNew, state {__state}");
             //switch (__state)
             //{
@@ -5679,18 +6114,19 @@ namespace TweaksAndFixes
         internal static void Postfix_MoveNext(Ship._AddRandomPartsNew_d__591 __instance, ARPData __state, ref bool __result)
         {
             Patch_Ship.RecordShipgenPhase($"addparts_state_{__state.state:00}_{Patch_Ship.ShipgenAddPartsStateLabel(__state.state)}", Time.realtimeSinceStartup - __state.startedAt);
+            Patch_Ship._LastAddRandomPartsMoveNextEndedAt = Time.realtimeSinceStartup;
 
-            if (Patch_Ship.ShouldFastRetryTowerBeforeMainGun(__instance.__4__this))
+            if (__result && __state.state == 1 && Patch_Ship.ShouldFastRetryAtRandPartBoundary(__instance.__4__this, __instance.__8__1.randPart, out string fastRetryReason))
             {
                 Patch_Ship._FastRetriedTowerBeforeMainGun = true;
+                Patch_Ship._AttemptFastRetryReason = fastRetryReason;
                 __instance.__1__state = -2;
                 __result = false;
 
                 if (Patch_Ship.IsShipgenDebugEnabled())
                 {
-                    Patch_Ship.CountMainGunCandidateStats(out int seen, out int accepted);
                     float elapsed = Patch_Ship._AttemptStartedAt > 0f ? Time.realtimeSinceStartup - Patch_Ship._AttemptStartedAt : 0f;
-                    Melon<TweaksAndFixes>.Logger.Msg($"  Fast retry: main tower placed, no main guns after {seen} candidate checks ({accepted} accepted), elapsed={elapsed:F1}s.");
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Fast retry: {fastRetryReason}, elapsed={elapsed:F1}s.");
                 }
             }
 

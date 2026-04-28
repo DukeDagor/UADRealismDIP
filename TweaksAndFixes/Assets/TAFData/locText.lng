@@ -107,3 +107,5 @@ $TAF_Ui_MainMenu_ModUpdates;Mod Updates
 $TAF_Ui_MainMenu_ModUpdates_Tooltip;Check for mod updates.
 $TAF_Ui_MainMenu_TAFUpdates;TAF Updates
 $TAF_Ui_MainMenu_TAFUpdates_Tooltip;Check for Tweaks and Fixes updates.
+$TAF_Ui_NewGame_BlankSlate;Blank Slate
+$TAF_tooltip_campaign_new_game_fleet_creation;Choose "Fleet: Auto-Generated" to have your initial fleet created automatically. Choose "Fleet: Create Own" to design and build your custom initial fleet. Choose "Fleet: Blank Slate" to start the campaign without generated starting warships.

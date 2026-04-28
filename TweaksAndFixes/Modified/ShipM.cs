@@ -1112,6 +1112,54 @@ namespace TweaksAndFixes
             }
         }
 
+        public static bool SyncShipgenTurretArmor(Ship _this)
+        {
+            if (_this == null || _this.shipTurretArmor == null || _this.shipTurretArmor.Count == 0)
+                return false;
+
+            bool debug = Config.Param("taf_debug_shipgen_info", 0) != 0;
+            if (_this.armor == null)
+            {
+                if (debug)
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Turret armor sync skipped: armor=null, entries={_this.shipTurretArmor.Count}");
+                return false;
+            }
+
+            var gaInfo = GenArmorData.GetInfoFor(_this);
+            if (gaInfo == null)
+            {
+                if (debug)
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Turret armor sync skipped: no gen armor data for shipType={_this.shipType?.name ?? "?"}, entries={_this.shipTurretArmor.Count}");
+                return false;
+            }
+
+            int zeroBefore = CountAllZeroTurretArmorEntries(_this);
+            float armorLerp = gaInfo.EstimateLerp(_this);
+            bool changed = gaInfo.SyncTurretArmor(_this, armorLerp);
+            if (debug)
+            {
+                int zeroAfter = CountAllZeroTurretArmorEntries(_this);
+                Melon<TweaksAndFixes>.Logger.Msg(
+                    $"  Turret armor sync: entries={_this.shipTurretArmor.Count}, zeroAll {zeroBefore}->{zeroAfter}, changed={changed}, " +
+                    $"lerp={armorLerp:F3}, global side={_this.armor.GetValueOrDefault(Ship.A.TurretSide) / 25.4f:F2}in, " +
+                    $"top={_this.armor.GetValueOrDefault(Ship.A.TurretTop) / 25.4f:F2}in, barbette={_this.armor.GetValueOrDefault(Ship.A.Barbette) / 25.4f:F2}in");
+            }
+
+            return changed;
+        }
+
+        private static int CountAllZeroTurretArmorEntries(Ship ship)
+        {
+            int count = 0;
+            foreach (var ta in ship.shipTurretArmor)
+            {
+                if (ta.topTurretArmor <= 0f && ta.sideTurretArmor <= 0f && ta.barbetteArmor <= 0f)
+                    count++;
+            }
+
+            return count;
+        }
+
         public static void FillUnusedShipgenTonnageWithArmor(Ship _this)
         {
             if (!Config.ShipGenTweaks || _this == null || _this.shipType == null || _this.IsShipWhitoutArmor())

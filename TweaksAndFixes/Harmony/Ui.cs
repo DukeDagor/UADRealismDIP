@@ -116,6 +116,66 @@ namespace TweaksAndFixes
 
         // ########## MAIN MENU ########## //
 
+        [HarmonyPatch(nameof(Ui.CompleteLoadingScreen))]
+        [HarmonyPrefix]
+        internal static void Prefix_CompleteLoadingScreen(out Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            __state = Patch_CampaignController.BeginCampaignLoadMethodTiming(nameof(Ui.CompleteLoadingScreen), $"loadingScreen={SafeIsLoadingScreenActive()}");
+            Patch_CampaignController.EndCampaignLoadMethodPrefix(ref __state);
+        }
+
+        [HarmonyPatch(nameof(Ui.CompleteLoadingScreen))]
+        [HarmonyPostfix]
+        internal static void Postfix_CompleteLoadingScreen(Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            __state.Details = $"loadingScreen={SafeIsLoadingScreenActive()}";
+            Patch_CampaignController.EndCampaignLoadMethodTiming(__state);
+        }
+
+        [HarmonyPatch(nameof(Ui.HideLoadingScreen))]
+        [HarmonyPrefix]
+        internal static void Prefix_HideLoadingScreen(out Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            __state = Patch_CampaignController.BeginCampaignLoadMethodTiming(nameof(Ui.HideLoadingScreen), $"loadingScreen={SafeIsLoadingScreenActive()}");
+            Patch_CampaignController.EndCampaignLoadMethodPrefix(ref __state);
+        }
+
+        [HarmonyPatch(nameof(Ui.HideLoadingScreen))]
+        [HarmonyPostfix]
+        internal static void Postfix_HideLoadingScreen(Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            __state.Details = $"loadingScreen={SafeIsLoadingScreenActive()}";
+            Patch_CampaignController.EndCampaignLoadMethodTiming(__state);
+        }
+
+        [HarmonyPatch(nameof(Ui.OnLoadingScreenHide))]
+        [HarmonyPrefix]
+        internal static void Prefix_OnLoadingScreenHide(out Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            __state = Patch_CampaignController.BeginCampaignLoadMethodTiming(nameof(Ui.OnLoadingScreenHide), $"loadingScreen={SafeIsLoadingScreenActive()}");
+            Patch_CampaignController.EndCampaignLoadMethodPrefix(ref __state);
+        }
+
+        [HarmonyPatch(nameof(Ui.OnLoadingScreenHide))]
+        [HarmonyPostfix]
+        internal static void Postfix_OnLoadingScreenHide(Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            __state.Details = $"loadingScreen={SafeIsLoadingScreenActive()}";
+            Patch_CampaignController.EndCampaignLoadMethodTiming(__state);
+        }
+
+        private static bool SafeIsLoadingScreenActive()
+        {
+            try
+            {
+                return GameManager.IsLoadingScreenActive;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         // public static bool hasLoadedPredefsAsync = false;
         // 
         // [HarmonyPatch(nameof(Ui.HideLoadingScreen))]
@@ -440,6 +500,7 @@ namespace TweaksAndFixes
             UiM.UpdateModifications();
             Patch_GameManager.Update();
             CampaignControllerM.Update();
+            Patch_CampaignController.UpdateAiDesignService();
             ConstructorM.Update();
             CheatMenu.UpdateCheatButtonInteractable();
 
@@ -2491,11 +2552,45 @@ namespace TweaksAndFixes
         }
     }
 
+    [HarmonyPatch(typeof(MissionsWindowUI))]
+    internal class Patch_MissionsWindowUI
+    {
+        [HarmonyPatch(nameof(MissionsWindowUI.UpdateInfo))]
+        [HarmonyPrefix]
+        internal static void Prefix_UpdateInfo(out Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            __state = Patch_CampaignController.BeginCampaignLoadMethodTiming(nameof(MissionsWindowUI.UpdateInfo));
+            Patch_CampaignController.EndCampaignLoadMethodPrefix(ref __state);
+        }
+
+        [HarmonyPatch(nameof(MissionsWindowUI.UpdateInfo))]
+        [HarmonyPostfix]
+        internal static void Postfix_UpdateInfo(Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            Patch_CampaignController.EndCampaignLoadMethodTiming(__state);
+        }
+    }
+
     [HarmonyPatch(typeof(Cam))]
     internal class Patch_Cam
     {
         public static bool overrideCamBounds = false;
         public static Vector3 camBounds = Vector3.zero;
+
+        [HarmonyPatch(nameof(Cam.CenterCampaignCamera))]
+        [HarmonyPrefix]
+        internal static void Prefix_CenterCampaignCamera(out Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            __state = Patch_CampaignController.BeginCampaignLoadMethodTiming(nameof(Cam.CenterCampaignCamera));
+            Patch_CampaignController.EndCampaignLoadMethodPrefix(ref __state);
+        }
+
+        [HarmonyPatch(nameof(Cam.CenterCampaignCamera))]
+        [HarmonyPostfix]
+        internal static void Postfix_CenterCampaignCamera(Patch_CampaignController.CampaignLoadMethodTimingFrame __state)
+        {
+            Patch_CampaignController.EndCampaignLoadMethodTiming(__state);
+        }
 
         [HarmonyPatch(nameof(Cam.LookAtPointEx))]
         [HarmonyPrefix]

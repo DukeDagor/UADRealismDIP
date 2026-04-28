@@ -953,7 +953,7 @@ namespace TweaksAndFixes
 
         public static void ApplyMainMenuModifications()
         {
-            G.ui.NewGameWindow.ChangeFleetCreation(1);
+            Patch_CampaignNewGame.SetFleetCreationOption(G.ui.NewGameWindow, Patch_CampaignNewGame.FleetCreationCreateOwn);
             G.ui.NewGameWindow.ChangeDesignUsage(1);
             G.ui.NewGameWindow.ChangeSharedDesigns(1);
         }
