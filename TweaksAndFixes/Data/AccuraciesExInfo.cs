@@ -332,6 +332,9 @@ namespace TweaksAndFixes.Data
         // Load CSV with comment lines and a default line.
         public static void LoadData()
         {
+            if (Patch_Ship.ShouldBypassShipgenDataOverride("accuraciesEx"))
+                return;
+
             FilePath fp = Config._AccuraciesExFile;
             if (!fp.Exists)
             {

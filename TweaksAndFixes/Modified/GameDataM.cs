@@ -41,6 +41,12 @@ namespace TweaksAndFixes
 
         public static string? GetText(string name)
         {
+            if (Patch_Ship.ShouldBypassShipgenDataOverride(name))
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Using built-in vanilla asset {name}; bypassing TAF/DIP shipgen data override.");
+                return null;
+            }
+
             string filename = name + ".csv";
             string fileOver = name + "_override.csv";
             string? text = Serializer.CSV.GetTextFromFile(filename);

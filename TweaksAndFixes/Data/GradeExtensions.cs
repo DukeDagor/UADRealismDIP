@@ -71,7 +71,7 @@ namespace TweaksAndFixes
 
             public static void LoadData()
             {
-                var text = Serializer.CSV.GetTextFromFileOrAsset("guns");
+                var text = Patch_Ship.ShouldBypassShipgenDataOverride("guns") ? null : Serializer.CSV.GetTextFromFileOrAsset("guns");
                 if (text != null)
                 {
                     List<GunDataExtension> list = new List<GunDataExtension>();
@@ -124,7 +124,7 @@ namespace TweaksAndFixes
 
             public static void LoadData()
             {
-                var text = Serializer.CSV.GetTextFromFileOrAsset("partModels");
+                var text = Patch_Ship.ShouldBypassShipgenDataOverride("partModels") ? null : Serializer.CSV.GetTextFromFileOrAsset("partModels");
                 if (text != null)
                 {
                     List<PartModelExtension> list = new List<PartModelExtension>();

@@ -514,6 +514,7 @@ namespace TweaksAndFixes
             // Melon<TweaksAndFixes>.Logger.Error($"{ship == null} : {GameManager.Instance == null}");
 
             if (part == null) return;
+            if (Patch_Ship.UseVanillaShipgenBaseline()) return;
 
             if (GameManager.Instance.CurrentState == GameManager.GameState.Battle
                 || Patch_GameManager.CurrentSubGameState == Patch_GameManager.SubGameState.LoadingPredefinedDesigns)
@@ -552,6 +553,9 @@ namespace TweaksAndFixes
         // Load CSV with comment lines and a default line.
         public static void LoadData()
         {
+            if (Patch_Ship.ShouldBypassShipgenDataOverride("mounts"))
+                return;
+
             BaseGamePartModelData.LoadData();
 
             FilePath fp = Config._MountsFile;
@@ -622,6 +626,7 @@ namespace TweaksAndFixes
             public static void LoadData()
             {
                 if (loaded) return;
+                if (Patch_Ship.ShouldBypassShipgenDataOverride("baseGamePartModelData")) return;
 
                 FilePath fp = Config._BaseGamePartModelDataFile;
                 if (!fp.Exists)

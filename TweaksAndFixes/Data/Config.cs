@@ -229,7 +229,7 @@ namespace TweaksAndFixes
         [ConfigParse("Ports/Provinces Overriding", "override_map")]
         public static OverrideMapOptions OverrideMap = OverrideMapOptions.Disabled;
         [ConfigParse("Ship Autodesign Tweaks", "shipgen_tweaks")]
-        public static bool ShipGenTweaks = true;
+        public static bool ShipGenTweaks = false;
         [ConfigParse("Alliance Behavior Tweaks", "alliance_changes")]
         public static bool AllianceTweaks = false;
         [ConfigParse("Use Non-Home Population for Crew", "crew_pool_colony_pop_ratio")]
@@ -304,6 +304,12 @@ namespace TweaksAndFixes
                 }
                 if (shouldLog)
                     Melon<TweaksAndFixes>.Logger.Msg($"{attrib._name}: {(f.FieldType.IsEnum ? f.GetValue(null) : ((bool)(f.GetValue(null)) ? "Enabled" : "Disabled"))}");
+            }
+
+            if (Patch_Ship.UseVanillaShipgenBaseline() && ShipGenTweaks)
+            {
+                ShipGenTweaks = false;
+                Melon<TweaksAndFixes>.Logger.Msg("Ship Autodesign Tweaks: Forced Disabled by vanilla shipgen baseline.");
             }
         }
 

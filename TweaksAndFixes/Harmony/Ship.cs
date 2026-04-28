@@ -102,6 +102,134 @@ namespace TweaksAndFixes
         private static int _SkippedCampaignPrestartShipgenCount = 0;
         private static int _SkippedCampaignPrestartCreateRandomCount = 0;
 
+        private static int ParamSafe(string name, int defValue = 0)
+        {
+            try
+            {
+                return Config.Param(name, defValue);
+            }
+            catch (NullReferenceException)
+            {
+            }
+
+            try
+            {
+                string path = Path.Combine(Config._BasePath, "params.csv");
+                if (!File.Exists(path))
+                    return defValue;
+
+                foreach (string line in File.ReadLines(path))
+                {
+                    if (!line.StartsWith(name + ","))
+                        continue;
+
+                    string[] split = line.Split(',');
+                    if (split.Length > 1 && int.TryParse(split[1], out int value))
+                        return value;
+
+                    return defValue;
+                }
+            }
+            catch
+            {
+            }
+
+            return defValue;
+        }
+
+        private static string? ParamStringSafe(string name, string? defValue = null)
+        {
+            try
+            {
+                return Config.ParamS(name, defValue);
+            }
+            catch (NullReferenceException)
+            {
+            }
+
+            try
+            {
+                string path = Path.Combine(Config._BasePath, "params.csv");
+                if (!File.Exists(path))
+                    return defValue;
+
+                foreach (string line in File.ReadLines(path))
+                {
+                    if (!line.StartsWith(name + ","))
+                        continue;
+
+                    string[] split = line.Split(',');
+                    if (split.Length > 6 && !string.IsNullOrWhiteSpace(split[6]))
+                        return split[6].Trim().Trim('"');
+
+                    return defValue;
+                }
+            }
+            catch
+            {
+            }
+
+            return defValue;
+        }
+
+        internal static bool UseVanillaShipgenBaseline()
+        {
+            return ParamSafe("taf_shipgen_vanilla_baseline", 1) != 0;
+        }
+
+        internal static bool UseTafShipgenTweaks()
+        {
+            return Config.ShipGenTweaks && !UseVanillaShipgenBaseline();
+        }
+
+        internal static bool IsVanillaShipgenBaselineActive()
+        {
+            return UseVanillaShipgenBaseline()
+                && (GameManager.IsAutodesignActive || Patch_ShipGenRandom.shipGenActive || _GenerateRandomShipRoutine != null || _AddRandomPartsRoutine != null);
+        }
+
+        internal static int VanillaShipgenDataTier()
+        {
+            return ParamSafe("taf_shipgen_vanilla_data_tier", 0);
+        }
+
+        internal static bool ShouldBypassShipgenDataOverride(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return false;
+
+            name = name.Replace(".csv", string.Empty);
+
+            string? skipList = ParamStringSafe("taf_shipgen_vanilla_data_files", "randParts|randPartsRefit|mounts");
+            if (!string.IsNullOrWhiteSpace(skipList))
+            {
+                foreach (string item in skipList.Split(new[] { '|', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string skipName = item.Trim().Replace(".csv", string.Empty);
+                    if (string.Equals(skipName, name, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+            }
+
+            int tier = VanillaShipgenDataTier();
+            if (tier <= 0)
+                return false;
+
+            if (tier >= 1 && (name == "randParts" || name == "randPartsRefit"))
+                return true;
+
+            if (tier >= 2 && (name == "shipTypes" || name == "parts"))
+                return true;
+
+            if (tier >= 3 && (name == "partModels" || name == "components" || name == "guns" || name == "torpedoTubes" || name == "technologies" || name == "techGroups" || name == "techTypes"))
+                return true;
+
+            if (tier >= 4 && (name == "stats" || name == "accuracies" || name == "penetration" || name == "accuraciesEx" || name == "genarmordata" || name == "genArmorDefaults" || name == "mounts" || name == "baseGamePartModelData"))
+                return true;
+
+            return false;
+        }
+
         internal static bool ShouldUseBlankSlateCampaignStart()
         {
             return Patch_CampaignNewGame.BlankSlateCampaignSelected && Config.Param("taf_campaign_skip_prewarm_shipbuilding", 1) != 0;
@@ -405,7 +533,7 @@ namespace TweaksAndFixes
 
         internal static bool ShouldUseMaxShipgenDisplacement(Ship ship)
         {
-            if (!Config.ShipGenTweaks || ship == null || ship.hull == null || ship.hull.data == null)
+            if (!UseTafShipgenTweaks() || ship == null || ship.hull == null || ship.hull.data == null)
                 return false;
 
             return true;
@@ -413,7 +541,7 @@ namespace TweaksAndFixes
 
         internal static bool ShouldUseShipgenGeometryDefaults(Ship ship)
         {
-            if (!Config.ShipGenTweaks || ship == null || ship.hull == null || ship.hull.data == null)
+            if (!UseTafShipgenTweaks() || ship == null || ship.hull == null || ship.hull.data == null)
                 return false;
 
             return true;
@@ -445,7 +573,7 @@ namespace TweaksAndFixes
 
         internal static ShipgenHullProfile ShipgenProfileForShip(Ship ship = null)
         {
-            if (!Config.ShipGenTweaks)
+            if (!UseTafShipgenTweaks())
                 return null;
 
             ship ??= CurrentShipgenShip();
@@ -554,7 +682,7 @@ namespace TweaksAndFixes
 
         internal static bool ShouldUseSpecialTbShipgen(Ship ship)
         {
-            if (!Config.ShipGenTweaks || ship == null || ship.hull == null || ship.hull.data == null || ship.shipType == null)
+            if (!UseTafShipgenTweaks() || ship == null || ship.hull == null || ship.hull.data == null || ship.shipType == null)
                 return false;
 
             if (Config.Param("taf_shipgen_special_tb_generator_enabled", 0) == 0)
@@ -4630,6 +4758,9 @@ namespace TweaksAndFixes
         [HarmonyPatch(nameof(Ship.TechGunGrade))]
         internal static void Postfix_TechGunGrade(Ship __instance, PartData gun, bool requireValid, ref int __result)
         {
+            if (IsVanillaShipgenBaselineActive())
+                return;
+
             // Let's hope the gun grade cache is only used in this method!
             // If it's used elsewhere, we won't catch that case. The reason
             // is that we can't patch the cache if we want to use it at all,
@@ -4643,6 +4774,9 @@ namespace TweaksAndFixes
         [HarmonyPatch(nameof(Ship.TechTorpedoGrade))]
         internal static void Postfix_TechTorpedoGrade(Ship __instance, PartData torpedo, bool requireValid, ref int __result)
         {
+            if (IsVanillaShipgenBaselineActive())
+                return;
+
             // Let's hope the torp grade cache is only used in this method!
             // If it's used elsewhere, we won't catch that case. The reason
             // is that we can't patch the cache if we want to use it at all,
@@ -4656,6 +4790,9 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_AddedAdditionalTonnageUsage(Ship __instance)
         {
+            if (IsVanillaShipgenBaselineActive())
+                return true;
+
             float startedAt = Time.realtimeSinceStartup;
             if (Config.ShipGenTweaks && _GenerateRandomShipRoutine != null && Config.Param("taf_shipgen_skip_intermediate_tonnage_fill", 1) != 0)
             {
@@ -4672,6 +4809,9 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_ReduceWeightByReducingCharacteristics(Ship __instance, Il2CppSystem.Random rnd, float tryN, float triesTotal, float randArmorRatio = 0, float speedLimit = 0)
         {
+            if (IsVanillaShipgenBaselineActive())
+                return true;
+
             float startedAt = Time.realtimeSinceStartup;
             float oldTempGoodWeight = __instance.tempGoodWeight;
             bool adjustedTempGoodWeight = false;
@@ -4703,6 +4843,9 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_GenerateArmor(float armorMaximal, Ship shipHint, ref Il2CppSystem.Collections.Generic.Dictionary<Ship.A, float> __result)
         {
+            if (IsVanillaShipgenBaselineActive())
+                return true;
+
             __result = ShipM.GenerateArmorNew(armorMaximal, shipHint);
             return false;
         }
@@ -4818,6 +4961,9 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_AddShipTurretArmor(Part part)
         {
+            if (UseVanillaShipgenBaseline())
+                return;
+
             if (_AddRandomPartsRoutine == null || !_GenGunInfo.isLimited || UpdateRPGunCacheOrSkip(_AddRandomPartsRoutine.__8__1.randPart))
                 return;
 
@@ -5046,7 +5192,7 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_GetComponentsToInstall_b__565_3(ComponentData c, ref float __result)
         {
-            if (Patch_Ship._GenerateRandomShipRoutine == null)
+            if (Patch_Ship.UseVanillaShipgenBaseline() || Patch_Ship._GenerateRandomShipRoutine == null)
                 return true;
 
             __result = ComponentDataM.GetWeight(c, Patch_Ship._GenerateRandomShipRoutine.__4__this.shipType);
@@ -5067,6 +5213,9 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_b0(Ship.__c__DisplayClass590_0 __instance, PartData a, ref bool __result)
         {
+            if (Patch_Ship.UseVanillaShipgenBaseline())
+                return true;
+
             Patch_Ship.TrackShipgenRandPartStarted(__instance.randPart);
             var stats = Patch_Ship.CandidateStatsFor(__instance.randPart);
             stats.seen++;
@@ -5141,6 +5290,9 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_b0(Ship.__c__DisplayClass590_0 __instance, PartData a, bool __result)
         {
+            if (Patch_Ship.UseVanillaShipgenBaseline())
+                return;
+
             var stats = Patch_Ship.CandidateStatsFor(__instance.randPart);
             if (__result)
             {
@@ -5213,6 +5365,7 @@ namespace TweaksAndFixes
         public static GRSData lastState = new();
 
         public static bool shipGenActive = false;
+        private static bool _LoggedVanillaBaselineActive = false;
 
         public static float Reratio(float v, float a1, float a2, float b1, float b2)
         {
@@ -5516,12 +5669,29 @@ namespace TweaksAndFixes
 
         public static void OnShipgenStart()
         {
+            if (Patch_Ship.UseVanillaShipgenBaseline())
+            {
+                if (!_LoggedVanillaBaselineActive)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Vanilla shipgen baseline active: bypassing TAF shipgen override code. data_tier={Patch_Ship.VanillaShipgenDataTier()}.");
+                    _LoggedVanillaBaselineActive = true;
+                }
+                shipGenActive = true;
+                return;
+            }
+
             PrintShipgenStart(Patch_Ship._GenerateRandomShipRoutine, Patch_Ship._GenerateRandomShipRoutine.__4__this);
             shipGenActive = true;
         }
 
         public static void OnShipgenEnd()
         {
+            if (Patch_Ship.UseVanillaShipgenBaseline())
+            {
+                shipGenActive = false;
+                return;
+            }
+
             var routine = Patch_Ship._GenerateRandomShipRoutine;
             if (Config.ShipGenTweaks && routine != null && routine._tryN_5__5 != routine._triesTotal_5__4)
             {
@@ -5782,6 +5952,28 @@ namespace TweaksAndFixes
         {
             float prefixStartedAt = Time.realtimeSinceStartup;
             int startingState = __instance.__1__state;
+            __state = new GRSData
+            {
+                state = startingState,
+                tryNum = __instance._tryN_5__5,
+                startedAt = prefixStartedAt
+            };
+
+            if (Patch_Ship.UseVanillaShipgenBaseline())
+            {
+                var vanillaShip = __instance.__4__this;
+                if (startingState == 0 && Patch_Ship.ShouldSkipCampaignPrestartShipgen(vanillaShip))
+                {
+                    Patch_Ship.LogSkippedCampaignPrestartShipgen(vanillaShip);
+                    __instance.onDone?.Invoke(false, __instance._tryN_5__5, 0f);
+                    __instance.__1__state = -2;
+                    __result = false;
+                    return false;
+                }
+
+                return true;
+            }
+
             if (Patch_Ship._LastGenerateRandomShipMoveNextEndedAt > 0f)
             {
                 float gap = prefixStartedAt - Patch_Ship._LastGenerateRandomShipMoveNextEndedAt;
@@ -5798,10 +5990,6 @@ namespace TweaksAndFixes
             //   Add pause/step buttons
 
             // So we know what state we started in.
-            __state = new GRSData();
-            __state.state = startingState;
-            __state.tryNum = __instance._tryN_5__5;
-            __state.startedAt = prefixStartedAt;
             Patch_Ship._GenerateShipState = __state.state;
             var ship = __instance.__4__this;
             var hd = ship.hull.data;
@@ -5983,6 +6171,9 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_MoveNext(Ship._GenerateRandomShip_d__573 __instance, GRSData __state, ref bool __result)
         {
+            if (Patch_Ship.UseVanillaShipgenBaseline())
+                return;
+
             if (Config.ShipGenTweaks)
                 Patch_Ship.RecordShipgenPhase($"grs_state_{__state.state:00}_{Patch_Ship.ShipgenGeneratorStateLabel(__state.state)}", Time.realtimeSinceStartup - __state.startedAt);
             Patch_Ship._LastGenerateRandomShipMoveNextEndedAt = Time.realtimeSinceStartup;
@@ -6061,6 +6252,15 @@ namespace TweaksAndFixes
         {
             float prefixStartedAt = Time.realtimeSinceStartup;
             int startingState = __instance.__1__state;
+            __state = new ARPData
+            {
+                state = startingState,
+                startedAt = prefixStartedAt
+            };
+
+            if (Patch_Ship.UseVanillaShipgenBaseline())
+                return;
+
             if (Patch_Ship._LastAddRandomPartsMoveNextEndedAt > 0f)
             {
                 float gap = prefixStartedAt - Patch_Ship._LastAddRandomPartsMoveNextEndedAt;
@@ -6070,11 +6270,6 @@ namespace TweaksAndFixes
 
             Patch_Ship._AddRandomPartsRoutine = __instance;
             Patch_Ship.MarkShipgenGunNormalizationActive();
-            __state = new ARPData
-            {
-                state = startingState,
-                startedAt = prefixStartedAt
-            };
             if (__state.state == 0)
             {
                 Patch_Ship._LastAddRandomPartsMoveNextEndedAt = 0f;
@@ -6113,6 +6308,9 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_MoveNext(Ship._AddRandomPartsNew_d__591 __instance, ARPData __state, ref bool __result)
         {
+            if (Patch_Ship.UseVanillaShipgenBaseline())
+                return;
+
             Patch_Ship.RecordShipgenPhase($"addparts_state_{__state.state:00}_{Patch_Ship.ShipgenAddPartsStateLabel(__state.state)}", Time.realtimeSinceStartup - __state.startedAt);
             Patch_Ship._LastAddRandomPartsMoveNextEndedAt = Time.realtimeSinceStartup;
 

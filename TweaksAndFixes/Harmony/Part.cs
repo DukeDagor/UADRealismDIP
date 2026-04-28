@@ -807,6 +807,7 @@ namespace TweaksAndFixes
         internal static bool Prefix(Part __instance, PartData data, Ship ship, bool partIsReal, ref string denyReason, ref bool __result)
         {
             if (!GameManager.IsAutodesignActive && !ForceCheck) return true;
+            if (Patch_Ship.UseVanillaShipgenBaseline() && GameManager.IsAutodesignActive && !ForceCheck) return true;
 
             if (data.isGun)
             {
@@ -1034,6 +1035,9 @@ namespace TweaksAndFixes
 
         internal static void Postfix(Part __instance, PartData data, Ship ship, bool partIsReal, string denyReason, bool __result)
         {
+            if (Patch_Ship.UseVanillaShipgenBaseline())
+                return;
+
             if (__result)
                 return;
 

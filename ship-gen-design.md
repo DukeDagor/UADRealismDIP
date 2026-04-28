@@ -81,7 +81,7 @@ There are two practical levels:
    - Add a data-load bypass for the shipgen-critical CSVs:
 
      ```csv
-     taf_shipgen_vanilla_data,1
+     taf_shipgen_vanilla_data_tier,1
      ```
 
    - When this is enabled, `GameDataM.GetText(name)` should return `null` for selected shipgen data files so `GameData.LoadInfo.process` uses the built-in Unity asset instead of the mod CSV.
@@ -205,6 +205,17 @@ if (ShouldBypassShipgenDataOverride(name))
 
 For a stronger test, extend the bypass to `parts` and `shipTypes`, but that should be treated as a broader compatibility experiment because those files affect constructor behavior, tech availability, hull metadata, and other non-shipgen systems too.
 
+Implemented baseline controls:
+
+- `taf_shipgen_vanilla_baseline`
+  - Default `0`.
+  - When enabled, major shipgen-specific TAF Harmony overrides pass through to vanilla while autodesign is active.
+  - Guarded paths include the random-ship coroutine mutation layer, add-random-parts fast retry/tracking layer, TAF armor generation replacement, TAF weight reduction replacement, TAF unused-tonnage fill replacement, component weight override, randpart candidate filters, autodesign `Part.CanPlaceGeneric` `shipgen_limit(...)`/funnel constraints, and final armor fill.
+- `taf_shipgen_vanilla_data_tier`
+  - Default `0`.
+  - Tiered bypass in `GameDataM.GetText(name)` returns `null` for selected data names so the vanilla built-in Unity asset loads instead of the mod CSV.
+  - Direct TAF helper loaders are also bypassed at tier 4 for `accuraciesEx`, `genarmordata`, `mounts`, and `baseGamePartModelData`.
+
 The master switch should make these TAF/shipgen override paths pass-through:
 
 - `Patch_ShipGenRandom.OnShipgenStart()`
@@ -303,8 +314,8 @@ Suggested first comparison scenarios:
 
 Current source marker observed:
 
-- `TAF-RC7 GG Patch gg171`
-- `3.20.3-gg171`
+- `TAF-RC7 GG Patch gg173`
+- `3.20.3-gg173`
 
 Main sources used:
 

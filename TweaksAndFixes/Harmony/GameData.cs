@@ -100,13 +100,28 @@ namespace TweaksAndFixes
         internal static void Postfix_PostProcessAll(GameData __instance)
         {
             Debug.Log("Finished internal PostProcessAll");
-            foreach (var rp in __instance.randParts.Values)
+            if (!Patch_Ship.ShouldBypassShipgenDataOverride("randParts"))
             {
-                FixRandPart(rp);
+                foreach (var rp in __instance.randParts.Values)
+                {
+                    FixRandPart(rp);
+                }
             }
-            foreach (var rp in __instance.randPartsRefit.Values)
+            else
             {
-                FixRandPart(rp);
+                Melon<TweaksAndFixes>.Logger.Msg("Skipping TAF randParts postprocess fix for vanilla shipgen baseline.");
+            }
+
+            if (!Patch_Ship.ShouldBypassShipgenDataOverride("randPartsRefit"))
+            {
+                foreach (var rp in __instance.randPartsRefit.Values)
+                {
+                    FixRandPart(rp);
+                }
+            }
+            else
+            {
+                Melon<TweaksAndFixes>.Logger.Msg("Skipping TAF randPartsRefit postprocess fix for vanilla shipgen baseline.");
             }
 
             foreach (var data in __instance.parts.Values)

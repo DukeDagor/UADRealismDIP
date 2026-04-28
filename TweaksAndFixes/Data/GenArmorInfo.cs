@@ -76,6 +76,9 @@ namespace TweaksAndFixes
 
         public static void LoadData()
         {
+            if (Patch_Ship.ShouldBypassShipgenDataOverride("genarmordata"))
+                return;
+
             FilePath fp = Config._GenArmorDataFile;
             if (!fp.Exists)
             {
