@@ -165,6 +165,10 @@ For this installed DIP/TAF setup, the active game-side parameter file is:
 
 Do **not** assume the live file is named `params_override.csv`. The repo source default file `TweaksAndFixes/Default_Files/TAF_Files/params_override.csv` is useful for adding new defaults, but when the user asks to enable or change a runtime flag in the game folder, edit the live `Mods\params.csv` file.
 
+Never copy `TweaksAndFixes/Default_Files/TAF_Files/params_override.csv` directly to live `Mods\params.csv`. It is only the TAF override fragment, not the full game parameter table. Replacing live `params.csv` with it removes base rows such as `ai_difficulty_normal_income_multiplier` and can break campaign loading in `CampaignController.PrepareProvinces` with `KeyNotFoundException`.
+
+Live `Mods\params.csv` should normally be a full-size table, roughly 80-90 KB in this setup. If it is about 20-25 KB after an edit, it is probably the override fragment and must be repaired from a timestamped full backup before testing the game.
+
 Before editing live params, make a timestamped backup, then change only the requested row. If a newly added `taf_*` key is missing from live `params.csv`, insert it near the related TAF rows. Example from `gg138`:
 
 ```csv

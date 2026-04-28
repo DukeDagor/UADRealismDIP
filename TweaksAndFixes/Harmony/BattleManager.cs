@@ -94,6 +94,9 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_LeaveBattle()
         {
+            StrikeCommand.OnBattleEnded();
+            StrikeCommandUi.Hide();
+
             if (GameManager.Instance.isCampaign)
             {
                 CampaignControllerM.RequestForcedGameSave = true;

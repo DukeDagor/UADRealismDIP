@@ -76,6 +76,11 @@ namespace TweaksAndFixes
             _Orders.Clear();
         }
 
+        internal static void OnBattleEnded()
+        {
+            ClearAll();
+        }
+
         internal static void ToggleFromSelectedDivision()
         {
             Division source = SelectedDivision();
@@ -362,8 +367,7 @@ namespace TweaksAndFixes
         {
             if (!GameManager.IsBattle)
             {
-                if (_Root != null)
-                    _Root.SetActive(false);
+                Hide();
                 return;
             }
 
@@ -459,6 +463,12 @@ namespace TweaksAndFixes
                 return "Strike command active.\nClick or press K to cancel. Manual movement also cancels.";
 
             return "Toggle torpedo strike for the selected division.\nApproaches the current weapon target, then withdraws after reaching launch range.\nHotkey: K";
+        }
+
+        internal static void Hide()
+        {
+            if (_Root != null)
+                _Root.SetActive(false);
         }
     }
 

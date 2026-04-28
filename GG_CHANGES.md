@@ -79,6 +79,12 @@ Also - all the changes were generated using Codex - I didn't type a single chara
 
 ### Combat
 
+- Modified auto shell selection logic
+  - This is actually a pretty massive change because of how DIP makes AP superior to HE, but AI code isn't aware of it
+  - Until now that is
+  - Expect to get quite a bit more damage from AI than before especially if your armor isn't up to par
+  - On the other hand, expect to deal more damage as well 
+
 - Experemntal TB AI mode
   - More like kamikaze mode
 

@@ -2,10 +2,309 @@
 
 This is a working map for campaign/random ship design generation in this checkout. It is grounded in the decompiled game shape first, then in the current TAF/DIP Harmony patches.
 
+## Goal
+
+The main goal of the current `gg` work is to make campaign ship design generation fast and reliable enough that the campaign remains playable.
+
+The problem is not just isolated bad designs. When ship generation stalls, retries, or spends too long in randpart placement, campaign turns can slow down enough to feel broken. The approach so far has been incremental and layered:
+
+- use the vanilla disassembly to understand the original flow
+- keep the existing TAF structure rather than replacing the generator wholesale
+- add targeted `gg` fixes on top of TAF where the logs show real bottlenecks or bad validation behavior
+- keep the DIP data layer visible, because data inputs like `randParts.csv`, `parts.csv`, and `shipTypes.csv` strongly affect which generation paths become slow or impossible
+
+In short: **vanilla defines the original generator, TAF gives us the modding surface, DIP supplies much of the data, and the `gg` patches are our focused fixes for campaign-scale shipgen performance and reliability.**
+
+## Strategic Direction Question
+
+There are two plausible ways to attack ship generation performance:
+
+1. **Patch the current TAF/DIP generation path**
+   - This is what the `gg` work has done so far.
+   - Keep TAF's shipgen improvements and DIP's data layer active.
+   - Add targeted fixes where logs show bottlenecks, bad validation gates, or pathological hull/randpart cases.
+   - Advantage: preserves more of TAF's intended design-quality improvements.
+   - Risk: we may be optimizing a generator stack that has become structurally heavier than vanilla.
+
+2. **Return closer to vanilla ship generation, then selectively port only safe TAF fixes**
+   - Use vanilla UAD's generator as the baseline because vanilla ship generation was fast enough for campaign play.
+   - Reintroduce only minimal, performance-friendly fixes from TAF/`gg`.
+   - Treat each added behavior as opt-in and prove it does not recreate the performance cliff.
+   - Advantage: starts from the known-fast path.
+   - Risk: may reintroduce vanilla bad designs unless we choose the ported fixes carefully.
+
+This second strategy is plausible because the original problem may not be "shipgen needs more patches." It may be "TAF/DIP shipgen has accumulated enough extra constraints, data complexity, and validation behavior that the generator spends too much time trying to make perfect or semi-perfect ships." If that is true, a vanilla-first baseline may be cleaner than continuing to patch around every slow case.
+
+Open evaluation plan:
+
+- identify the smallest switch or patch boundary that lets us compare current TAF/DIP shipgen against near-vanilla shipgen
+- run the same campaign/year/nation scenarios against both paths
+- compare generation time, retry count, hard failures, and design usability
+- port only the TAF/`gg` changes that provide clear value without large retry/placement cost
+
+### Least-Resistance Vanilla-Baseline Experiment
+
+Important distinction: this experiment is **not** "disable the `gg` fixes." Many of the bullets below are `gg` fixes we added because the TAF path was already too slow or too failure-prone. Turning those off by itself would mostly answer the wrong question.
+
+The cleaner question is: can we bypass the extra ship-generation override layer that TAF introduced on top of vanilla, while keeping MelonLoader, non-shipgen TAF patches, DIP data loading, and any small `gg` instrumentation or emergency fixes we deliberately choose to keep?
+
+There is a second, equally important distinction: bypassing TAF shipgen code still leaves TAF/DIP CSV data overrides in place. If `randParts.csv`, `randPartsRefit.csv`, `parts.csv`, or `shipTypes.csv` are changed, then the generator is still not using vanilla inputs.
+
+The first experiment for strategy 2 should therefore not remove TAF, DIP, or MelonLoader. Those are still needed for the mod to load and for all non-ship-generation behavior. The goal is narrower: keep the mod stack active, but make ship generation pass through as close to vanilla code and vanilla shipgen data as we can.
+
+There are two practical levels:
+
+1. **Config-only baseline**
+   - Set the existing shipgen feature flag off:
+
+     ```csv
+     taf_shipgen_tweaks,0
+     ```
+
+   - This is the cheapest test because many TAF and `gg` shipgen branches already check `Config.ShipGenTweaks`.
+   - It keeps non-shipgen TAF behavior and the DIP data layer active.
+   - It is not pure vanilla UAD. DIP CSV data such as `randParts.csv`, `parts.csv`, and `shipTypes.csv` still changes what the generator is asked to build.
+   - It is also not guaranteed to disable every TAF shipgen override. Some important patches do not use `Config.ShipGenTweaks` as a master gate.
+
+2. **Temporary vanilla-baseline master switch**
+   - Add a new explicit parameter, for example:
+
+     ```csv
+     taf_shipgen_vanilla_baseline,1
+     ```
+
+   - Keep Harmony patches loaded, but make the shipgen-specific TAF override layer early-out before changing generator state.
+   - This gives a cleaner A/B test than relying only on `taf_shipgen_tweaks,0`.
+   - The patch can preserve passive timing/result logging and any deliberately selected `gg` emergency fixes, but should disable broad TAF replacement behavior.
+
+3. **Vanilla shipgen data mode**
+   - Add a data-load bypass for the shipgen-critical CSVs:
+
+     ```csv
+     taf_shipgen_vanilla_data,1
+     ```
+
+   - When this is enabled, `GameDataM.GetText(name)` should return `null` for selected shipgen data files so `GameData.LoadInfo.process` uses the built-in Unity asset instead of the mod CSV.
+   - Minimum first-pass skip list:
+     - `randParts`
+     - `randPartsRefit`
+   - Stronger baseline skip list:
+     - `randParts`
+     - `randPartsRefit`
+     - `shipTypes`
+     - `parts`
+   - Full design-data baseline candidate list:
+     - `randParts`
+     - `randPartsRefit`
+     - `shipTypes`
+     - `parts`
+     - `partModels`
+     - `components`
+     - `guns`
+     - `torpedoTubes`
+     - `technologies`
+     - `techGroups`
+     - `techTypes`
+     - `stats`
+     - `accuracies`
+     - `penetration`
+   - `randParts` and `randPartsRefit` are the cleanest first target because they directly define the random-design recipes.
+   - `shipTypes` and `parts` are more invasive because they affect far more than shipgen, but they also carry shipgen-only params such as `shipgen_limit(...)` and `shipgen_clamp(...)`.
+   - `guns`, `partModels`, `components`, `torpedoTubes`, and tech files affect which candidate parts/components exist or what their stats are, so they are part of a fuller vanilla-design-data baseline.
+   - `stats`, `accuracies`, and `penetration` are less directly recipe-shaped, but they can still affect candidate value, weight, ballistics, and validation.
+
+Observed deployed `Mods` CSVs that look ship-design related:
+
+- Recipe/layout layer:
+  - `randParts.csv`
+  - `shipTypes.csv`
+  - `parts.csv`
+  - `partModels.csv`
+  - `mounts.csv`
+- Equipment/stat layer:
+  - `components.csv`
+  - `guns.csv`
+  - `torpedoTubes.csv`
+  - `stats.csv`
+  - `accuracies.csv`
+  - `accuraciesEx.csv`
+  - `penetration.csv`
+- Technology availability layer:
+  - `technologies.csv`
+  - `techGroups.csv`
+  - `techTypes.csv`
+- TAF helper data layer:
+  - `genarmordata.csv`
+  - `TAFData/genArmorDefaults.csv`
+  - `TAFData/baseGamePartModelData.csv`
+
+Suggested data bypass tiers:
+
+| Tier | Files / systems | Purpose |
+| --- | --- | --- |
+| 1 | `randParts`, `randPartsRefit` | Test vanilla random-design recipes while leaving the rest of DIP mostly intact. |
+| 2 | Tier 1 + `shipTypes`, `parts` | Remove hull/type-level shipgen params and part metadata that can make vanilla recipes behave differently. |
+| 3 | Tier 2 + `partModels`, `components`, `guns`, `torpedoTubes`, `technologies`, `techGroups`, `techTypes` | Test vanilla recipes against mostly vanilla design equipment and tech availability. |
+| 4 | Tier 3 + `stats`, `accuracies`, `penetration`, `accuraciesEx`, `genarmordata`, `mounts`, `TAFData/baseGamePartModelData`, `TAFData/genArmorDefaults` | Closest ship-design-data baseline, but increasingly broad because these files influence combat, constructor behavior, armor generation, and model/mount handling outside autodesign too. |
+
+For first implementation, prefer a named mode rather than one giant boolean:
+
+```csv
+taf_shipgen_vanilla_data_tier,1
+```
+
+That lets us test progressively:
+
+- `0`: current TAF/DIP data
+- `1`: vanilla randpart recipes only
+- `2`: vanilla recipes plus vanilla hull/type/part shipgen metadata
+- `3`: fuller vanilla equipment/tech design data
+- `4`: broadest ship-design-data baseline
+
+This is safer than immediately bypassing every design-looking CSV, because some files are probably relied on by non-shipgen TAF/DIP systems.
+
+Current data-load mechanics:
+
+- `Patch_GameData.Postfix_LoadVersionAndData(...)` calls `GameDataM.LoadData(__instance)`.
+- `GameDataM.LoadData(...)` iterates vanilla `GameData.LoadInfo` entries and calls `ProcessLoadInfo(...)`.
+- `ProcessLoadInfo(...)` calls `GameDataM.GetText(l.name)`.
+- `GameDataM.GetText(name)` looks beside the mod DLL for:
+  - `<name>.csv`
+  - `<name>_override.csv`
+- If `<name>.csv` exists, it replaces the built-in asset.
+- If only `<name>_override.csv` exists, it merges the override into `Util.ResourcesLoad<TextAsset>(name).text`.
+- If neither exists, it returns `null`, and the vanilla load process uses the built-in asset.
+
+So the least-invasive vanilla-data bypass is:
+
+```csharp
+internal static bool UseVanillaShipgenData()
+{
+    return Config.Param("taf_shipgen_vanilla_data", 0) != 0;
+}
+
+internal static bool ShouldBypassShipgenDataOverride(string name)
+{
+    if (!UseVanillaShipgenData())
+        return false;
+
+    return name == "randParts"
+        || name == "randPartsRefit";
+}
+```
+
+Then near the top of `GameDataM.GetText(name)`:
+
+```csharp
+if (ShouldBypassShipgenDataOverride(name))
+{
+    Melon<TweaksAndFixes>.Logger.Msg($"Using built-in vanilla asset {name}; bypassing TAF/DIP shipgen data override.");
+    return null;
+}
+```
+
+For a stronger test, extend the bypass to `parts` and `shipTypes`, but that should be treated as a broader compatibility experiment because those files affect constructor behavior, tech availability, hull metadata, and other non-shipgen systems too.
+
+The master switch should make these TAF/shipgen override paths pass-through:
+
+- `Patch_ShipGenRandom.OnShipgenStart()`
+  - Do not call randpart reordering.
+  - Optional: keep a simple "shipgen begin" log if debug logging is enabled.
+- `Patch_ShipGenRandom.OnShipgenEnd()`
+  - Do not run final armor fill or post-generation adjustment.
+  - Optional: keep a simple result/timing log.
+- `Patch_ShipGenRandom.Prefix_MoveNext(...)`
+  - Do not cap attempts.
+  - Do not force max displacement.
+  - Do not apply deterministic beam/draught defaults.
+  - Do not normalize guns or speed.
+  - Do not skip vanilla beam/draught, post-parts hull stats, or vanilla gun validation.
+  - Do not run special TB generation.
+- `Patch_ShipGenRandom.Postfix_MoveNext(...)`
+  - Do not mutate retry/result state.
+  - Optional: keep passive phase timing only if it does not change behavior.
+- `Patch_Ship_AddRandParts.Prefix_MoveNext(...)` and `Postfix_MoveNext(...)`
+  - Do not fast-retry at randpart boundaries.
+  - Do not collect placement state that later changes behavior.
+  - Optional: keep passive timing only.
+- `Ship.GenerateArmor` prefix
+  - This is a broad TAF replacement: `Prefix_GenerateArmor(...)` always returns `ShipM.GenerateArmorNew(...)` and skips vanilla `Ship.GenerateArmor`.
+  - A true vanilla-baseline mode should return `true` here so vanilla armor generation runs.
+- component selection weight override
+  - `Ship.__c._GetComponentsToInstall_b__574_3` is patched to use `ComponentDataM.GetWeight(...)` during `GenerateRandomShip`.
+  - A true vanilla-baseline mode should return `true` here so vanilla component weighting runs.
+- part candidate filtering
+  - `Ship.__c__DisplayClass590_0._GetParts_b__0` adds TAF/`gg` filters around randpart candidate selection.
+  - Some filters are our newer fixes, but the patch is still part of the non-vanilla shipgen layer.
+  - Baseline mode should either pass through entirely or keep only explicitly selected minimal filters.
+- `Part.CanPlaceGeneric`
+  - TAF adds `shipgen_limit(...)` gun caliber/barrel/count enforcement from `shipTypes.csv` and hull `parts.csv`.
+  - It also adds funnel-cap limiting during autodesign.
+  - A true vanilla-baseline mode should skip these shipgen-only limits.
+- weight reduction override
+  - `Ship.ReduceWeightByReducingCharacteristics` is patched to call `ShipM.ReduceWeightByReducingCharacteristics(...)`.
+  - That replacement includes TAF behavior for armor, speed, range, survivability, components, and debug diagnostics.
+  - Baseline mode should let vanilla weight reduction run unless we intentionally port back a small safe subset.
+- unused-tonnage fill override
+  - `Ship.AddedAdditionalTonnageUsage` can be skipped/replaced by TAF logic.
+  - Baseline mode should let vanilla run.
+- helper hooks in `Ship.cs`, `ShipM.cs`, and `Part.cs`
+  - Treat the baseline switch as stronger than `Config.ShipGenTweaks`.
+  - Any helper that rejects parts, clamps shipgen values, changes armor generation, changes gun/tower selection, or changes randpart behavior should return vanilla behavior when the baseline switch is on.
+
+Implementation shape:
+
+```csharp
+internal static bool UseVanillaShipgenBaseline()
+{
+    return Config.Param("taf_shipgen_vanilla_baseline", 0) != 0;
+}
+
+internal static bool UseTafShipgenTweaks()
+{
+    return Config.ShipGenTweaks && !UseVanillaShipgenBaseline();
+}
+
+internal static bool UseTafShipgenOverrideLayer()
+{
+    return !UseVanillaShipgenBaseline();
+}
+```
+
+Then shipgen-specific checks can move from:
+
+```csharp
+if (!Config.ShipGenTweaks)
+    return;
+```
+
+to:
+
+```csharp
+if (!Patch_Ship.UseTafShipgenTweaks())
+    return;
+```
+
+For the first temporary patch, guard the major shipgen mutation boundaries first. The important thing is that the generator is allowed to run vanilla control flow again while we keep the rest of TAF/DIP alive.
+
+This means the temporary baseline is not just "turn off `Config.ShipGenTweaks`." It is closer to "while autodesign is active, do not apply TAF's replacement shipgen methods or TAF's shipgen-only candidate/placement constraints, except for logging and any explicitly chosen minimal `gg` patch."
+
+Expected result:
+
+- If this is fast, then TAF shipgen logic is the main performance suspect.
+- If this is still slow, then DIP/TAF data inputs are probably enough to make even vanilla-ish generation struggle.
+- If this is fast but produces bad ships, we can port back only the smallest fixes that improve output without recreating the retry cliff.
+
+Suggested first comparison scenarios:
+
+- 1898 DD generation, especially `dd_1`, `dd_1_france`, `dd_1_russia`, `dd_1_japan`, and `dd_1_german`.
+- Known slow hulls from `shipgen-problem-hulls.md`.
+- At least one larger hull that recently succeeded, such as `b3_britain`, to make sure the baseline is not only improving tiny ships.
+
 Current source marker observed:
 
-- `TAF-RC7 GG Patch gg152`
-- `3.20.3-gg152`
+- `TAF-RC7 GG Patch gg171`
+- `3.20.3-gg171`
 
 Main sources used:
 
@@ -14,6 +313,29 @@ Main sources used:
 - Current TAF patches: `TweaksAndFixes/Harmony/Ship.cs`, `TweaksAndFixes/Harmony/CampaignController.cs`, `TweaksAndFixes/Harmony/CampaignNewGame.cs`, `TweaksAndFixes/Modified/ShipM.cs`, `TweaksAndFixes/Harmony/GameData.cs`, `TweaksAndFixes/Modified/GameDataM.cs`
 - Legacy/reference-only trap checked for gun armor zeroing: `UADRealism/Harmony/Ship.cs`, `UADRealism/ModifiedClasses/GenerateShip.cs`
 - Current data: `TweaksAndFixes/Default_Files/UAD_Files/randParts.csv`, `parts.csv`, `shipTypes.csv`, `TweaksAndFixes/Default_Files/TAF_Files/params_override.csv`
+
+## Project Layers
+
+This repo is easier to reason about if we keep the layers separate:
+
+1. **Vanilla UAD**
+   - The base game.
+   - We do not have or edit original source.
+   - We do have disassembled/decompiled output, which is the reference for how the game normally works.
+   - Important decompiled ship-design references live under `E:\Codex\cpp2il_uad_diffable` and `E:\Codex\cpp2il_uad_isil`.
+
+2. **TAF / TweaksAndFixes**
+   - The C# mod layer on top of vanilla.
+   - This is the active source code we can edit and rebuild.
+   - It patches vanilla behavior with Harmony and replacement/helper code.
+   - Ship generation changes mostly live in `TweaksAndFixes/Harmony/Ship.cs`, `TweaksAndFixes/Modified/ShipM.cs`, and the campaign/menu patches.
+
+3. **DIP / Great Game**
+   - The data/config/content layer on top of TAF.
+   - It is mostly CSV/config/data overrides loaded by TAF.
+   - It changes the inputs that vanilla/TAF generation operates on: parts, randParts, ship types, params, countries, events, and related game data.
+
+So for ship design generation: **vanilla provides the original coroutine flow**, **TAF intercepts and adjusts that flow**, and **DIP supplies much of the data that the adjusted generator consumes**.
 
 ## High-Level Flow
 
