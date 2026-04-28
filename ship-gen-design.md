@@ -208,13 +208,16 @@ For a stronger test, extend the bypass to `parts` and `shipTypes`, but that shou
 Implemented baseline controls:
 
 - `taf_shipgen_vanilla_baseline`
-  - Default `0`.
+  - Default `1` in the current `gg` branch.
   - When enabled, major shipgen-specific TAF Harmony overrides pass through to vanilla while autodesign is active.
   - Guarded paths include the random-ship coroutine mutation layer, add-random-parts fast retry/tracking layer, TAF armor generation replacement, TAF weight reduction replacement, TAF unused-tonnage fill replacement, component weight override, randpart candidate filters, autodesign `Part.CanPlaceGeneric` `shipgen_limit(...)`/funnel constraints, and final armor fill.
 - `taf_shipgen_vanilla_data_tier`
   - Default `0`.
   - Tiered bypass in `GameDataM.GetText(name)` returns `null` for selected data names so the vanilla built-in Unity asset loads instead of the mod CSV.
   - Direct TAF helper loaders are also bypassed at tier 4 for `accuraciesEx`, `genarmordata`, `mounts`, and `baseGamePartModelData`.
+- `taf_shipgen_vanilla_data_files`
+  - Default `randParts|randPartsRefit|mounts` in the current `gg` branch.
+  - This keeps most DIP/TAF data active while using vanilla random-part recipes and avoiding TAF mount override data.
 
 The master switch should make these TAF/shipgen override paths pass-through:
 
@@ -268,7 +271,7 @@ Implementation shape:
 ```csharp
 internal static bool UseVanillaShipgenBaseline()
 {
-    return Config.Param("taf_shipgen_vanilla_baseline", 0) != 0;
+    return Config.Param("taf_shipgen_vanilla_baseline", 1) != 0;
 }
 
 internal static bool UseTafShipgenTweaks()
@@ -385,6 +388,157 @@ The generated state-machine fields are useful because they show what the game ke
 - `AddRandomPartsNew`: `randPart` display class, `partDataForGroup`, `mainTowerPlaced`, `secTowerPlaced`, `secTowerNeedForShip`, `funnelsInstalled`, `maxFunnels`, `desiredAmount`, `chooseFromParts`, placement offsets.
 
 The ISIL dump confirms the big call order inside `GenerateRandomShip`: tonnage/beam/draught adjustment, armor generation, component/hull-stat work, repeated calls to `ReduceWeightByReducingCharacteristics` and `AddedAdditionalTonnageUsage`, deletion of unmounted parts, then `AddRandomPartsNew`.
+
+## Vanilla Algorithm Blueprint
+
+This section is a working map of the vanilla path as seen in the disassembled code. It is meant to guide backports: any fix we reintroduce should be tied to one of these boundaries instead of rebuilding the whole TAF generator.
+
+### 1. `Ship.CreateRandom`: build or select a candidate shell
+
+Disassembly reference: `E:\Codex\cpp2il_uad_isil\IsilDump\Assembly-CSharp\Ship_NestedType__CreateRandom_d__571.txt`.
+
+The vanilla `CreateRandom` coroutine is a wrapper around the real generator:
+
+1. Create a temporary `Ship` object with `Ship.Create(...)`.
+2. Build a `usedHulls` list.
+3. Pick a hull with `Ship.GetHull(shipType, player, ..., usedHulls, ...)`.
+4. Add that hull to `usedHulls`.
+5. Apply it with `Ship.ChangeHull(...)`.
+6. Enter constructor state with `Ship.EnterConstructor(...)`.
+7. Yield `Ship.GenerateRandomShip(...)`.
+8. When generation resumes, call `Ship.IsValid(...)`.
+9. If the generated ship is invalid, optionally try a shared design in custom battle flow, otherwise choose another hull and call `ChangeHull(...)` again.
+10. Stop after the hull retry counter reaches 10.
+11. On exit, call `Ship.LeaveConstructor(...)` unless a shared design was selected, then invoke `onDone(ship)`.
+
+Important implications:
+
+- `CreateRandom` retries at the hull level, not just the part-layout level.
+- `usedHulls` prevents the same failed hull from being selected repeatedly.
+- Shared-design substitution happens after a generated candidate fails `Ship.IsValid(...)`, mostly in custom battle context.
+- The heavy work is inside `GenerateRandomShip`; `CreateRandom` is mainly the lifecycle and hull-selection wrapper.
+
+### 2. `Ship.GenerateRandomShip`: attempt loop and validation pipeline
+
+Disassembly reference: `E:\Codex\cpp2il_uad_isil\IsilDump\Assembly-CSharp\Ship_NestedType__GenerateRandomShip_d__573.txt`.
+
+`GenerateRandomShip` owns the per-hull attempt loop. Its useful persistent fields include `triesTotal`, `tryN`, `randArmorRatio`, `componentsToInstall`, `adjustTonnage`, `adjustBeam`, `adjustDraught`, custom speed/range/armor/caliber inputs, and the `onDone(success, tryN, elapsed)` callback.
+
+At a high level, each attempt does this:
+
+1. Remove previous parts or reset the candidate when retrying.
+2. Choose randomized tonnage, speed, range, survivability, and armor inputs from ship type, hull, tech, and custom battle parameters.
+3. Compute `randArmorRatio` with `Ship.GetRandArmorRatio(...)`.
+4. Generate the ship-wide armor dictionary with `Ship.GenerateArmor(armorMaximal, ship)`.
+5. Store that dictionary on `ship.armor`, then refresh hull stats.
+6. Run an initial `Ship.AdjustHullStats(...)` pass to tune displacement, beam, draught, speed, armor, and range according to the selected inputs.
+7. Build `componentsToInstall` with `Ship.GetComponentsToInstall(...)`.
+8. Install the first selected component from that list, remove it from the pending list, and update hull stats.
+9. If needed, run another `AdjustHullStats(...)` pass and update hull stats again.
+10. Run cleanup over existing parts: remove bad soft-placement parts, sort/count guns, enforce minimum/maximum part-count windows from hull metadata, and install remaining components.
+11. Call `Ship.ReduceWeightByReducingCharacteristics(...)`.
+12. Call `Ship.AddedAdditionalTonnageUsage(...)`.
+13. Compare current weight against tonnage thresholds; if too light, fill tonnage again; if too heavy, reduce again.
+14. Refresh hull and update hull stats.
+15. Delete unmounted barbettes with `Ship.DeleteUnmounted("barbette")`.
+16. Yield `Ship.AddRandomPartsNew(...)` to place randpart recipes.
+17. After parts are placed, adjust/update hull stats again.
+18. Run vanilla main-gun validation when requested: hull `minMainTurrets` and `minMainBarrels` are checked here.
+19. Run final validation gates: `IsValidWeightOffset`, `IsValidCostReqParts`, `IsValidCostWeightBarbette`, tonnage allowed by tech, cost/weight validity, and general `Ship.IsValid(...)`.
+20. If validation fails and attempts remain, increment `tryN`, reset parts, and restart the attempt.
+21. If validation succeeds or attempts are exhausted, call `onDone(...)`.
+
+Important implications:
+
+- Vanilla is already a retry engine. It does not expect every randpart recipe to succeed.
+- `GenerateArmor` happens before guns are placed. Later gun armor is copied from the already-current ship armor values when gun entries are created.
+- `ReduceWeightByReducingCharacteristics` and `AddedAdditionalTonnageUsage` are balancing tools inside the attempt, not final polish only.
+- State `11` is the vanilla main-gun count gate. It checks main turret/barrel minimums after `AddRandomPartsNew` and post-parts hull adjustment.
+- The final gate is broader than "parts placed": cost requirements, empty/invalid barbettes, weight offset, tech tonnage range, and overall validity can all reject a visually plausible layout.
+
+### 3. `Ship.AddRandomPartsNew`: recipe loop and placement engine
+
+Disassembly reference: `E:\Codex\cpp2il_uad_isil\IsilDump\Assembly-CSharp\Ship_NestedType__AddRandomPartsNew_d__591.txt`.
+
+`AddRandomPartsNew` is where `randParts` become actual constructor parts. Its persistent fields include the current `randPart`, selected `partData`, grouped part data, `mainTowerPlaced`, `secTowerPlaced`, `secTowerNeedForShip`, `funnelsInstalled`, `maxFunnels`, `desiredAmount`, `chooseFromParts`, placement offsets, and several temporary lists/sets.
+
+For each randpart recipe, vanilla roughly does this:
+
+1. Iterate the ship type's `randParts` or `randPartsRefit` list.
+2. Apply chance: `Util.Chance(rp.chance * modifiers, rnd)`.
+3. Skip recipes whose tower/funnel/barbette preconditions are no longer allowed.
+4. Enforce tower ordering flags: once main or secondary tower is placed, later conflicting tower recipes can be skipped.
+5. Enforce funnel cap tracking with `funnelsInstalled` and `maxFunnels`.
+6. Check `scheme(...)` and other `rp.paramx` operations.
+7. Call `Ship.CheckOperations(randPart)` for `and(...)`, `or(...)`, tags, mount requirements, exclusions, and similar recipe-level gates.
+8. Handle `delete_unmounted` and `delete_refit` commands as special recipe operations.
+9. Roll `desiredAmount` from `rp.min` to `rp.max`; paired recipes double the count.
+10. Build candidate `PartData` list with `Ship.GetParts(randPart, limitCaliber)`.
+11. If the recipe has a `group`, reuse or record the group's selected `PartData` so later recipes coordinate with the same tower/gun/funnel family.
+12. For gun recipes, choose caliber and barrel length, then call `Ship.AddShipTurretCaliber(...)`.
+13. Before creating a part, call `Part.CanPlaceGeneric(partData, ship, false, out reason)`.
+14. Create the part with `Part.Create(...)`, add it to the ship, load its model, and update colliders for guns.
+15. For mount-based recipes, try `Part.TryFindMount(true)`, inspect allowed mounts, and use `Ship.GetAllowedMountsInGroups(...)` where groups matter.
+16. For free/deck placement, compute offsets from the recipe's `rangeZFrom/rangeZTo`, `center`, `side`, paired flag, and random side/position choices.
+17. Test placement with `Part.CanPlace(...)`, `CanPlaceSoft(...)`, and `CanPlaceSoftLight(...)`.
+18. If a part cannot be placed cleanly, remove it, unmount it, remove its mirror if needed, and try the next candidate/offset.
+19. If it succeeds, update tower/funnel counters, record grouped data, and for guns call `Ship.AddShipTurretArmor(part)`.
+20. Advance to the next desired part count, then the next randpart recipe.
+21. At the end, remove leftover invalid soft-placement parts.
+
+Important implications:
+
+- `Ship.GetParts(randPart, limitCaliber)` is the candidate-selection boundary. It is the best place to reason about "recipe applicable but no candidate parts".
+- `Part.CanPlaceGeneric` is the early part-data filter. `Part.CanPlace`, `CanPlaceSoft`, and `CanPlaceSoftLight` are actual placement/collider/mount checks after an instance exists.
+- The recipe loop is allowed to fail silently and continue. A failed recipe is not automatically a failed ship.
+- Gun armor is not generated in `AddRandomPartsNew`; it is attached after successful gun placement by copying from the ship's current armor dictionary.
+- `delete_unmounted` recipes are operations, not placement recipes; they clean up part types named in the recipe.
+
+### 4. Retry and failure boundaries
+
+The main rejection boundaries worth preserving or instrumenting are:
+
+- `Ship.GetHull(...)` returns no hull: `CreateRandom` cannot start a candidate.
+- `Ship.GenerateRandomShip(...)` exhausts attempts: the hull candidate fails.
+- `AddRandomPartsNew` places too few key parts: later validation usually catches this, especially main guns and required stats.
+- State `11` main-gun validation fails: hull-level `minMainTurrets` or `minMainBarrels` was not met.
+- `IsValidCostReqParts(...)` fails: ship-type stat requirements such as `gun_main(...)` or other required stats were not met.
+- `IsValidCostWeightBarbette(...)` fails: empty/invalid barbette relationships remain.
+- `IsValidWeightOffset(...)` fails: placement produced unacceptable balance.
+- `Player.IsTonnageAllowedByTech(...)` fails: selected tonnage is outside the player's tech allowance.
+- `Ship.IsValid(...)` fails after the coroutine reports done: final design is still rejected by the caller.
+
+This is the backport rule of thumb: prefer small fixes that improve one boundary without adding new global constraints to earlier boundaries. The expensive failure mode we are avoiding is adding enough early candidate filtering or retry logic that vanilla's forgiving recipe loop turns into a long search for a perfect layout.
+
+### 5. GG vanilla-baseline tweak layer
+
+New vanilla-backport experiments should live in `TweaksAndFixes/Harmony/GGShipgenTweaks.cs`, not inside the larger TAF shipgen replacement block. The goal is readability: each tweak should look like a small patch on top of vanilla, and should be easy to remove if it causes bad designs. For now these are hardcoded while we learn which vanilla-friendly patches are actually useful.
+
+Current patch tracker:
+
+| Patch | Target | Hook point | Status |
+| --- | --- | --- | --- |
+| Compact small craft geometry | `dd`, `tb` | `GenerateRandomShip` state `2` (`beam_draught`) | Active, hardcoded |
+| Max legal small craft displacement | `dd`, `tb` | `GenerateRandomShip` state `3` (`tonnage`) | Active, hardcoded |
+| Heavy-ship torpedo randpart ban | `ca`, `bc`, `bb` | `Ship.GetParts(randPart)` candidate filter | Active, hardcoded |
+
+Current standalone tweaks:
+
+- DD/TB compact hull plus maximum legal displacement.
+  - Hardcoded for now; no config param.
+  - Prefix-patches vanilla `Ship._GenerateRandomShip_d__573.MoveNext`.
+  - When the coroutine reaches state `2` (`beam_draught`) for a generated `dd` or `tb`, it sets beam and draught to `hull.data.beamMin` / `hull.data.draughtMin`, refreshes the hull, advances the coroutine to state `3`, and returns `false` so vanilla does not immediately randomize those dimensions again.
+  - When the coroutine reaches state `3` (`tonnage`) for the same generated `dd` or `tb`, it sets display tonnage to the maximum legal value and advances the coroutine to state `5`, skipping vanilla's random tonnage roll and the now-redundant clamp state.
+  - Maximum legal tonnage is capped by hull `TonnageMax()`, player `TonnageLimit(shipType)`, and campaign `player.shipyard` when in campaign. It also respects hull `TonnageMin()`.
+  - The setter divides the target display tonnage by `Ship.BeamDraughtBonus()` before calling `SetTonnage(...)`, because the game stores raw tonnage but reports display tonnage after beam/draught scaling. If the setter still clamps too low, the helper writes the raw backing `ship.tonnage` and updates hull stats.
+  - This changes only the vanilla beam/draught and tonnage selection phases. It does not hook global `Ship.SetBeam(...)`, `Ship.SetDraught(...)`, or `Ship.SetTonnage(...)`.
+  - Each Harmony patch point in this file should carry a short code comment explaining the intent and the vanilla coroutine state it replaces.
+
+- CA/BC/BB torpedo randpart ban.
+  - Hardcoded for now; no config param.
+  - Prefix-patches vanilla `Ship.__c__DisplayClass590_0._GetParts_b__0`, the candidate filter used by `Ship.GetParts(randPart)`.
+  - When the active randpart type is `torpedo` and the generated ship type is `ca`, `bc`, or `bb`, the candidate filter returns `false` before any torpedo part is created.
+  - This avoids post-placement cleanup. The vanilla recipe loop may still visit a torpedo recipe, but it will see no legal torpedo candidates for heavy ships and continue.
 
 The TAF code names the game coroutine states as:
 
