@@ -4,7 +4,6 @@ using Il2Cpp;
 using Il2CppSystem.Linq;
 using UnityEngine;
 using static Il2Cpp.CampaignController;
-using System.Diagnostics;
 
 #pragma warning disable CS8602
 #pragma warning disable CS8604
@@ -14,95 +13,6 @@ namespace TweaksAndFixes
     [HarmonyPatch(typeof(CampaignController))]
     internal class Patch_CampaignController
     {
-        internal struct CampaignLoadMethodTimingFrame
-        {
-            public bool Enabled;
-            public string Method;
-            public string Details;
-            public int Session;
-            public int LoadState;
-            public string LoadStateLabel;
-            public long StartedAt;
-            public long PrefixEndedAt;
-        }
-
-        internal static CampaignLoadMethodTimingFrame BeginCampaignLoadMethodTiming(string method, string details = "")
-        {
-            if (!Patch_GameManager_LoadCampaigndCoroutine.IsTimingEnabled ||
-                !Patch_GameManager_LoadCampaigndCoroutine.IsTimingActive)
-            {
-                return default;
-            }
-
-            var frame = new CampaignLoadMethodTimingFrame
-            {
-                Enabled = true,
-                Method = method,
-                Details = details,
-                Session = Patch_GameManager_LoadCampaigndCoroutine.TimingSession,
-                LoadState = Patch_GameManager_LoadCampaigndCoroutine.TimingCurrentState,
-                LoadStateLabel = Patch_GameManager_LoadCampaigndCoroutine.TimingCurrentStateLabel,
-                StartedAt = Stopwatch.GetTimestamp()
-            };
-
-            Melon<TweaksAndFixes>.Logger.Msg(
-                $"Campaign load timing method begin: session={frame.Session}, " +
-                $"state={frame.LoadState} ({frame.LoadStateLabel}), method={method}" +
-                $"{FormatCampaignLoadTimingDetails(details)}");
-
-            return frame;
-        }
-
-        internal static void EndCampaignLoadMethodPrefix(ref CampaignLoadMethodTimingFrame frame)
-        {
-            if (frame.Enabled)
-            {
-                frame.PrefixEndedAt = Stopwatch.GetTimestamp();
-            }
-        }
-
-        internal static void EndCampaignLoadMethodTiming(CampaignLoadMethodTimingFrame frame)
-        {
-            if (!frame.Enabled)
-            {
-                return;
-            }
-
-            long now = Stopwatch.GetTimestamp();
-            double totalMs = ElapsedCampaignLoadTimingMs(frame.StartedAt, now);
-            string prefixTiming = "";
-
-            if (frame.PrefixEndedAt != 0)
-            {
-                double prefixMs = ElapsedCampaignLoadTimingMs(frame.StartedAt, frame.PrefixEndedAt);
-                double originalMs = ElapsedCampaignLoadTimingMs(frame.PrefixEndedAt, now);
-                prefixTiming = $", prefixMs={prefixMs:0.0}, originalMs={originalMs:0.0}";
-            }
-
-            Melon<TweaksAndFixes>.Logger.Msg(
-                $"Campaign load timing method end: session={frame.Session}, " +
-                $"state={frame.LoadState} ({frame.LoadStateLabel}), method={frame.Method}, " +
-                $"elapsedMs={totalMs:0.0}{prefixTiming}" +
-                $"{FormatCampaignLoadTimingDetails(frame.Details)}");
-        }
-
-        private static double ElapsedCampaignLoadTimingMs(long startedAt, long endedAt)
-        {
-            return (endedAt - startedAt) * 1000.0 / Stopwatch.Frequency;
-        }
-
-        private static string FormatCampaignLoadTimingDetails(string details)
-        {
-            return string.IsNullOrEmpty(details) ? "" : $", {details}";
-        }
-
-        private static string DescribePredefinedDesignTiming(CampaignController controller, bool prewarm)
-        {
-            string currentDesigns = controller?._currentDesigns == null ? "null" : "loaded";
-            string usage = controller == null ? "?" : controller.designsUsage.ToString();
-            return $"prewarm={prewarm}, designsUsage={usage}, currentDesigns={currentDesigns}";
-        }
-
         [HarmonyPatch(nameof(CampaignController.CheckTension))]
         [HarmonyPrefix]
         internal static bool Prefix_CheckTension()
@@ -222,8 +132,6 @@ namespace TweaksAndFixes
         internal static void Prefix_OnNewTurn(CampaignController __instance)
         {
             // Melon<TweaksAndFixes>.Logger.Msg($"OnNewTurn"); // <<< Trigger on start of new turn
-
-            EnsureAiDesignServiceStarted(__instance);
 
             var vessels = __instance.CampaignData.Vessels;
 
@@ -473,17 +381,6 @@ namespace TweaksAndFixes
         internal static CampaignController._AiManageFleet_d__201? _AiManageFleet = null;
         private static int _SkippedPrewarmBuildNewShipsCount = 0;
         private static int _SkippedPrestartRandomDesignsCount = 0;
-        private static int _SkippedServiceOwnedRandomDesignsCount = 0;
-        private static object? _AiDesignServiceRoutine = null;
-        private static CampaignController? _AiDesignServiceRequestedController = null;
-        private static bool _AiDesignServiceStartRequested = false;
-        private static System.Reflection.MethodInfo? _GenerateRandomDesignsMethod = null;
-        internal static bool _AiDesignServiceRunningGenerateRandomDesigns = false;
-        private static int _AiDesignServiceCycle = 0;
-        private static int _AiDesignServiceNextPendingId = 0;
-        private static readonly Dictionary<IntPtr, AiDesignGenerationTrace> _GenerateRandomDesignTraces = new();
-        private static readonly Dictionary<IntPtr, AiDesignServiceJob> _AiDesignServiceJobs = new();
-        private static readonly Dictionary<int, AiDesignServiceJob> _AiDesignServicePendingJobs = new();
 
         internal struct AiBuildTrace
         {
@@ -508,53 +405,8 @@ namespace TweaksAndFixes
             public HashSet<Il2CppSystem.Guid> BuildingIds;
         }
 
-        private struct AiDesignGenerationTrace
-        {
-            public bool Enabled;
-            public string PlayerName;
-            public int Year;
-            public int Month;
-            public bool Prewarming;
-            public bool ServiceOwned;
-            public int DesignCount;
-            public string DesignClasses;
-            public HashSet<Il2CppSystem.Guid> DesignIds;
-        }
-
-        private class AiDesignServiceJob
-        {
-            public string PlayerName = "?";
-            public int Cycle;
-            public int Year;
-            public int Month;
-            public int DesignCount;
-            public string DesignClasses = "-";
-            public HashSet<Il2CppSystem.Guid> DesignIds = new();
-            public bool Completed;
-            public bool Started;
-            public bool Prewarming;
-            public int PendingId;
-            public IntPtr PlayerPointer;
-            public IntPtr RoutinePointer;
-        }
-
-        private class AiGenerateRandomDesignRoutine
-        {
-            public Il2CppSystem.Collections.IEnumerator Enumerator = null!;
-            public string RawType = "?";
-        }
-
         private static bool IsAiBuildDebugEnabled()
             => Config.Param("taf_debug_ai_shipbuilding", 0) != 0;
-
-        internal static bool IsAiDesignServiceEnabled()
-            => Config.Param("taf_campaign_ai_design_service_enabled", 0) != 0;
-
-        private static bool IsAiDesignServiceDebugEnabled()
-            => Config.Param("taf_debug_ai_design_service", 0) != 0;
-
-        internal static bool ShouldSkipServiceOwnedRandomDesigns()
-            => IsAiDesignServiceEnabled() && Config.Param("taf_campaign_ai_design_service_disable_endturn_generation", 0) != 0;
 
         private static AiBuildTrace CaptureAiBuildTrace(CampaignController controller, Player player, float tempPlayerCash)
         {
@@ -707,374 +559,6 @@ namespace TweaksAndFixes
                         : "has designs and no current builds; deeper CreateRandom/shared-design/budget traces should explain the drop";
                 Melon<TweaksAndFixes>.Logger.Msg($"  No-build context: buildingTonnage={before.BuildingTonnage:N0}t, freeCapacityApprox={freeCapacityBefore:N0}t, designTonnageRange={designTonnage}, inferred={inferred}");
                 Melon<TweaksAndFixes>.Logger.Msg("  No visible change from BuildNewShips; next checks are budget/capacity gates, available designs by class, and shipgen/shared-design failure logs.");
-            }
-        }
-
-        internal static void EnsureAiDesignServiceStarted(CampaignController controller)
-        {
-            if (!IsAiDesignServiceEnabled())
-                return;
-            if (controller == null)
-                return;
-
-            _AiDesignServiceRequestedController = controller;
-            _AiDesignServiceStartRequested = true;
-        }
-
-        internal static void UpdateAiDesignService()
-        {
-            if (!IsAiDesignServiceEnabled())
-            {
-                _AiDesignServiceStartRequested = false;
-                return;
-            }
-
-            if (_AiDesignServiceRoutine != null)
-                return;
-
-            CampaignController controller = CampaignController.Instance ?? _AiDesignServiceRequestedController;
-            if (controller == null || controller.CampaignData == null || controller.CampaignData.Players == null)
-                return;
-            if (GameManager.Instance == null || !GameManager.Instance.isCampaign || GameManager.Instance.CurrentState != GameManager.GameState.World || GameManager.IsLoadingScreenActive)
-                return;
-
-            string source = _AiDesignServiceStartRequested ? "OnNewTurn request" : "Ui.Update campaign pump";
-            _AiDesignServiceStartRequested = false;
-            _AiDesignServiceRoutine = MelonCoroutines.Start(AiDesignServiceLoop(controller));
-            Melon<TweaksAndFixes>.Logger.Msg($"AI design service scheduled by {source} in state {GameManager.Instance.CurrentState}.");
-        }
-
-        private static System.Collections.IEnumerator AiDesignServiceLoop(CampaignController initialController)
-        {
-            Melon<TweaksAndFixes>.Logger.Msg("AI design service loop entered.");
-
-            float waitUntil = Time.realtimeSinceStartup + Math.Max(0.1f, Config.Param("taf_campaign_ai_design_service_start_delay_seconds", 1f));
-            while (Time.realtimeSinceStartup < waitUntil)
-                yield return new WaitForEndOfFrame();
-
-            while (IsAiDesignServiceEnabled())
-            {
-                CampaignController controller = CampaignController.Instance ?? initialController;
-                if (controller == null || controller.CampaignData == null || controller.CampaignData.Players == null)
-                {
-                    waitUntil = Time.realtimeSinceStartup + 1f;
-                    while (Time.realtimeSinceStartup < waitUntil)
-                        yield return new WaitForEndOfFrame();
-                    continue;
-                }
-
-                _AiDesignServiceCycle++;
-                List<Player> players = new();
-                foreach (Player player in controller.CampaignData.Players)
-                {
-                    if (ShouldRunAiDesignServiceFor(player))
-                        players.Add(player);
-                }
-
-                if (IsAiDesignServiceDebugEnabled())
-                {
-                    int year = controller.CurrentDate.AsDate().Year;
-                    int month = controller.CurrentDate.AsDate().Month;
-                    Melon<TweaksAndFixes>.Logger.Msg($"AI design service cycle {_AiDesignServiceCycle} begin: date={year:D4}-{month:D2}, aiMajorPlayers={players.Count}");
-                }
-
-                foreach (Player player in players)
-                {
-                    yield return RunAiDesignServiceForPlayer(controller, player, _AiDesignServiceCycle);
-                    waitUntil = Time.realtimeSinceStartup + Math.Max(0.05f, Config.Param("taf_campaign_ai_design_service_player_delay_seconds", 0.25f));
-                    while (Time.realtimeSinceStartup < waitUntil)
-                        yield return new WaitForEndOfFrame();
-                }
-
-                waitUntil = Time.realtimeSinceStartup + Math.Max(0.1f, Config.Param("taf_campaign_ai_design_service_cycle_delay_seconds", 5f));
-                while (Time.realtimeSinceStartup < waitUntil)
-                    yield return new WaitForEndOfFrame();
-            }
-
-            _AiDesignServiceRoutine = null;
-            Melon<TweaksAndFixes>.Logger.Msg("AI design service stopped because taf_campaign_ai_design_service_enabled is off.");
-        }
-
-        private static bool ShouldRunAiDesignServiceFor(Player player)
-        {
-            if (player == null)
-                return false;
-
-            try
-            {
-                return player.isAi && player.isMajor && !player.isDisabled;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static System.Collections.IEnumerator RunAiDesignServiceForPlayer(CampaignController controller, Player player, int cycle)
-        {
-            string playerName = player?.Name(false) ?? "?";
-            int year = controller?.CurrentDate.AsDate().Year ?? 0;
-            int month = controller?.CurrentDate.AsDate().Month ?? 0;
-            HashSet<Il2CppSystem.Guid> beforeIds = new();
-            string beforeClasses = CaptureDesignClassSummary(player, beforeIds, out int beforeCount);
-
-            if (IsAiDesignServiceDebugEnabled())
-                Melon<TweaksAndFixes>.Logger.Msg($"AI design service begin: {playerName}, cycle={cycle}, date={year:D4}-{month:D2}, designs={beforeCount} [{beforeClasses}]");
-
-            AiGenerateRandomDesignRoutine? routine = null;
-            try
-            {
-                routine = InvokeGenerateRandomDesigns(controller, player, false);
-            }
-            catch (System.Exception ex)
-            {
-                Melon<TweaksAndFixes>.Logger.Error($"AI design service failed to create GenerateRandomDesigns for {playerName}: {ex.Message}");
-            }
-
-            if (routine == null)
-                yield break;
-
-            AiDesignServiceJob serviceJob = new()
-            {
-                PendingId = ++_AiDesignServiceNextPendingId,
-                PlayerName = playerName,
-                Cycle = cycle,
-                Year = year,
-                Month = month,
-                DesignCount = beforeCount,
-                DesignClasses = beforeClasses,
-                DesignIds = beforeIds,
-                PlayerPointer = PlayerPointer(player),
-                Prewarming = false
-            };
-
-            _AiDesignServicePendingJobs[serviceJob.PendingId] = serviceJob;
-
-            try
-            {
-                AiDesignCoroutineHost.GetOrCreate().StartDesignCoroutine(routine.Enumerator);
-            }
-            catch (System.Exception ex)
-            {
-                _AiDesignServicePendingJobs.Remove(serviceJob.PendingId);
-                Melon<TweaksAndFixes>.Logger.Error($"AI design service failed to StartCoroutine for {playerName}: {ex.Message}");
-                yield break;
-            }
-
-            Melon<TweaksAndFixes>.Logger.Msg($"AI design service Unity coroutine requested: {playerName}, cycle={cycle}, pending={serviceJob.PendingId}, raw={routine.RawType}");
-
-            float timeoutAt = Time.realtimeSinceStartup + Math.Max(5f, Config.Param("taf_campaign_ai_design_service_job_timeout_seconds", 90f));
-            while (!serviceJob.Completed)
-            {
-                if (Time.realtimeSinceStartup > timeoutAt)
-                {
-                    _AiDesignServicePendingJobs.Remove(serviceJob.PendingId);
-                    if (serviceJob.RoutinePointer != IntPtr.Zero)
-                        _AiDesignServiceJobs.Remove(serviceJob.RoutinePointer);
-
-                    string bound = serviceJob.Started ? $"routine=0x{serviceJob.RoutinePointer.ToInt64():X}" : "routine=unbound";
-                    Melon<TweaksAndFixes>.Logger.Error($"AI design service timed out waiting for Unity-hosted GenerateRandomDesigns: {playerName}, cycle={cycle}, pending={serviceJob.PendingId}, {bound}");
-                    yield break;
-                }
-
-                yield return new WaitForEndOfFrame();
-            }
-
-            _AiDesignServicePendingJobs.Remove(serviceJob.PendingId);
-            if (serviceJob.RoutinePointer != IntPtr.Zero)
-                _AiDesignServiceJobs.Remove(serviceJob.RoutinePointer);
-        }
-
-        private static AiGenerateRandomDesignRoutine? InvokeGenerateRandomDesigns(CampaignController controller, Player player, bool prewarming)
-        {
-            _GenerateRandomDesignsMethod ??= AccessTools.Method(typeof(CampaignController), "GenerateRandomDesigns", new[] { typeof(Player), typeof(bool) });
-            if (_GenerateRandomDesignsMethod == null)
-            {
-                Melon<TweaksAndFixes>.Logger.Error("AI design service could not find CampaignController.GenerateRandomDesigns(Player,bool).");
-                return null;
-            }
-
-            object? rawRoutine = _GenerateRandomDesignsMethod.Invoke(controller, new object[] { player, prewarming });
-            Il2CppSystem.Collections.IEnumerator? enumerator = rawRoutine as Il2CppSystem.Collections.IEnumerator;
-
-            if (enumerator == null)
-            {
-                Melon<TweaksAndFixes>.Logger.Error($"AI design service could not cast GenerateRandomDesigns result to IEnumerator. raw={rawRoutine?.GetType().FullName ?? "null"}");
-                return null;
-            }
-
-            return new AiGenerateRandomDesignRoutine
-            {
-                Enumerator = enumerator,
-                RawType = rawRoutine?.GetType().FullName ?? "null"
-            };
-        }
-
-        private static string CaptureDesignClassSummary(Player player, HashSet<Il2CppSystem.Guid>? ids, out int count)
-        {
-            count = 0;
-            Dictionary<string, int> classes = new();
-            if (player == null || player.designs == null)
-                return "-";
-
-            foreach (Ship design in new Il2CppSystem.Collections.Generic.List<Ship>(player.designs))
-            {
-                if (design == null || !design.isDesign)
-                    continue;
-
-                count++;
-                ids?.Add(design.id);
-                AddClassCount(classes, design);
-            }
-
-            return FormatClassCounts(classes);
-        }
-
-        internal static void BeginGenerateRandomDesignTrace(CampaignController._GenerateRandomDesigns_d__202 routine)
-        {
-            if (!IsAiDesignServiceDebugEnabled())
-                return;
-
-            IntPtr pointer = RoutinePointer(routine);
-            if (pointer == IntPtr.Zero || routine == null || routine.player == null || !routine.player.isAi)
-                return;
-
-            HashSet<Il2CppSystem.Guid> beforeIds = new();
-            string beforeClasses = CaptureDesignClassSummary(routine.player, beforeIds, out int beforeCount);
-            AiDesignGenerationTrace trace = new()
-            {
-                Enabled = true,
-                PlayerName = routine.player.Name(false),
-                Year = CampaignController.Instance?.CurrentDate.AsDate().Year ?? 0,
-                Month = CampaignController.Instance?.CurrentDate.AsDate().Month ?? 0,
-                Prewarming = routine.prewarming,
-                ServiceOwned = IsAiDesignServiceRoutine(routine) || _AiDesignServiceRunningGenerateRandomDesigns,
-                DesignCount = beforeCount,
-                DesignClasses = beforeClasses,
-                DesignIds = beforeIds
-            };
-
-            _GenerateRandomDesignTraces[pointer] = trace;
-            Melon<TweaksAndFixes>.Logger.Msg($"AI GenerateRandomDesigns begin: {trace.PlayerName}, date={trace.Year:D4}-{trace.Month:D2}, prewarm={trace.Prewarming}, service={trace.ServiceOwned}, designs={trace.DesignCount} [{trace.DesignClasses}]");
-        }
-
-        internal static void EndGenerateRandomDesignTrace(CampaignController._GenerateRandomDesigns_d__202 routine, bool result)
-        {
-            if (result)
-                return;
-
-            IntPtr pointer = RoutinePointer(routine);
-            if (pointer == IntPtr.Zero || !_GenerateRandomDesignTraces.TryGetValue(pointer, out AiDesignGenerationTrace trace))
-                return;
-
-            _GenerateRandomDesignTraces.Remove(pointer);
-            if (!trace.Enabled || routine == null || routine.player == null)
-                return;
-
-            string afterClasses = CaptureDesignClassSummary(routine.player, null, out int afterCount);
-            List<string> newDesigns = new();
-            foreach (Ship design in new Il2CppSystem.Collections.Generic.List<Ship>(routine.player.designs))
-            {
-                if (design == null || !design.isDesign || trace.DesignIds.Contains(design.id))
-                    continue;
-
-                newDesigns.Add(DescribeAiBuildShip(design));
-            }
-
-            string addedText = newDesigns.Count == 0 ? "-" : string.Join("; ", newDesigns);
-            string outcome = newDesigns.Count == 0 ? "no persisted designs" : "persisted";
-            Melon<TweaksAndFixes>.Logger.Msg($"AI GenerateRandomDesigns {outcome}: {trace.PlayerName}, date={trace.Year:D4}-{trace.Month:D2}, prewarm={trace.Prewarming}, service={trace.ServiceOwned}, result={result}, designs={trace.DesignCount}->{afterCount} [{afterClasses}], added={addedText}");
-        }
-
-        internal static bool IsAiDesignServiceRoutine(CampaignController._GenerateRandomDesigns_d__202 routine)
-        {
-            IntPtr pointer = RoutinePointer(routine);
-            return pointer != IntPtr.Zero && _AiDesignServiceJobs.ContainsKey(pointer);
-        }
-
-        internal static bool TryBindAiDesignServiceRoutine(CampaignController._GenerateRandomDesigns_d__202 routine)
-        {
-            IntPtr pointer = RoutinePointer(routine);
-            if (pointer == IntPtr.Zero)
-                return false;
-            if (_AiDesignServiceJobs.ContainsKey(pointer))
-                return true;
-            if (routine == null || routine.player == null)
-                return false;
-
-            IntPtr playerPointer = PlayerPointer(routine.player);
-            AiDesignServiceJob? match = null;
-            foreach (AiDesignServiceJob job in _AiDesignServicePendingJobs.Values)
-            {
-                if (job.Started || job.Prewarming != routine.prewarming)
-                    continue;
-                if (job.PlayerPointer != IntPtr.Zero && playerPointer != IntPtr.Zero && job.PlayerPointer != playerPointer)
-                    continue;
-
-                match = job;
-                break;
-            }
-
-            if (match == null)
-                return false;
-
-            match.Started = true;
-            match.RoutinePointer = pointer;
-            _AiDesignServicePendingJobs.Remove(match.PendingId);
-            _AiDesignServiceJobs[pointer] = match;
-            Melon<TweaksAndFixes>.Logger.Msg($"AI design service Unity coroutine bound: {match.PlayerName}, cycle={match.Cycle}, pending={match.PendingId}, routine=0x{pointer.ToInt64():X}");
-            return true;
-        }
-
-        internal static void CompleteAiDesignServiceJob(CampaignController._GenerateRandomDesigns_d__202 routine)
-        {
-            IntPtr pointer = RoutinePointer(routine);
-            if (pointer == IntPtr.Zero || !_AiDesignServiceJobs.TryGetValue(pointer, out AiDesignServiceJob job) || job.Completed)
-                return;
-
-            job.Completed = true;
-            if (routine == null || routine.player == null)
-                return;
-
-            string afterClasses = CaptureDesignClassSummary(routine.player, null, out int afterCount);
-            List<string> newDesigns = new();
-            foreach (Ship design in new Il2CppSystem.Collections.Generic.List<Ship>(routine.player.designs))
-            {
-                if (design == null || !design.isDesign || job.DesignIds.Contains(design.id))
-                    continue;
-
-                newDesigns.Add(DescribeAiBuildShip(design));
-            }
-
-            string newDesignText = newDesigns.Count == 0 ? "-" : string.Join("; ", newDesigns);
-            if (newDesigns.Count > 0)
-                Melon<TweaksAndFixes>.Logger.Msg($"AI design service verified persisted design(s): {job.PlayerName}, cycle={job.Cycle}, designs={job.DesignCount}->{afterCount} [{afterClasses}], added={newDesignText}");
-
-            if (IsAiDesignServiceDebugEnabled())
-                Melon<TweaksAndFixes>.Logger.Msg($"AI design service Unity coroutine completed: {job.PlayerName}, cycle={job.Cycle}, designs={job.DesignCount}->{afterCount} [{afterClasses}], newDesigns={newDesignText}");
-        }
-
-        private static IntPtr RoutinePointer(CampaignController._GenerateRandomDesigns_d__202 routine)
-        {
-            try
-            {
-                return routine?.Pointer ?? IntPtr.Zero;
-            }
-            catch
-            {
-                return IntPtr.Zero;
-            }
-        }
-
-        private static IntPtr PlayerPointer(Player player)
-        {
-            try
-            {
-                return player?.Pointer ?? IntPtr.Zero;
-            }
-            catch
-            {
-                return IntPtr.Zero;
             }
         }
 
@@ -1334,16 +818,6 @@ namespace TweaksAndFixes
             Melon<TweaksAndFixes>.Logger.Msg($"Skipping pre-start GenerateRandomDesigns for {playerName}, year={year} ({_SkippedPrestartRandomDesignsCount} skipped).");
         }
 
-        internal static void LogSkippedServiceOwnedRandomDesigns(Player player)
-        {
-            _SkippedServiceOwnedRandomDesignsCount++;
-            if (_SkippedServiceOwnedRandomDesignsCount > 12 && _SkippedServiceOwnedRandomDesignsCount % 25 != 0)
-                return;
-
-            string playerName = player == null ? "?" : player.Name(false);
-            int year = CampaignController.Instance?.CurrentDate.AsDate().Year ?? 0;
-            Melon<TweaksAndFixes>.Logger.Msg($"Skipping vanilla GenerateRandomDesigns for {playerName}, year={year}; AI design service owns generation ({_SkippedServiceOwnedRandomDesignsCount} skipped).");
-        }
         // 
         [HarmonyPatch(nameof(CampaignController.BuildNewShips))]
         [HarmonyPostfix]
@@ -1351,22 +825,6 @@ namespace TweaksAndFixes
         {
             LogAiBuildTrace(__instance, player, tempPlayerCash, __state, false);
         }
-
-        [HarmonyPatch(nameof(CampaignController.UpdateAllShipsWeightCost))]
-        [HarmonyPrefix]
-        internal static void Prefix_UpdateAllShipsWeightCost(bool force, out CampaignLoadMethodTimingFrame __state)
-        {
-            __state = BeginCampaignLoadMethodTiming(nameof(CampaignController.UpdateAllShipsWeightCost), $"force={force}");
-            EndCampaignLoadMethodPrefix(ref __state);
-        }
-
-        [HarmonyPatch(nameof(CampaignController.UpdateAllShipsWeightCost))]
-        [HarmonyPostfix]
-        internal static void Postfix_UpdateAllShipsWeightCost(CampaignLoadMethodTimingFrame __state)
-        {
-            EndCampaignLoadMethodTiming(__state);
-        }
-
 
         [HarmonyPatch(nameof(CampaignController.ScrapOldAiShips))]
         [HarmonyPrefix]
@@ -1380,36 +838,15 @@ namespace TweaksAndFixes
             return true;
         }
 
-        [HarmonyPatch(nameof(CampaignController.UpdateNavmeshPassableAreas))]
-        [HarmonyPrefix]
-        internal static void Prefix_UpdateNavmeshPassableAreas(out CampaignLoadMethodTimingFrame __state)
-        {
-            __state = BeginCampaignLoadMethodTiming(nameof(CampaignController.UpdateNavmeshPassableAreas));
-            EndCampaignLoadMethodPrefix(ref __state);
-        }
-
-        [HarmonyPatch(nameof(CampaignController.UpdateNavmeshPassableAreas))]
-        [HarmonyPostfix]
-        internal static void Postfix_UpdateNavmeshPassableAreas(CampaignLoadMethodTimingFrame __state)
-        {
-            EndCampaignLoadMethodTiming(__state);
-        }
-
         [HarmonyPatch(nameof(CampaignController.CheckPredefinedDesigns))]
         [HarmonyPrefix]
-        internal static void Prefix_CheckPredefinedDesigns(CampaignController __instance, bool prewarm, out CampaignLoadMethodTimingFrame __state)
+        internal static void Prefix_CheckPredefinedDesigns(CampaignController __instance, bool prewarm)
         {
-            __state = BeginCampaignLoadMethodTiming(
-                nameof(CampaignController.CheckPredefinedDesigns),
-                DescribePredefinedDesignTiming(__instance, prewarm));
-
             if (__instance._currentDesigns == null || (PredefinedDesignsData.NeedLoadRestrictive(prewarm) && !PredefinedDesignsData.Instance.LastLoadWasRestrictive))
             {
                 if (!PredefinedDesignsData.Instance.LoadPredefSets(prewarm))
                 {
                     Melon<TweaksAndFixes>.Logger.BigError("Tried to load predefined designs but failed! YOUR CAMPAIGN WILL NOT WORK.");
-                    __state.Details = DescribePredefinedDesignTiming(__instance, prewarm);
-                    EndCampaignLoadMethodPrefix(ref __state);
                     return;
                 }
             }
@@ -1427,31 +864,6 @@ namespace TweaksAndFixes
                 __instance._currentDesigns.GetNearestYear(startYear, out year);
                 __instance.initedForYear = year;
             }
-
-            __state.Details = DescribePredefinedDesignTiming(__instance, prewarm);
-            EndCampaignLoadMethodPrefix(ref __state);
-        }
-
-        [HarmonyPatch(nameof(CampaignController.CheckPredefinedDesigns))]
-        [HarmonyPostfix]
-        internal static void Postfix_CheckPredefinedDesigns(CampaignLoadMethodTimingFrame __state)
-        {
-            EndCampaignLoadMethodTiming(__state);
-        }
-
-        [HarmonyPatch(nameof(CampaignController.OnLoadingScreenHide))]
-        [HarmonyPrefix]
-        internal static void Prefix_OnLoadingScreenHide(out CampaignLoadMethodTimingFrame __state)
-        {
-            __state = BeginCampaignLoadMethodTiming(nameof(CampaignController.OnLoadingScreenHide));
-            EndCampaignLoadMethodPrefix(ref __state);
-        }
-
-        [HarmonyPatch(nameof(CampaignController.OnLoadingScreenHide))]
-        [HarmonyPostfix]
-        internal static void Postfix_OnLoadingScreenHideTiming(CampaignLoadMethodTimingFrame __state)
-        {
-            EndCampaignLoadMethodTiming(__state);
         }
 
         [HarmonyPatch(nameof(CampaignController.OnLoadingScreenHide))]
@@ -1483,36 +895,6 @@ namespace TweaksAndFixes
         }
     }
 
-    [RegisterTypeInIl2Cpp]
-    public class AiDesignCoroutineHost : MonoBehaviour
-    {
-        public static AiDesignCoroutineHost? Instance;
-
-        public AiDesignCoroutineHost(IntPtr ptr) : base(ptr) { }
-
-        public static AiDesignCoroutineHost GetOrCreate()
-        {
-            if (Instance != null)
-                return Instance;
-
-            GameObject hostObject = new("TAF AI Design Coroutine Host");
-            UnityEngine.Object.DontDestroyOnLoad(hostObject);
-            Instance = hostObject.AddComponent<AiDesignCoroutineHost>();
-            return Instance;
-        }
-
-        private void Awake()
-        {
-            Instance = this;
-            UnityEngine.Object.DontDestroyOnLoad(gameObject);
-        }
-
-        public Coroutine StartDesignCoroutine(Il2CppSystem.Collections.IEnumerator routine)
-        {
-            return StartCoroutine(routine);
-        }
-    }
-
     [HarmonyPatch(typeof(CampaignController._GenerateRandomDesigns_d__202))]
     internal class Patch_GenerateRandomDesigns
     {
@@ -1523,14 +905,6 @@ namespace TweaksAndFixes
             if (__instance.__1__state != 0)
                 return true;
 
-            if (Patch_CampaignController.TryBindAiDesignServiceRoutine(__instance) ||
-                Patch_CampaignController.IsAiDesignServiceRoutine(__instance) ||
-                Patch_CampaignController._AiDesignServiceRunningGenerateRandomDesigns)
-            {
-                Patch_CampaignController.BeginGenerateRandomDesignTrace(__instance);
-                return true;
-            }
-
             if (Patch_CampaignController.ShouldSkipPrestartRandomDesigns(__instance.prewarming))
             {
                 Patch_CampaignController.LogSkippedPrestartRandomDesigns(__instance.player);
@@ -1539,25 +913,7 @@ namespace TweaksAndFixes
                 return false;
             }
 
-            if (!Patch_CampaignController.ShouldSkipServiceOwnedRandomDesigns())
-            {
-                Patch_CampaignController.BeginGenerateRandomDesignTrace(__instance);
-                return true;
-            }
-
-            Patch_CampaignController.LogSkippedServiceOwnedRandomDesigns(__instance.player);
-            __instance.__1__state = -2;
-            __result = false;
-            return false;
-        }
-
-        [HarmonyPatch(nameof(CampaignController._GenerateRandomDesigns_d__202.MoveNext))]
-        [HarmonyPostfix]
-        internal static void Postfix_MoveNext(CampaignController._GenerateRandomDesigns_d__202 __instance, bool __result)
-        {
-            Patch_CampaignController.EndGenerateRandomDesignTrace(__instance, __result);
-            if (!__result)
-                Patch_CampaignController.CompleteAiDesignServiceJob(__instance);
+            return true;
         }
     }
 }

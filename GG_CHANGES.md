@@ -22,9 +22,6 @@ Also - all the changes were generated using Codex - I didn't type a single chara
 
 ### Campaign UI
 
-- Added a small battle only log above normal log UI
-  - this way it's easier to see who fights whom, also has tooltip on hover with more details
-
 - Designs screen show designs from all countries not just players
   - AI designs are only viewable, player can't use / change them
   - Also added basic deployment stats - how many ships are active/building/repairing instead of just active
@@ -33,49 +30,21 @@ Also - all the changes were generated using Codex - I didn't type a single chara
 
 - This was probably where I spent most of the time trying to balance speed vs variety vs usability
 
-- As a background - the way AI ship designer works is effectivelly throwing darts and hoping some hit somewhere near the target
-  - This is very fast in the basic implementation but results in the wacky and completly unreasonable designs in Vanilla
-  - TAF/DIP fix this by adding bunch of restrictions and rules and that works in that it produces better designs but at a cost of much much longer processing speed
-    - Basically with DIP the algorithm is 1) throw darts 2) check if they landed in very specific way 3) repeat
+- Tried many different approaches - making improvements to TAF algorithm, making my own algorithm, running ship generation in background... you name it. In the end the simplest solution turned out to be simplest one
 
-- Ok so the way I "fix" this is by making it a simpler problem
+- I effectively reverted the game to use Vanilla ship generator but with few small improvements
+  - Ported armor generation logic from TAF to have AI generate reasonable armor
+  - Ported parts of TAF speed logic to keep ships speed not insane
+  - Sanity defaults to prevent AI creating truly bizzare ships
+    - TB/DDs are restricted to min beam/draught and max tonnage
+    - No torps on CA and above
+    - Guns are restricted to whole calibers (so no more 13.2 inches)
+    - Shells are max AP with best penetrating caps chosen (to capitalize on DIP AP bias)
 
-- Reduce variability of inputs - AI is no longer allowed to change beam/draught/tonnage
-  - we max the tonnage (up to what current tech/docks allow)
-  - beam is set to widest for BBs, narrowest for DD/TB, 0 for everything else
-  - draught is set to shallowest for DD/TB, 0 for everything else
-
-- Speed is clamped to whole numbers only - no more 17.4 knots
-
-- Guns are clamped as well - no more 12.4 inch gun with 7% extra length
-  - Human player can still do that but AI cannot
-
-- Gun tech is clamped to highest available 
-  - So if specific design have mark 3 and mark 2 options, mark 2s will be ignored
-
-- Drastic algorithm for weight reduction
-  - Basically anything is a fair game if it can get design to be workable - quarters/range etc
-
-- Retry downsizing logic - if a design attempt fails to create a viable design, next attempt only uses smaller parts
-
-- Hard floors for armor, speed and tech - basically makes sure that AI can't generate something very silly
-
-- Hard coded preference for Max AP ammo and best pen caps
-  - In DIP armor is king and pen is more valuable than anything else
-
-- Dynamically reorder "dart throwing rules" to make sure we give us the best chance
-  - In other words, some times the game is configured to put secondaries before main guns which can break certain hulls
-  - The mod rearranges those on the fly
-
-- Relaxation of minimum turrets / barrels checks
-  - Certain hulls have very high minimums that are very hard to hit consistently resulting in many retries and wasted time
-  - It does lead to somewhat silly designs sometimes but hey that's part of the fun 
-
-- CA and above can't have torpedoes, yes even Japan
-
-- Fast retry logic 
-  - Basically if the ship is fundamentally broken, no reason to optimize weight - just try again sooner
-
+- It works.. surprisingly well.. there are still few issues that I am seeing but I can live with those
+  - Wacky gun placement - can still happen but to me that's part of the charm instead of always looking at the same ship layouts - most of these are reasonable and not entirely broken anyway
+  - Some hulls / tech level combinations are super frustrating and don't have any margins for AI to experiment - good examples are early TB hulls with 275 tons max and funnels that take up half the ship length
+  - Outside of that though.. it's all fairly reasonable imho, but let me know if you find something truly broken and perhaps we can add special rules to address
 
 ### Combat
 
@@ -98,7 +67,7 @@ Also - all the changes were generated using Codex - I didn't type a single chara
 - Country specific generation overrides
   - Give Japan higher basic speed floor or require more torpedoes or something
 
-- Better combat AI
+- Better combat AI and more "combat modes"
 
 - Design caches
   - Sort of a middle ground between everything pregenerated and nothing

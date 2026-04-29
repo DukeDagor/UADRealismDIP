@@ -711,15 +711,8 @@ Current `CampaignController` patches add:
 
 - `taf_debug_ai_shipbuilding`: before/after logging around `BuildNewShips`, including design counts, class summaries, under-construction counts, approximate free capacity, and design tonnage range.
 - `Ship._CreateRandom_d__571` tracing: `AI CreateRandom begin` and `AI CreateRandom end` for AI players when debug is enabled.
-- Optional AI design service:
-  - `taf_campaign_ai_design_service_enabled`
-  - `taf_campaign_ai_design_service_disable_endturn_generation`
-  - `taf_campaign_ai_design_service_start_delay_seconds`
-  - `taf_campaign_ai_design_service_player_delay_seconds`
-  - `taf_campaign_ai_design_service_cycle_delay_seconds`
-  - `taf_debug_ai_design_service`
 
-The AI design service is off by default. When enabled, it runs an always-on coroutine from `OnNewTurn`, invokes the private `GenerateRandomDesigns(Player,bool)` by reflection, and skips vanilla end-turn `GenerateRandomDesigns` unless the service itself owns that invocation.
+Cleanup note: the optional AI design service experiment was removed. Campaign AI ship generation now stays on the normal vanilla end-turn `GenerateRandomDesigns` path, with only the pre-start Blank Slate skip still patched.
 
 ### Hull Defaults And Tonnage
 
@@ -754,7 +747,6 @@ Accepted keys include:
 
 - `max_displacement`
 - `min_beam_draught`, `min_beam_draft`, `min_dimensions`, `compact_geometry`
-- `generator` / `special_generator` / `shipgen`
 - `main_gun_max`
 - `tower_tier_max`
 - `tower <family>`
@@ -765,7 +757,7 @@ Default source value:
 maine_hull_a:max_displacement=1,main_gun_max=9,tower_tier_max=1
 ```
 
-Special generator note: `gg_tb_minimal` exists for `tb` ships when both the hull profile names it and `taf_shipgen_special_tb_generator_enabled` is `1`. It is disabled by default.
+Cleanup note: the old `gg_tb_minimal` special torpedo-boat replacement generator was removed. Hull profiles now only carry small caps/defaults consumed by the normal generator path.
 
 ### Component Optimization
 
@@ -1013,7 +1005,7 @@ Use this decision tree:
 - If a recipe accepts candidates but places none, inspect mount constraints, `rangeZ`, `center`/`side`, paired behavior, and `Part.CanPlace`/`Part.Place` traces.
 - If parts place but the design is rejected, inspect final issue flags: weight, cost requirements, main gun count/barrels, instability, and missing required stats.
 - If a hull needs a narrow custom rule, prefer `taf_shipgen_hull_profiles` over global behavior.
-- If a hull needs a completely different placement strategy, add it as a named profile generator like `gg_tb_minimal` rather than branching globally.
+- If a hull needs a completely different placement strategy, avoid adding a replacement generator until the vanilla-baseline patch approach has clearly failed.
 - If adding bans, prefer explicit source-visible ids only after repeated log evidence. The current code intentionally does not use dynamic learned bans.
 
 Useful debug toggles:
@@ -1026,7 +1018,6 @@ Useful debug toggles:
 - `taf_debug_shipgen_flow_trace`
 - `taf_debug_shipgen_gun_normalization`
 - `taf_debug_ai_shipbuilding`
-- `taf_debug_ai_design_service`
 
 Useful live log path:
 

@@ -9,19 +9,11 @@ Current source marker:
 - `TAF-RC7 GG Patch gg150`
 - `3.20.3-gg150`
 
-`gg147` is a safety fix after `gg146` hung on Next Turn. The live log showed the service was scheduled and entered, but never reached `AI design service cycle ... begin`; because vanilla end-turn `GenerateRandomDesigns` was still being skipped, a scheduled-but-dead service could starve the normal turn flow. `gg147` switches the service's managed yields to `WaitForEndOfFrame`, and the end-turn skip now defaults off and only arms after the service completes at least one cycle.
-
-`gg148` is the next AI design-generation performance experiment. It hosts vanilla `CampaignController.GenerateRandomDesigns(player, false)` on a real Unity/IL2CPP `MonoBehaviour` (`AiDesignCoroutineHost`) instead of trying to yield the IL2CPP enumerator through Melon coroutines.
-
-`gg149` turns vanilla end-turn `GenerateRandomDesigns` off when `taf_campaign_ai_design_service_disable_endturn_generation=1` without waiting for a completed service cycle. The current test intentionally makes the Unity-hosted service the only design-generation owner, while `BuildNewShips` remains in the normal end-turn flow.
-
-`gg150` fixes the service-owned Unity coroutine bridge. Reflection returns only an `Il2CppSystem.Collections.IEnumerator` wrapper at creation time, so the service now starts that raw enumerator, stores a pending job keyed by player/prewarm context, and binds the real `_GenerateRandomDesigns_d__202` pointer from the first Harmony `MoveNext` prefix before the vanilla skip guard runs.
-
 - `E:\SteamLibrary\steamapps\common\Ultimate Admiral Dreadnoughts\Mods\TweaksAndFixes.dll`
 
 Important current user rule: **do not kill, start, or restart the game unless explicitly asked.** Before copying a DLL, check whether the game is running. If it is running, report that the DLL was built but not copied and ask/let the user close the game. If the game is closed, copy the DLL and verify the marker.
 
-Current active work is split between the campaign Ship Design tab AI-design viewer in `TweaksAndFixes/Harmony/CampaignFleetWindow.cs` and an experimental campaign AI design-generation service in `TweaksAndFixes/Harmony/CampaignController.cs`.
+Current active work includes the campaign Ship Design tab AI-design viewer in `TweaksAndFixes/Harmony/CampaignFleetWindow.cs`. The old coroutine-based AI design-generation service experiment has been removed; keep campaign ship generation on the normal vanilla end-turn path unless the user explicitly starts a new experiment.
 
 Implemented:
 
@@ -42,18 +34,9 @@ Known current UI issue:
 Active AI-build/design instrumentation:
 
 - Live `Mods\params.csv` should contain `taf_debug_ai_shipbuilding,1`.
-- Live `Mods\params.csv` should contain `taf_campaign_ai_design_service_enabled,1`, `taf_campaign_ai_design_service_disable_endturn_generation,1`, `taf_debug_ai_design_service,1`, and `taf_campaign_ai_design_service_job_timeout_seconds,90` for the current Unity-hosted service performance test.
 - Live params were backed up before editing to `E:\SteamLibrary\steamapps\common\Ultimate Admiral Dreadnoughts\Mods\params.csv.bak-20260427-144936`.
 - `BuildNewShips` now logs per-AI before/after counts plus no-build context: building tonnage, approximate free capacity, design tonnage range, and inferred reason category.
 - `Ship.CreateRandom` coroutine tracing now logs `AI CreateRandom begin` and `AI CreateRandom end` around AI random design generation so we can correlate shipgen success with whether `player.designs` or building counts changed.
-- `gg141+` adds an always-on main-thread Melon coroutine that loops over active AI major powers and runs vanilla private `CampaignController.GenerateRandomDesigns(player, false)` through a nested Il2Cpp coroutine runner.
-- `gg145` scheduled the service from `Patch_Ui.Postfix_Update` only once the campaign is in `World` state, then yielded vanilla `GenerateRandomDesigns` directly. That proved shipgen could start, but produced MelonLoader `Unsupported type Il2CppSystem.Collections.IEnumerator` trampoline errors.
-- `gg146` kept the world-state scheduling and used a managed stack walker for Il2Cpp nested coroutines instead of raw-yielding them, but the service entered and never reached the first cycle in the live log.
-- `gg147` uses `WaitForEndOfFrame` for service yields and prevents `taf_campaign_ai_design_service_disable_endturn_generation` from skipping vanilla generation until a service cycle has completed.
-- `gg148` invokes `GenerateRandomDesigns` via `AiDesignCoroutineHost.StartCoroutine(...)`, tracks the IL2CPP state-machine pointer, and completes the service wait from the `GenerateRandomDesigns.MoveNext` postfix when Unity reports the routine is done. Watch for `AI design service Unity coroutine started`, `AI GenerateRandomDesigns persisted...`, `AI design service Unity coroutine completed...`, and `AI design service verified persisted design(s)...`.
-- `gg149` makes `taf_campaign_ai_design_service_disable_endturn_generation=1` skip vanilla state-0 end-turn `GenerateRandomDesigns` immediately rather than after a proven completed service cycle. `BuildNewShips` remains in the normal end-turn flow.
-- `gg150` should produce `AI design service Unity coroutine requested`, then `AI design service Unity coroutine bound`, then `AI GenerateRandomDesigns begin... service=True`, and finally completion/persistence logs. If `requested` appears without `bound`, Unity did not enter the typed coroutine state machine. If `bound` appears and then a timeout appears, the typed coroutine started but did not finish.
-- Once started, this yolo service does not pause itself for battles, loading, or human constructor state. The test assumption is that the user will avoid battles/ship designer while observing it.
 
 Recent files touched for this feature:
 
@@ -235,7 +218,7 @@ Before hardcoding behavior, first check whether a `taf_*` parameter or CSV file 
 
 ## Shipgen Experiments
 
-Current GG ship generation work lives mostly in `TweaksAndFixes/Harmony/Ship.cs` and `TweaksAndFixes/Modified/ShipM.cs`. Keep new behavior gated behind `taf_shipgen_hull_profiles` where possible, plus an explicit enable switch for experimental replacement generators.
+Current GG ship generation work lives mostly in the `TweaksAndFixes/Harmony/GGShipgen*.cs` vanilla-baseline patch files, with older TAF integration points still in `TweaksAndFixes/Harmony/Ship.cs` and `TweaksAndFixes/Modified/ShipM.cs`. Do not add a replacement ship generation algorithm; prefer small, well-commented patches on top of the vanilla generator.
 
 The profile parser accepts entries like:
 
@@ -245,31 +228,10 @@ maine_hull_a:max_displacement=1|main_gun_max=9|tower_tier_max=1
 
 As of `gg74`, all ship types are hardcoded through the normal generator to use the maximum legal displacement during ship generation. "Legal" means clamped to hull max, `Player.TonnageLimit(shipType)`, and campaign shipyard capacity when present; do not use `Player.IsTonnageAllowedByTech` for selecting the forced max, because it can cap early TB hulls below the generator/UI limit. Shipgen geometry is also hardcoded before max tonnage is calculated: BBs use maximum beam and 0 draught; TBs/DDs use minimum beam and minimum draught; every other ship type uses 0 beam and 0 draught, clamped to the hull's legal beam/draught range. Disassembly showed `Ship.Tonnage()` returns `BeamDraughtBonus * rawTonnage`, so `SetShipgenTonnage` must store `displayTarget / BeamDraughtBonus`; writing the display target directly makes modified-geometry hulls show too small, e.g. 275t requested becomes 239t. If `Ship.SetTonnage` still clamps below that legal target during shipgen, `SetShipgenTonnage` assigns the backing `ship.tonnage` field and refreshes hull stats. The old relaxed shipgen weight acceptance is disabled again; generated ships should pass the game's real weight validation. Shell-size reduction is allowed for all ship types as soon as overweight reduction runs. `OptimizeComponents` also forces AI shipgen toward DIP-friendly armament components: max AP shell distribution for main and secondary guns, best available penetrating AP/HE shell type, and max available torpedo diameter. Shipgen hard-bans main-gun randparts `49/`, `52/`, and `368/`; these early-BB centerline randparts repeatedly accepted candidates but never reached placement, so they are filtered before candidate selection and omitted from the applicable-main-gun diagnostic list. Since campaign generation usually gives only four attempts, default downsize behavior is aggressive: start after the first failed attempt, reduce main-gun cap by 2 inches per step, and reduce tower-family tier caps by 2 tiers per step while preserving floors from seen/accepted candidates. Successful shipgen summaries print grouped final main/other gun part names so future hull-specific prioritization can be based on observed working parts. Avoid adding string-list rows for this to live `params.csv`; the game can fail while replacing the built-in params asset.
 
-`jap_tb_hull:generator=gg_tb_minimal` is a shelved experimental special-hull path. It replaces the random part-placement phase for `tb` ships using the `jap_tb_hull` model, while leaving the game's normal hull setup, components, weight/stat passes, coroutine flow, and final validation in place. As of `gg61`, do not route into it by default: `taf_shipgen_special_tb_generator_enabled` defaults to `0`, and the default hull profile no longer includes `jap_tb_hull:generator=gg_tb_minimal`.
-
-To deliberately re-enable it for debugging, set both:
-
-```csv
-taf_shipgen_special_tb_generator_enabled,1
-taf_shipgen_hull_profiles,maine_hull_a:max_displacement=1|main_gun_max=9|tower_tier_max=1; jap_tb_hull:generator=gg_tb_minimal
-```
-
-As of `gg58`, `gg_tb_minimal` uses a bounded backtracking search instead of a purely greedy placement pass:
-
-- Apply narrow defaults first: minimum beam, minimum draught, and cramped quarters.
-- Clear generated parts and refresh mounts.
-- Enumerate candidate main-tower placements, shuffle them, then try one.
-- From that tower state, enumerate candidate standard-funnel placements, shuffle them, then try one.
-- From that tower+funnel state, try the constrained main-gun placement helper.
-- If required main guns are present, optionally add a torpedo launcher and return the ship to normal validation.
-- If a branch fails, remove the parts from that branch, refresh mounts, and continue until `taf_shipgen_special_tb_search_limit` is reached.
-
 When editing this area:
 
-- Prefer adding new special generators through the hull profile parser instead of global behavior.
-- Keep special generators narrow to a hull model or hull data name, and usually also check `ship.shipType.name`.
+- Keep hull-profile rules limited to small caps/defaults that the normal generator can consume.
 - Avoid installing live `params_override.csv`; source defaults go in `TweaksAndFixes/Default_Files/TAF_Files/params_override.csv`, but live tests should keep using the installed `params.csv` unless the user explicitly asks otherwise.
-- If a special generator fails, log enough to know whether candidate filtering, mount fitting, `CreateFromStore`, `CanPlace`, or final validation rejected the design.
 
 ## Editing Guidance
 
