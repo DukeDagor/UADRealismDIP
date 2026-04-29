@@ -521,6 +521,13 @@ Current patch tracker:
 | Compact small craft geometry | `dd`, `tb` | `GenerateRandomShip` state `2` (`beam_draught`) | Active, hardcoded |
 | Max legal small craft displacement | `dd`, `tb` | `GenerateRandomShip` state `3` (`tonnage`) | Active, hardcoded |
 | Heavy-ship torpedo randpart ban | `ca`, `bc`, `bb` | `Ship.GetParts(randPart)` candidate filter | Active, hardcoded |
+| Data-driven armor generation | all armored ship types with `GenArmorData` | `Ship.GenerateArmor(...)` during vanilla shipgen | Active, hardcoded |
+| Post-parts turret armor sync | generated guns with turret armor entries | `GenerateRandomShip` state `11` (`validate_guns`) | Active, hardcoded |
+| Whole-inch gun caliber floor | generated guns | `Ship.SetCaliberDiameter(...)` during vanilla shipgen | Active, hardcoded |
+| Penetration-biased gun components | generated gun-equipped ships | `GenerateRandomShip.MoveNext` while vanilla shipgen is active | Active, hardcoded |
+| Hull-aware speed clamp | all generated ship types | `Ship.SetSpeedMax(...)` during vanilla shipgen | Active, hardcoded |
+| Relaxed minimum speed floor | `tb`, `dd`, `cl` by `-2 kn`; all others by `-1 kn` | `Ship.SetSpeedMax(...)` during vanilla shipgen | Active, hardcoded |
+| Whole-knot speed normalization | all generated ship types | `Ship.SetSpeedMax(...)` during vanilla shipgen | Active, hardcoded |
 
 Current standalone tweaks:
 
@@ -539,6 +546,52 @@ Current standalone tweaks:
   - Prefix-patches vanilla `Ship.__c__DisplayClass590_0._GetParts_b__0`, the candidate filter used by `Ship.GetParts(randPart)`.
   - When the active randpart type is `torpedo` and the generated ship type is `ca`, `bc`, or `bb`, the candidate filter returns `false` before any torpedo part is created.
   - This avoids post-placement cleanup. The vanilla recipe loop may still visit a torpedo recipe, but it will see no legal torpedo candidates for heavy ships and continue.
+
+- TAF-style armor on vanilla shipgen.
+  - Hardcoded for now; no config param.
+  - Lives in `TweaksAndFixes/Harmony/GGShipgenArmor.cs` to keep armor experiments separate from geometry/randpart tweaks.
+  - Copies the useful body of `ShipM.GenerateArmorNew(...)` into the GG layer instead of calling it directly.
+  - Prefix-patches `Ship.GenerateArmor(...)` only while the vanilla-baseline generator is inside `GenerateRandomShip`.
+  - If `GenArmorData.GetInfoFor(ship)` returns data, the patch builds the armor dictionary from the TAF data-driven min/max table. If data is missing or invalid, it falls through to vanilla `Ship.GenerateArmor(...)`.
+  - Tracks the active vanilla coroutine state locally so the copied logic can apply the same state-`5` year-scaling correction without depending on disabled TAF state bookkeeping.
+  - Copies the useful body of `ShipM.SyncShipgenTurretArmor(...)` into the GG layer and runs it at state `11` (`validate_guns`), after `AddRandomPartsNew` has created per-gun `Ship.TurretArmor` entries and before vanilla validates the design.
+  - This intentionally does not port TAF `AdjustHullStats`, `ReduceWeightByReducingCharacteristics`, or final unused-tonnage armor fill.
+
+- TAF-style speed sanity on vanilla shipgen.
+  - Hardcoded for now; no config param.
+  - Lives in `TweaksAndFixes/Harmony/GGShipgenSpeed.cs` to keep speed experiments separate from armor and randpart tweaks.
+  - Copies the default TAF speed-range helpers, not the `speedMultByGen_*` param override layer.
+  - Prefix-patches `Ship.SetSpeedMax(...)` only while the vanilla-baseline generator is inside `GenerateRandomShip`.
+  - Clamps generated speeds to a hull-aware range based on `hull.data.speedLimiter`, hull generation, ship type min/max speed, ship year, and the vanilla shipgen coroutine RNG when available.
+  - Relaxes the enforced minimum speed after those calculations by `2 kn` for `tb`/`dd`/`cl` and by `1 kn` for all other ship types, with an absolute lower bound of `1 kn`.
+  - Floors generated speeds to whole knots, matching the useful TAF normalization behavior.
+  - Skips the clamp/normalization when a scenario supplies a custom shipgen speed.
+  - This intentionally does not port TAF `AdjustHullStats` or its wider speed/range/crew/survivability balancing loop.
+
+- Whole-inch gun caliber floor on vanilla shipgen.
+  - Hardcoded for now; no config param.
+  - Lives in `TweaksAndFixes/Harmony/GGShipgenGuns.cs` to keep gun experiments separate from armor, speed, and randpart tweaks.
+  - Does not reject fractional-caliber gun candidates outright. Instead, it keeps the selected gun and floors the generated effective caliber to the nearest lower whole inch by adjusting the ship's `TurretCaliber.diameter` modifier.
+  - Prefix-patches `Ship.SetCaliberDiameter(...)` only while the vanilla-baseline generator is active, and also normalizes any surviving generated gun caliber entries after each `GenerateRandomShip.MoveNext` step.
+  - Does not currently clamp barrel length modifiers; that is deliberately left alone until we map a safer generation-only hook.
+
+- Penetration-biased generated gun components.
+  - Hardcoded for now; no config param.
+  - Lives in `TweaksAndFixes/Harmony/GGShipgenGuns.cs` next to the caliber-floor patch.
+  - While vanilla-baseline shipgen is active, generated ships install the most AP-heavy main and secondary shell ratios when available: `shell_ratio_main_2` and `shell_ratio_sec_2`.
+  - Generated ships also prefer the highest-penetration shell setup available from current tech: `shell_S.heavy` before `shell_heavy` before `shell_normal`, AP cap order `ap_5`, `ap_2`, `ap_1`, `ap_0`, `ap_4`, `ap_3`, and HE cap order `he_3`, `he_2`, `he_0`, `he_1`, `he_4`, `he_5`.
+  - This preserves vanilla part selection and only changes the final component choices for generated designs.
+
+- Compact vanilla-baseline shipgen logging.
+  - Hardcoded for now; no config param.
+  - The per-attempt `GG turret armor sync` diagnostics were removed from normal logs because they were too noisy during retries.
+  - `TweaksAndFixes/Harmony/GGShipgenGuns.cs` now logs one `GG shipgen start` line when vanilla-baseline `GenerateRandomShip` begins and one `GG shipgen end` line when the coroutine completes.
+  - Start includes ship type, hull id/model, country, year, and target tonnage.
+  - Each rejected attempt logs a compact best-effort reason when vanilla increments the attempt counter. Current reason hints include main gun count, unmet required stats, overweight, invalid/empty barbettes, tech tonnage, balance, or general validity failure.
+  - End includes success/failure, attempts, elapsed seconds, speed, weight/tonnage, compact armor summary, compact main/secondary gun summary, compact torpedo summary, and the final rejection reason on failure.
+  - Speed is logged from `ship.speedMax`, the raw generated design speed written by `SetSpeedMax(...)`. Disassembly shows `Ship.SpeedMax(...)` is an effective/runtime speed accessor that multiplies the stored design speed by ship modifiers and can report zero during generation.
+  - Armor is logged in inches as `belt=main/bow/stern`, `deck=main/bow/stern`, `turret=side/top/barbette`, `citadel=inner belt 1st/inner deck 1st`, and `ct/super=conning tower/superstructure`.
+  - Torpedoes are logged as launcher count, total tube count, and grouped tube/diameter layout, for example `torps=2/6 tubes (2 launchers 3x18in)`.
 
 The TAF code names the game coroutine states as:
 
