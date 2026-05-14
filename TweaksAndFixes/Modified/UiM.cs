@@ -692,7 +692,7 @@ namespace TweaksAndFixes
 
             ApplyCampaignWindowModifications();
             ApplyDockyardModifications();
-            
+
             AddLoadButton();
 
             G.GameData.tooltips["file_converter"] = new TooltipData();
@@ -868,13 +868,13 @@ namespace TweaksAndFixes
             }));
         }
 
-        public static void AddConfirmPopupToButton(Button button, string text = default, System.Action before = null, System.Action after = null)
+        public static void AddConfirmPopupToButton(Button button, string? text = default, System.Action? before = null, System.Action? after = null, bool invokeOnYes = true, bool invokeOnNo = false)
         {
-
             if (button.onClick.PrepareInvoke().Count == 1)
             {
-                if (text == default)
+                if (text == default || text == null)
                 {
+                    // TODO: Localize (not that it gets used anywhere)
                     text = "Are you sure?";
                 }
                 else
@@ -890,12 +890,27 @@ namespace TweaksAndFixes
                         new System.Action(() =>
                         {
                             if (before != null) before.Invoke();
-                            baseCall.Invoke(new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(System.Array.Empty<Il2CppSystem.Object>()));
+                            if (invokeOnYes)
+                                baseCall.Invoke(
+                                    new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(
+                                        System.Array.Empty<Il2CppSystem.Object>()
+                                    )
+                                );
                             if (after != null) after.Invoke();
                         }),
-                        new System.Action(() => { })
+                        new System.Action(() =>
+                        {
+                            if (invokeOnNo)
+                                baseCall.Invoke(
+                                    new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(
+                                        System.Array.Empty<Il2CppSystem.Object>()
+                                    )
+                                );
+                        })
                     );
                 }));
+
+                // Empty event is a marker that we visited this button already
                 button.onClick.AddListener(new System.Action(() => { }));
             }
         }
