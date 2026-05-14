@@ -2419,6 +2419,68 @@ namespace TweaksAndFixes
             btn.EvaluateAndTransitionToSelectionState();
         }
 
+        private static void AskIfCloneShouldUpdateTechs()
+        {
+            var Clone = G.ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip");
+            var button = Clone.GetComponent<Button>();
+
+            // Melon<TweaksAndFixes>.Logger.Msg("ConstructorUi");
+
+            if (button.onClick.PrepareInvoke().Count != 1)
+                return;
+
+            // Melon<TweaksAndFixes>.Logger.Msg("Replacing listener");
+
+            var baseCall = button.onClick.PrepareInvoke()[0];
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(new System.Action(() =>
+            {
+                G.ui.ShowConfirmation(
+                    ModUtils.LocalizeF("$TAF_Ui_Dockyard_Confirm_Action_CloneShip"),
+                    new System.Action(() =>
+                    {
+                        string Header = LocalizeManager.Localize("$TAF_Ui_Constructor_UpdateTechs");
+                        string Text = ModUtils.LocalizeF("$TAF_Ui_Constructor_UpdateTechsBody");
+
+                        // Melon<TweaksAndFixes>.Logger.Msg("Confirm");
+
+                        if (GameManager.IsCampaign)
+                            MessageBoxUI.Show(
+                                Header,
+                                Text,
+                                null, false,
+                                LocalizeManager.Localize("$Ui_Popup_Generic_Yes"), LocalizeManager.Localize("$Ui_Popup_Generic_No"),
+                                new System.Action(() =>
+                                {
+                                    Melon<TweaksAndFixes>.Logger.Msg("Update");
+                                    Patch_PlayerController.updateTechsForNextClonedShips = true;
+                                    baseCall.Invoke(
+                                        new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(
+                                            System.Array.Empty<Il2CppSystem.Object>()
+                                        )
+                                    );
+                                }),
+                                new System.Action(() =>
+                                {
+                                    Melon<TweaksAndFixes>.Logger.Msg("Don't update");
+                                    baseCall.Invoke(
+                                        new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(
+                                            System.Array.Empty<Il2CppSystem.Object>()
+                                        )
+                                    );
+                                }), null, null, null, false
+                            );
+                        else
+                            baseCall.Invoke(
+                                new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(
+                                    System.Array.Empty<Il2CppSystem.Object>()
+                                )
+                            );
+                    })
+                );
+            }));
+        }
+
         [HarmonyPatch(nameof(Ui.ConstructorUI))]
         [HarmonyPostfix]
         internal static void Postfix_ConstructorUI(Ui __instance)
@@ -2426,6 +2488,7 @@ namespace TweaksAndFixes
             ClearAllButtons(__instance);
             EnsureAllButtons(__instance);
             ForceRefitButtonInteractable();
+            AskIfCloneShouldUpdateTechs();
         }
 
         [HarmonyPatch(nameof(Ui.RefreshConstructorInfo))]
