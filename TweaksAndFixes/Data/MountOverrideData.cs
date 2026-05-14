@@ -318,16 +318,18 @@ namespace TweaksAndFixes
 
             if (relitive) partName = partName.Replace("(Clone)", "");
 
-            if (!BaseGamePartModelData._Data.ContainsKey(partName))
-            {
-                Melon<TweaksAndFixes>.Logger.Msg($"Error! Key for {partName} not found! Failed to override {part.Name()}!");
-                // Melon<TweaksAndFixes>.Logger.Msg($"{ModUtils.DumpHierarchy(part.gameObject)}");
-                return;
-            }
+            bool isHull = false;
+            bool isTower = false;
+            bool isBarbette = false;
 
-            bool isHull     = BaseGamePartModelData._Data[partName].isHull;
-            bool isTower    = BaseGamePartModelData._Data[partName].isTowerMain || BaseGamePartModelData._Data[partName].isTowerSec;
-            bool isBarbette = BaseGamePartModelData._Data[partName].isBarbette;
+            if (BaseGamePartModelData._Data.ContainsKey(partName))
+            {
+                var data = BaseGamePartModelData._Data[partName];
+
+                isHull = data.isHull;
+                isTower = data.isTowerMain || data.isTowerSec;
+                isBarbette = data.isBarbette;
+            }
 
             // Melon<TweaksAndFixes>.Logger.Msg($"Parsing: {partName}...");
             // Melon<TweaksAndFixes>.Logger.Msg($"  {model.name} : {model.transform.position}");
