@@ -1,5 +1,8 @@
 ﻿using HarmonyLib;
 using Il2Cpp;
+using MelonLoader;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace TweaksAndFixes
 {
@@ -74,19 +77,21 @@ namespace TweaksAndFixes
 
         [HarmonyPatch(nameof(BattleManager.CombatUpdateTimeSpeedLimit))]
         [HarmonyPrefix]
-        internal static void Prefix_CombatUpdateTimeSpeedLimit()
+        internal static bool Prefix_CombatUpdateTimeSpeedLimit()
         {
-            InUpdateSpeedLimit = true;
-        }
-        
-        [HarmonyPatch(nameof(BattleManager.CombatUpdateTimeSpeedLimit))]
-        [HarmonyPostfix]
-        internal static void Postfix_CombatUpdateTimeSpeedLimit()
-        {
-            InUpdateSpeedLimit = false;
+            return false;
 
-            SetTimeSpeedLimit();
+            // InUpdateSpeedLimit = true;
         }
+
+        // [HarmonyPatch(nameof(BattleManager.CombatUpdateTimeSpeedLimit))]
+        // [HarmonyPostfix]
+        // internal static void Postfix_CombatUpdateTimeSpeedLimit()
+        // {
+        //     InUpdateSpeedLimit = false;
+        // 
+        //     SetTimeSpeedLimit();
+        // }
 
         // LeaveBattle
 
