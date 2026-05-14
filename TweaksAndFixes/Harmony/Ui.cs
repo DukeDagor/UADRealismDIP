@@ -1,4 +1,4 @@
-using MelonLoader;
+﻿using MelonLoader;
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
@@ -2422,12 +2422,70 @@ namespace TweaksAndFixes
             SpriteDatabase.Instance.OverrideResources();
         }
 
+        public static void PatchShipNameInput()
+        {
+            // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/ShipName
+            //  EditName/Static/EditIcon
+
+            GameObject EditName = ModUtils.GetChildAtPath(
+                "Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/ShipName/EditName"
+            );
+            EditName.GetParent().TryDestroyComponent<OnClickH>();
+            var edit = ModUtils.GetChildAtPath("Edit", EditName);
+            var input = edit.GetComponent<InputField>();
+            var Static = ModUtils.GetChildAtPath("Static", EditName);
+            Util.OnClickH(EditName.transform, new System.Action<PointerEventData>((PointerEventData d) =>
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg("Clicked!");
+                Static.active = false;
+                edit.active = true;
+                input.Select();
+                input.ActivateInputField();
+                // TODO: Fix undo system at some point...
+                // G.ui.textFieldValues.Add(input, input.m_Text);
+            }));
+
+            input.onEndEdit.RemoveAllListeners();
+            input.onEndEdit.AddListener(new System.Action<string>((string s) => {
+                // Melon<TweaksAndFixes>.Logger.Msg("Entered!");
+
+                if (s.Length >= 1 && s.Length <= 50)
+                {
+                    var mainShip = G.ui.mainShip;
+
+                    if (G.ui.isConstructorRefitMode
+                        || mainShip.isRefitDesign)
+                    {
+                        // Melon<TweaksAndFixes>.Logger.Msg("Is Refit!");
+                        s = $"<i>{s}</i>";
+                    }
+
+                    mainShip.SetShipName(s);
+
+                    // TODO: Fix undo system at some point...
+                    // if (G.ui.textFieldValues.ContainsKey(input))
+                    // {
+                    //     UndoCommandManager.RecordInputFieldChange(input, G.ui.textFieldValues[input]);
+                    //     G.ui.textFieldValues.Remove(input);
+                    // }
+                }
+
+                Static.active = true;
+                edit.active = false;
+                G.ui.Refresh();
+            }));
+
+            GameObject editIcon = ModUtils.GetChildAtPath("Static/EditIcon", EditName);
+            editIcon.active = true;
+        }
+
         [HarmonyPatch(nameof(Ui.RefreshConstructorInfo))]
         [HarmonyPostfix]
         internal static void Postfix_RefreshConstructorInfo(Ui __instance)
         {
             EnsureAllButtons(__instance);
             UiM.UpdateConstructorUi();
+            PatchShipNameInput();
         }
 
 
