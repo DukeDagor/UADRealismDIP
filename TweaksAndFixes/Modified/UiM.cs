@@ -929,6 +929,7 @@ namespace TweaksAndFixes
                 if (child.name.Contains("SpaceEater")) child.transform.SetParent(null, false);
                 if (child.name.Contains("Space")) continue;
                 if (child.name == "Undo") continue;
+                if (child.name == "CloneShip") continue;
                 if (child.name.StartsWith("TAF")) continue;
                 //Melon<TweaksAndFixes>.Logger.Msg("  " + child.name);
 
