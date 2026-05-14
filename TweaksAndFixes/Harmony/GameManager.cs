@@ -181,24 +181,7 @@ namespace TweaksAndFixes
         {
             Melon<TweaksAndFixes>.Logger.Msg($"Save Game: forced = {force}, ignoreStateCheck = {ignoreStateCheck}");
 
-            if (!GameSavedInfoTextInitalized)
-            {
-                GameSavedInfoText = GameObject.Instantiate(G.ui.overlayUi.GetChild("Version"));
-                GameSavedInfoText.name = "TAF_GameSavedInfoText";
-                GameSavedInfoText.SetParent(G.ui.overlayUi);
-                GameSavedInfoText.transform.position = new Vector3(500, 2050, 0);
-                GameSavedInfoText.transform.SetScale(1, 1, 1);
-                GameSavedInfoText.GetChild("VersionText").name = "TAF_GameSavedInfoTextElement";
-                GameSavedInfoTextElement = GameSavedInfoText.GetChild("TAF_GameSavedInfoTextElement").GetComponent<Text>();
-                GameSavedInfoTextElement.text = "Game Saved!";
-                GameSavedInfoTextElement.fontSize = 20;
-
-                GameSavedInfoTextInitalized = true;
-            }
-
-            TimeLeft = FadeTime;
-            GameSavedInfoTextElement.color = new Color(1, 1, 1, 1);
-            HasFadeEnded = false;
+            UiM.ShowTextTopLeft(ModUtils.LocalizeF("$TAF_Ui_FadeText_GameSaved"));
         }
 
         public static void Update()
