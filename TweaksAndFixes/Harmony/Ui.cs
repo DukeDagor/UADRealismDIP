@@ -2406,12 +2406,26 @@ namespace TweaksAndFixes
             buttonNew.SetActive(true);
         }
 
+        private static void ForceRefitButtonInteractable()
+        {
+            GameObject RefitShip = G.ui.conUpperButtons.GetChild("Layout").GetChild("RefitShip");
+            var btn = RefitShip.GetComponent<Button>();
+            btn.interactable = true;
+            btn.m_GroupsAllowInteraction = true;
+            RefitShip.TryDestroyComponent<OnEnter>(true);
+            RefitShip.TryDestroyComponent<OnLeave>(true);
+            UiM.AddTooltip(RefitShip, "$Ui_Constr_Refit");
+
+            btn.EvaluateAndTransitionToSelectionState();
+        }
+
         [HarmonyPatch(nameof(Ui.ConstructorUI))]
         [HarmonyPostfix]
         internal static void Postfix_ConstructorUI(Ui __instance)
         {
             ClearAllButtons(__instance);
             EnsureAllButtons(__instance);
+            ForceRefitButtonInteractable();
         }
 
         [HarmonyPatch(nameof(Ui.RefreshConstructorInfo))]
