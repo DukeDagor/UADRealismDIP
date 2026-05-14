@@ -1799,6 +1799,19 @@ namespace TweaksAndFixes
             spacer.TryDestroyComponent<CanvasGroup>();
             spacer.TryDestroyComponent<Outline>();
 
+            // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/NationAndYearSelection/ChooseCountry/Country/Flag
+            GameObject countryFlag = ModUtils.GetChildAtPath(
+                "Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/NationAndYearSelection/ChooseCountry/Country/Flag"
+            );
+            Image countryFlagImage = countryFlag.GetComponent<Image>();
+
+            // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/NationAndYearSelection/ChooseCountry/Country/Flag
+            GameObject countryName = ModUtils.GetChildAtPath(
+                "Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/NationAndYearSelection/ChooseCountry/Country/Name"
+            );
+            Text countryNameText = countryName.GetComponent<Text>();
+
+
             // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/NationAndYearSelection/InputChooseYear/EditName/Edit/Placeholder
 
             GameObject placeholder = ModUtils.GetChildAtPath("InputChooseYear/EditName/Edit/Placeholder", ChooseNationYear);
@@ -1842,10 +1855,16 @@ namespace TweaksAndFixes
                 }
                 else
                 {
+                    G.ui.ClearPlacingPart();
+                    // G.ui.mainShip.LeaveConstructor();
+
                     // Melon<TweaksAndFixes>.Logger.Msg($"  Parsed: `{parsedYear}`");
                     G.ui.sharedDesignYear = parsedYear;
+                    countryNameText.text = Player.GetNameUI(null, G.ui.sharedDesignPlayer, G.ui.sharedDesignYear);
+
                     GameManager.Instance.RefreshSharedDesign(parsedYear, G.ui.sharedDesignPlayer);
                     InputChooseYearStaticText.text = value;
+                    countryFlagImage.sprite = Player.Flag(G.ui.sharedDesignPlayer, true, null, G.ui.sharedDesignYear);
                 }
             }));
         }
