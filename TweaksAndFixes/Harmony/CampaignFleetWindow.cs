@@ -3,7 +3,6 @@ using UnityEngine;
 using Il2Cpp;
 using Il2CppTMPro;
 using UnityEngine.UI;
-using MelonLoader;
 
 namespace TweaksAndFixes.Harmony
 {
@@ -76,6 +75,9 @@ namespace TweaksAndFixes.Harmony
                     G.ui.FleetWindow.Delete.interactable = element.Value.ShipCount.text == "0";
                 }
             }
+
+            if (G.ui.FleetWindow.selectedElements.Count > 0)
+                G.ui.FleetWindow.BuildShip.interactable = true;
 
             if (G.ui.FleetWindow.selectedElements.Count == 0)
             {
