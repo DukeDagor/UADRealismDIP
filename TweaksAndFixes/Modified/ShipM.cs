@@ -1,7 +1,6 @@
 ﻿using MelonLoader;
 using UnityEngine;
 using Il2Cpp;
-using Il2CppSystem.Linq;
 using System.Globalization;
 
 #pragma warning disable CS8600
@@ -1689,7 +1688,7 @@ namespace TweaksAndFixes
 
         Done:
 
-            if (Config.Param("taf_debug_shipgen_info", 0) == 0) return;
+            if (Config.Param("taf_debug_shipgen_info", 0) != 2) return;
 
             if (startWeight == weight || weightReductionLog.Count == 0)
             {

@@ -1359,6 +1359,13 @@ namespace TweaksAndFixes
         {
             if (Config.Param("taf_debug_shipgen_info", 0) == 0) return;
 
+            if (Config.Param("taf_debug_shipgen_info", 0) == 1)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Attempt {__instance._tryN_5__5} / {__instance._triesTotal_5__4}");
+
+                return;
+            }
+
             int numMainTurrets = 0;
             int numMainBarrels = 0;
 
@@ -1456,6 +1463,15 @@ namespace TweaksAndFixes
         {
             if (Config.Param("taf_debug_shipgen_info", 0) == 0) return;
 
+            if (Config.Param("taf_debug_shipgen_info", 0) == 1)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Begin shipgen:");
+                Melon<TweaksAndFixes>.Logger.Msg($"  Hull   : {ship.hull.data.nameUi}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  Nation : {ship.player.data.nameUi}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  Year   : {ship.dateCreated.AsDate().Year}");
+                return;
+            }
+
             Melon<TweaksAndFixes>.Logger.Msg($"Begin shipgen:");
             Melon<TweaksAndFixes>.Logger.Msg($"  Hull   : {ship.hull.data.name} ({ship.hull.data.nameUi})");
             Melon<TweaksAndFixes>.Logger.Msg($"  Model  : {ship.hull.data.model}");
@@ -1467,6 +1483,23 @@ namespace TweaksAndFixes
         private static void PrintShipgenEnd(Ship._GenerateRandomShip_d__573 __instance)
         {
             if (Config.Param("taf_debug_shipgen_info", 0) == 0) return;
+
+            if (Config.Param("taf_debug_shipgen_info", 0) == 1)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Shipgen halted");
+
+                if (__instance == null)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Result   : Interrupted");
+                }
+                else
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Attempts : {__instance._tryN_5__5} / {__instance._triesTotal_5__4}");
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Result   : {(__instance._tryN_5__5 != __instance._triesTotal_5__4 ? "Success" : "Failure")}");
+                }
+
+                return;
+            }
 
             Melon<TweaksAndFixes>.Logger.Msg($"Shipgen halted");
 
