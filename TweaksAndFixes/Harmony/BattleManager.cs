@@ -93,6 +93,70 @@ namespace TweaksAndFixes
         //     SetTimeSpeedLimit();
         // }
 
+
+        [HarmonyPatch(nameof(BattleManager.Update))]
+        [HarmonyPostfix]
+        internal static void Postfix_Update()
+        {
+            var scene = SceneManager.GetActiveScene();
+            var sceneObjs = scene.GetRootGameObjects();
+            GameObject tempObj = null;
+            GameObject shellsObj = null;
+
+            foreach (var obj in sceneObjs)
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg($"  {obj.name}");
+
+                if (obj.name == "Temp")
+                {
+                    tempObj = obj;
+                }
+                if (obj.name == "Shells")
+                {
+                    shellsObj = obj;
+                }
+            }
+
+
+            //Melon<TweaksAndFixes>.Logger.Msg($"Found Temp obj!");
+
+            if (tempObj != null)
+                foreach (var child in tempObj.GetChildren().ToArray())
+                {
+                    if (child.name != "TrailSmoke" && child.name != "TrailFire")
+                        continue;
+
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  {child.name} ({child.transform.GetSiblingIndex()})");
+                    child.TryDestroy(true);
+                }
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Found Temp obj!");
+
+            if (shellsObj != null)
+                foreach (var child in shellsObj.GetChildren().ToArray())
+                {
+                    bool foundOne = false;
+
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  {child.name} ({child.transform.GetSiblingIndex()})");
+
+                    foreach (var subchild in child.GetChildren().ToArray())
+                    {
+                        if (!subchild.name.Contains("Loop"))
+                            continue;
+
+                        if (!foundOne)
+                        {
+                            foundOne = true;
+                            continue;
+                        }
+
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  {subchild.name} ({subchild.transform.GetSiblingIndex()})");
+                        subchild.TryDestroy(true);
+                    }
+                }
+        }
+
+
         // LeaveBattle
 
         [HarmonyPatch(nameof(BattleManager.LeaveBattle))]
