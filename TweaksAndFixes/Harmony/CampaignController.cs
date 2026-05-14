@@ -305,6 +305,8 @@ namespace TweaksAndFixes
                 return;
             }
 
+            /*
+            // The base game logic is correct
             if (MainPlayer.unrest >= 99.495)
             {
                 // HighUnrest
@@ -312,7 +314,10 @@ namespace TweaksAndFixes
                 __instance.FinishCampaign(MainPlayer, FinishCampaignType.HighUnrest);
                 return;
             }
-            else if (MainPlayer.reputation <= -100)
+            else
+            */
+
+            if (MainPlayer.reputation <= -100)
             {
                 // Low reputation
                 Melon<TweaksAndFixes>.Logger.Msg($"  {MainPlayer.Name(false)} falls due to Low Reputation.");
