@@ -1514,7 +1514,13 @@ namespace TweaksAndFixes
                 {
                     hasPopups = false;
                     showPopups = true;
-                    // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"  Not in world");
+                    // if (Input.GetKey(KeyCode.J))
+                    return;
+                }
+
+                if (!GameManager.IsWorldMap)
+                {
+                    hidePopupsButton.SetActive(false);
                     return;
                 }
 
@@ -1522,7 +1528,10 @@ namespace TweaksAndFixes
 
                 foreach (GameObject child in regularPopups)
                 {
-                    if (child.name != "Event Window" && child.name != "Battle Window" && child.name != "WarReparationWindowUI") continue;
+                    if (child.name != "Event Window"
+                        && child.name != "Battle Window"
+                        && child.name != "WarReparationWindowUI")
+                        continue;
 
                     if (child.active)
                     {
@@ -1565,7 +1574,10 @@ namespace TweaksAndFixes
 
                 // if (Input.GetKey(KeyCode.J)) Melon<TweaksAndFixes>.Logger.Msg($"  Has popups: {hasPopups} | !Show popups {!showPopups} | !Loading Screen {!GameManager.IsLoadingScreenActive} | World Map {GameManager.IsWorldMap} | !Save Menu {!popupSaveWindow.active}");
 
-                hidePopupsButton.SetActive((hasPopups || !showPopups) && (!GameManager.IsLoadingScreenActive && GameManager.IsWorldMap && !popupSaveWindow.active));
+                hidePopupsButton.SetActive(
+                    (hasPopups || !showPopups)
+                    && (!GameManager.IsLoadingScreenActive && !popupSaveWindow.active)
+                );
             }));
         }
 
