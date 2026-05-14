@@ -2307,6 +2307,73 @@ namespace TweaksAndFixes
             Serializer.JSON.SaveJsonFile<TAF_Settings>(SavePath.path, TAF_Settings.settings);
         }
 
+        // ========== GENERAL ========== //
+
+
+        public static GameObject InfoText = new();
+        public static Text InfoTextElement = new();
+        public static float FadeTime = 5.0f;
+        public static float TimeLeft = 0f;
+        public static bool InfoTextInitalized = false;
+        public static bool HasFadeEnded = true;
+
+        public static void ShowTextTopLeft(string text, float fadeTime = 5.0f)
+        {
+            // TODO: Support queueing if this gets used more often
+            if (!HasFadeEnded)
+                return;
+
+            if (!InfoTextInitalized)
+            {
+                InfoText = GameObject.Instantiate(G.ui.overlayUi.GetChild("Version"));
+                InfoText.name = "TAF_InfoText";
+                InfoText.SetParent(G.ui.overlayUi);
+                InfoText.transform.position = new Vector3(500, 2050, 0);
+                InfoText.transform.SetScale(1, 1, 1);
+                InfoText.GetChild("VersionText").name = "Text";
+                InfoTextElement = InfoText.GetChild("Text").GetComponent<Text>();
+                InfoTextElement.text = text;
+                InfoTextElement.fontSize = 20;
+
+                InfoTextInitalized = true;
+            }
+
+            FadeTime = fadeTime;
+            TimeLeft = FadeTime;
+            InfoTextElement.color = new Color(1, 1, 1, 1);
+            HasFadeEnded = false;
+
+            MelonCoroutines.Start(Update());
+        }
+
+        internal static System.Collections.IEnumerator Update()
+        {
+            while (true)
+            {
+                if (TimeLeft > 0)
+                {
+                    TimeLeft -= Time.deltaTime;
+
+                    if (TimeLeft <= FadeTime / 2.0f)
+                    {
+                        InfoTextElement.color = new Color(1, 1, 1, (TimeLeft / FadeTime) * 2);
+                    }
+
+                    yield return new WaitForEndOfFrame();
+                }
+                else if (!HasFadeEnded)
+                {
+                    HasFadeEnded = true;
+                    InfoTextElement.color = new Color(1, 1, 1, 0);
+                    TimeLeft = 0;
+
+                    yield break;
+                }
+            }
+        }
+
+
+
         // ========== Function Overrides ========== //
 
         public static void CheckForPeace(Ui _this)
