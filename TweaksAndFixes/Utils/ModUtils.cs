@@ -160,13 +160,26 @@ namespace TweaksAndFixes
 
         public static readonly CultureInfo _InvariantCulture = CultureInfo.InvariantCulture;
 
-        private static string[] months = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+        private static string[] months = {
+            "$TAF_month_short_January",
+            "$TAF_month_short_February",
+            "$TAF_month_short_March",
+            "$TAF_month_short_April",
+            "$TAF_month_short_May",
+            "$TAF_month_short_June",
+            "$TAF_month_short_July",
+            "$TAF_month_short_August",
+            "$TAF_month_short_September",
+            "$TAF_month_short_October",
+            "$TAF_month_short_November",
+            "$TAF_month_short_December",
+        };
 
         public static string NumToMonth(int num)
         {
             if (num < 1 || num > 12) return $"ERR: {num} out of bounds";
 
-            return months[num - 1];
+            return ModUtils.LocalizeF(months[num - 1]);
         }
 
         // Reimplementation of stock function
@@ -996,6 +1009,17 @@ namespace TweaksAndFixes
             }
             Melon<TweaksAndFixes>.Logger.Msg($"    {ship.Name(false, false)}");
             return ship;
+        }
+
+        public static bool TryRemove<T, U>(this Dictionary<T, U> dict, T key)
+        {
+            if (dict.ContainsKey(key))
+            {
+                dict.Remove(key);
+                return true;
+            }
+
+            return false;
         }
 
         public static U ValOrDef<T, U>(this Dictionary<T, U> dict, T key, U def)
