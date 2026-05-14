@@ -24,7 +24,7 @@ namespace TweaksAndFixes
 
             GameDataM.LoadData(__instance);
             Patch_Ui.UpdateVersionString(G.ui);
-        }        
+        }
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(GameData.PostProcessAll))]
@@ -57,6 +57,21 @@ namespace TweaksAndFixes
                     ev.Value.paramx.Add("TAF_low_money", new());
                 }
             }
+
+            /*
+             
+            foreach (var ev in G.GameData.events)
+            {
+                ev.Value.param = ev.Value.param.Replace("low_money", "naval_funds(-inf; 0)");
+                if (ev.Value.paramx.ContainsKey("low_money"))
+                {
+                    ev.Value.paramx.Remove("low_money");
+                    ev.Value.paramx.Add("naval_funds", new());
+                    ev.Value.paramx["naval_funds"].Add("-inf");
+                    ev.Value.paramx["naval_funds"].Add("0");
+                }
+            }
+            */
         }
 
         private static readonly List<string> _FixKeys = new List<string>();
