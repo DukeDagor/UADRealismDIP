@@ -2090,6 +2090,34 @@ namespace TweaksAndFixes
             }));
             deckPropCoverageSC.Set(TAF_Settings.settings.deckPropCoverage / 25);
 
+            // Global/Ui/UiMain/Popup/Options Window/Root/RightSide/General/Viewport/Content/Language/Campaign Dropdown
+            // TMP_Dropdown
+
+            GameObject languageDropdown = ModUtils.GetChildAtPath(
+                "Global/Ui/UiMain/Popup/Options Window/Root/RightSide/General/Viewport/Content/Language"
+            );
+            GameObject refitDateFormat = GameObject.Instantiate(languageDropdown);
+            refitDateFormat.name = "RefitDateFormatDropdown";
+            refitDateFormat.transform.SetParent(GeneralOptionsContent);
+            refitDateFormat.transform.SetScale(1, 1, 1);
+            SetLocalizedTextTag(refitDateFormat.GetChild("Label"), "$TAF_Ui_Settings_RefitDateFormat");
+
+            TMP_Dropdown dropdown = refitDateFormat.GetChild("Campaign Dropdown").GetComponent<TMP_Dropdown>();
+            dropdown.ClearOptions();
+            var options = new Il2CppSystem.Collections.Generic.List<string>();
+            options.Add($"{ModUtils.NumToMonth(2)} 1920");
+            options.Add($"2/1920");
+            options.Add($"1920 {ModUtils.NumToMonth(2)}");
+            options.Add($"1920/2");
+            dropdown.AddOptions(options);
+            dropdown.onValueChanged.RemoveAllListeners();
+            dropdown.onValueChanged.AddListener(new System.Action<int>((int i) => {
+                SetSaveSettingsButtonActive();
+                Melon<TweaksAndFixes>.Logger.Msg($"Set Refit Date Format: {options[i]} (#{i})");
+                TAF_Settings.settings.refitDateFormat = i;
+            }));
+            dropdown.SetValue(TAF_Settings.settings.refitDateFormat, false);
+
             // Global/Ui/UiMain/Popup/Options Window/Root/RightSide/Sound/Viewport/Content/General Volume
 
             // Global/Ui/UiMain/Popup/Options Window/Root/RightSide/Graphic Options/Viewport/Content
@@ -2163,6 +2191,13 @@ namespace TweaksAndFixes
             public float uiScaleDefault { get; set; }
             public bool showMapImage { get; set; }
             public int deckPropCoverage { get; set; }
+            /*
+             0: Month Year | Feb. 1930
+             1: MM/YYYY    | 02/1930
+             2: Year Month | 1930 Feb.
+             3: YYYY/MM    | 1930/02
+             */
+            public int refitDateFormat { get; set; }
 
             public TAF_Settings()
             {
@@ -2171,6 +2206,7 @@ namespace TweaksAndFixes
                 uiScaleDefault = -1;
                 showMapImage = true;
                 deckPropCoverage = 50;
+                refitDateFormat = 0;
             }
         }
 
@@ -2203,6 +2239,7 @@ namespace TweaksAndFixes
                         Melon<TweaksAndFixes>.Logger.Msg($"   uiScaleDefault : {TAF_Settings.settings.uiScaleDefault}");
                         Melon<TweaksAndFixes>.Logger.Msg($"     showMapImage : {TAF_Settings.settings.showMapImage}");
                         Melon<TweaksAndFixes>.Logger.Msg($" deckPropCoverage : {TAF_Settings.settings.deckPropCoverage}%");
+                        Melon<TweaksAndFixes>.Logger.Msg($"  refitDateFormat : {TAF_Settings.settings.refitDateFormat}");
                     }
                 }
                 catch (Exception e)

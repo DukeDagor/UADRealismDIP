@@ -7,6 +7,7 @@ using TweaksAndFixes.Data;
 using static Il2Cpp.Ship;
 using UnityEngine.UI;
 using TweaksAndFixes.Harmony;
+using static TweaksAndFixes.UiM;
 
 #pragma warning disable CS8625
 
@@ -129,11 +130,36 @@ namespace TweaksAndFixes
             // Melon<TweaksAndFixes>.Logger.Msg($"                     `{__instance.Name(true, false, false, false, false)}` `{__instance.Name(false, false, false, false, true)}` `{__instance.Name(true, false, false, false, true)}`");
             // Melon<TweaksAndFixes>.Logger.Msg($"                     Original `{__result}`");
 
-            string prefix = __result.Contains(__instance.Name(false, false, false, false, true)) ? $"{__instance.Name(false, false, false, false, true)}" : "";
+            string prefix = 
+                __result.Contains(__instance.Name(false, false, false, false, true))
+                    ? $"{__instance.Name(false, false, false, false, true)}"
+                    : "";
 
             // string prefix = __result[^1] != '2' ? $"{__result.Substring(0, __result.LastIndexOf('(') - 1)}" : "";
+            int year = CampaignController.Instance.CurrentDate.AsDate().Year;
+            int month = CampaignController.Instance.CurrentDate.AsDate().Month;
+            string monthText;
 
-            __result = $"{prefix} ({ModUtils.NumToMonth(CampaignController.Instance.CurrentDate.AsDate().Month)}. {CampaignController.Instance.CurrentDate.AsDate().Year})";
+            switch (TAF_Settings.settings.refitDateFormat)
+            {
+                case 0:
+                    monthText = ModUtils.NumToMonth(month);
+                    __result = $"{prefix} ({monthText} {year})";
+                    break;
+                case 1:
+                    __result = $"{prefix} ({month:00}/{year})";
+                    break;
+                case 2:
+                    monthText = ModUtils.NumToMonth(month);
+                    __result = $"{prefix} ({year} {monthText})";
+                    break;
+                case 3:
+                    __result = $"{prefix} ({year}/{month:00})";
+                    break;
+                default:
+                    break;
+            }
+
             // Melon<TweaksAndFixes>.Logger.Msg($"                     New      `{__result}`");
         }
 
