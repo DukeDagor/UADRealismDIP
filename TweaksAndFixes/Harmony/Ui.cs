@@ -141,21 +141,118 @@ namespace TweaksAndFixes
 
         // ########## Shared Design Modifications ########## //
 
-        private static Ship SharedDesignToSave = null;
-
+        // Improve shared design filename and add top-left fade-text
         [HarmonyPatch(nameof(Ui.SaveSharedDesign))]
         [HarmonyPrefix]
-        internal static void Prefix_SaveSharedDesign(Ui __instance)
+        internal static bool Prefix_SaveSharedDesign(Ui __instance, string overrideName)
         {
-            SharedDesignToSave = ShipM.GetActiveShip();
-        }
+            Melon<TweaksAndFixes>.Logger.Msg($"Saveing Shared Design:");
 
-        [HarmonyPatch(nameof(Ui.SaveSharedDesign))]
-        [HarmonyPostfix]
-        internal static void Postfix_SaveSharedDesign(Ui __instance)
-        {
-            // Melon<TweaksAndFixes>.Logger.Msg($"Adding back {SharedDesignToSave.Name(false, false)}");
-            G.ui.allowEditShips.Add(SharedDesignToSave);
+            G.sound.PlayUi("con_save_ship");
+            G.ui.refreshPending = true;
+
+            var activeShip = PlayerController.Instance.Ship;
+            var activeShipStore = activeShip.ToStore();
+            var activeShipStoreSerialzied = Util.SerializeObjectByte(activeShipStore);
+
+            Il2CppSystem.Collections.Generic.List<Il2CppSystem.ValueTuple<Ship.Store, string>> designList;
+
+            bool found = G.GameData.sharedDesignsPerNation.TryGetValue(
+                activeShip.player.data.name, out designList
+            );
+
+            if (found)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"  Saving over '{activeShip.Name(false, false)}' file");
+
+                foreach (var design in designList.ToArray())
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"  {design.Item1.vesselName}");
+
+                    if (design.Item1.id != activeShip.id)
+                        continue;
+
+                    Melon<TweaksAndFixes>.Logger.Msg($"    Found!");
+
+                    G.GameData.DeleteSharedDesign(activeShip);
+
+                    break;
+                }
+            }
+            else
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"  Saving new design '{activeShip.Name(false, false)}'");
+
+                G.GameData.sharedDesignsPerNation.Add(activeShip.player.data.name, new());
+            }
+
+            if (overrideName == null)
+            {
+                int designYear = 1890;
+                string player = "";
+
+                if (GameManager.isSharedDesignConstructor)
+                {
+                    player = Player.GetNameUI(null, G.ui.sharedDesignPlayer, G.ui.sharedDesignYear);
+                    designYear = CampaignController.Instance.StartYear;
+                }
+                else
+                {
+                    if (G.ui.IsCustomBattleShipsPlayers())
+                    {
+                        player = Player.GetNameUI(null, G.ui.skirmishSetup.player1.country, G.ui.skirmishSetup.player1.year);
+                        designYear = G.ui.skirmishSetup.player1.year;
+                    }
+                    else
+                    {
+                        player = Player.GetNameUI(null, G.ui.skirmishSetup.player2.country, G.ui.skirmishSetup.player2.year);
+                        designYear = G.ui.skirmishSetup.player2.year;
+                    }
+                }
+
+                string design = activeShip.Name(false, false);
+                string? modName = Config.ParamS("taf_versiontext_filename") ?? Config.ParamS("taf_versiontext");
+
+                overrideName = $"{designYear} {player} {design}";
+
+                if (modName != null)
+                {
+                    overrideName = $"({modName}) " + overrideName;
+                }
+                else
+                {
+                    overrideName = $"(UAD 1.7) " + overrideName;
+                }
+            }
+
+            // Just in case. If they listen to the warning then it shouldn't happen often.
+            //   These are meant to have roughly the same gramatical meaning.
+            string sanitizedOverrideName = overrideName
+                .Replace('\\', ' ')
+                .Replace('/', '-')
+                .Replace(':', '-')
+                .Replace('*', ' ')
+                .Replace('?', ' ')
+                .Replace('"', '\'')
+                .Replace('<', '[')
+                .Replace('>', ']')
+                .Replace('|', ' ');
+
+            if (sanitizedOverrideName != overrideName)
+            {
+                Melon<TweaksAndFixes>.Logger.Warning(
+                    $"  Invalid characters in filename. \\/:*?\"<>| characters cannot be used in filenames."
+                );
+            }
+
+            string savedDesignPath = Storage.GetSavedDesignPath(overrideName, out _);
+            Storage.SaveSharedDesignShipByte(savedDesignPath, activeShipStoreSerialzied);
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Save to file path: '{savedDesignPath}'");
+
+            G.GameData.LoadSharedDesigns();
+
+            return false;
         }
 
 
