@@ -1387,6 +1387,12 @@ namespace TweaksAndFixes
             bailoutEventWindowYesText = bailoutEventWindowYesTextObj.GetComponent<TMP_Text>();
             Button bailoutEventWindowYesBtn = bailoutEventWindowYes.GetComponent<Button>();
             bailoutEventWindowYesBtn.onClick.RemoveAllListeners();
+
+            int bailoutEventNumber = Config.Param("taf_bailout_event_number", 81);
+
+            EventData prompt = G.GameData.events[$"{bailoutEventNumber}"];
+            EventData response = G.GameData.events[$"{bailoutEventNumber}_a"];
+
             bailoutEventWindowYesBtn.onClick.AddListener(new System.Action(() =>
             {
                 if (bailoutPlayer == null)
@@ -1395,11 +1401,6 @@ namespace TweaksAndFixes
                     Melon<TweaksAndFixes>.Logger.Error($"Error: Invalid player for bailout event!");
                     return;
                 }
-
-                int bailoutEventNumber = Config.Param("taf_bailout_event_number", 81);
-
-                EventData prompt = G.GameData.events[$"{bailoutEventNumber}"];
-                EventData response = G.GameData.events[$"{bailoutEventNumber}_a"];
 
                 EventX ev = new EventX();
                 ev.date = CampaignController.Instance.CurrentDate;
@@ -1416,7 +1417,7 @@ namespace TweaksAndFixes
             }));
 
             GameObject bailoutEventWindowHeader = bailoutEventWindow.GetChild("Header");
-            bailoutEventWindowHeader.GetComponent<TMP_Text>().text = "Government Bailout"; // TODO: Localize
+            bailoutEventWindowHeader.GetComponent<TMP_Text>().text = ModUtils.LocalizeF("$TAF_Ui_Event_GovernmentBailout"); // TODO: Localize
 
             GameObject bailoutEventWindowBody = bailoutEventWindow.GetChild("TextOld");
             bailoutEventWindowBody.name = "Text";
@@ -1435,11 +1436,11 @@ namespace TweaksAndFixes
 
             // TODO: Localize
             string promptStr = LocalizeManager.Localize(prompt.text);
-            promptStr += $"\n\n{ModUtils.ColorNumber(response.money, "", "%", false, true)} Naval Funds ({ModUtils.ColorNumber(player.Budget() * response.money / 100, "$", "", false, true)})";
-            promptStr += $"\n{ModUtils.ColorNumber(response.budget, "", "%")} Naval Budget";
-            promptStr += $"\n{ModUtils.ColorNumber(response.wealth, "", "%")} GDP";
-            promptStr += $"\n{ModUtils.ColorNumber(response.reputation)} Naval Prestige";
-            promptStr += $"\n{ModUtils.ColorNumber(response.respect, "", "", true)} Unrest";
+            promptStr += $"\n\n{ModUtils.ColorNumber(response.money, "", "%", false, true)} {ModUtils.LocalizeF("$Ui_World_NavalFunds")} ({ModUtils.ColorNumber(player.Budget() * response.money / 100, "$", "", false, true)})";
+            promptStr += $"\n{ModUtils.ColorNumber(response.budget, "", "%")} {ModUtils.LocalizeF("$Ui_World_NavalBudgetPercent")}";
+            promptStr += $"\n{ModUtils.ColorNumber(response.wealth, "", "%")} {ModUtils.LocalizeF("$Ui_World_GDP")}";
+            promptStr += $"\n{ModUtils.ColorNumber(response.reputation)} {ModUtils.LocalizeF("$Ui_Event_NavalPrestige")}";
+            promptStr += $"\n{ModUtils.ColorNumber(response.respect, "", "", true)} {ModUtils.LocalizeF("$Ui_Event_Unrest")}";
 
             // Melon<TweaksAndFixes>.Logger.Msg($"cash:                      {bailoutPlayer.cash}");
             // Melon<TweaksAndFixes>.Logger.Msg($"inflation:                 {bailoutPlayer.inflation}");
