@@ -252,7 +252,62 @@ namespace TweaksAndFixes
 
             G.GameData.LoadSharedDesigns();
 
+            UiM.skirmishSetupMod.UpdateShip(activeShipStore);
+
             return false;
+        }
+
+        // Save Custom Battle designs as Shared Designs
+        [HarmonyPatch(typeof(Ui.__c__DisplayClass489_21))]
+        [HarmonyPatch("_RefreshConstructorInfo_b__89")]
+        [HarmonyPrefix]
+        internal static bool Prefix__RefreshConstructorInfo_b__89(Ui.__c__DisplayClass489_21 __instance)
+        {
+            Melon<TweaksAndFixes>.Logger.Msg(
+                $"  Saving ship: {ShipM.GetActiveShip().Name(false, false)} | {__instance.canBuild} / {__instance.canNotBuildText}"
+            );
+
+            if (!__instance.canBuild)
+            {
+                G.ui.ShowMessage(__instance.canNotBuildText);
+                return false;
+            }
+
+            if (GameManager.isSharedDesignConstructor || GameManager.IsCustomBattle)
+            {
+                G.ui.SaveSharedDesign();
+
+                UiM.ShowTextTopLeft(ModUtils.LocalizeF("$TAF_Ui_FadeText_DesignSaved"));
+
+                // GameManager.Instance.ToConstructor(false, ShipM.GetActiveShip());
+            }
+            else
+            {
+                G.ui.SaveDesignOnExitFromConstructor(false);
+            }
+
+            return false;
+        }
+
+
+
+
+        // ########## CUSTOM BATTLE ########## //
+
+        [HarmonyPatch(nameof(Ui.SkirmishSetupUI))]
+        [HarmonyPostfix]
+        internal static void Postfix_SkirmishSetupUI(Ui __instance)
+        {
+            // Melon<TweaksAndFixes>.Logger.Msg($"SkirmishSetupUI");
+            UiM.UpdateSkirmishSetupModifications();
+        }
+
+        [HarmonyPatch(nameof(Ui.SkirmishSetupInit))]
+        [HarmonyPostfix]
+        internal static void Postfix_SkirmishSetupInit(Ui __instance)
+        {
+            // Melon<TweaksAndFixes>.Logger.Msg($"SkirmishSetupInit");
+            UiM.skirmishSetupMod.ApplyToSK();
         }
 
 
@@ -2578,6 +2633,46 @@ namespace TweaksAndFixes
             }));
         }
 
+        private static void FixNewShipButton()
+        {
+            if (!GameManager.IsCustomBattle)
+            {
+                return;
+            }
+
+            // Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipTabs/ShipTabs/Cont/ShipNew/Button
+            GameObject newShip = ModUtils.GetChildAtPath(
+                "Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipTabs/ShipTabs/Cont/ShipNew/Button"
+            );
+
+            var button = newShip.GetComponent<Button>();
+
+            // Melon<TweaksAndFixes>.Logger.Msg("ConstructorUi");
+
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(new System.Action(() =>
+            {
+                // Melon<TweaksAndFixes>.Logger.Msg("Ignore next");
+                Patch_GameManager.ignoreNextToConstructor = true;
+                var curr = BattleManager.Instance.CurrentCustomBattle;
+                BattleManager.Instance.CurrentCustomBattle = null;
+                G.ui._ConstructorUI_b__402_8();
+                BattleManager.Instance.CurrentCustomBattle = curr;
+
+                Patch_GameManager.ignoreNextToConstructor = false;
+
+                // Melon<TweaksAndFixes>.Logger.Msg("Called func");
+
+                GameManager.Instance.ToConstructor(
+                    true, null, true, null,
+                    G.ui.GetShipTypeFromIntNumber(G.ui.currentShipInSkirmish),
+                    false, G.ui.IsCustomBattleShipsPlayers() ? null : G.ui.GetEnemyForPlayer()
+                );
+
+                // Melon<TweaksAndFixes>.Logger.Msg("Done");
+            }));
+        }
+
         [HarmonyPatch(nameof(Ui.ConstructorUI))]
         [HarmonyPostfix]
         internal static void Postfix_ConstructorUI(Ui __instance)
@@ -2586,6 +2681,7 @@ namespace TweaksAndFixes
             EnsureAllButtons(__instance);
             ForceRefitButtonInteractable();
             AskIfCloneShouldUpdateTechs();
+            FixNewShipButton();
         }
 
         [HarmonyPatch(nameof(Ui.RefreshConstructorInfo))]
@@ -2659,6 +2755,7 @@ namespace TweaksAndFixes
         {
             EnsureAllButtons(__instance);
             UiM.UpdateConstructorUi();
+            UiM.UpdateShipTypeButtons(true);
             PatchShipNameInput();
         }
 

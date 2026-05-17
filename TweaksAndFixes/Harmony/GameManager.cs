@@ -57,30 +57,58 @@ namespace TweaksAndFixes
         internal static void Postfix_ToSharedDesignsConstructor(int year, PlayerData nation, bool forceCreateNew)
         {
             Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
+            UiM.UpdateShipTypeButtons(true);
         }
+
+        public static bool ignoreNextToConstructor = false;
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(GameManager.ToConstructor))]
-        internal static void Prefix_ToConstructor(bool newShip, Ship viewShip, ref bool allowEdit, IEnumerable<Ship> allowEditMany, ShipType shipTypeNew, bool needCleanup, Player newPlayer)
+        internal static bool Prefix_ToConstructor(ref bool newShip, Ship viewShip, ref bool allowEdit, IEnumerable<Ship> allowEditMany, ShipType shipTypeNew, bool needCleanup, Player newPlayer)
         {
+            if (ignoreNextToConstructor)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Skipping ToConstructor");
+                ignoreNextToConstructor = false;
+                return false;
+            }
+
             if (!GameManager.Instance.isCampaign)
             {
                 allowEdit = true;
             }
 
-            // Melon<TweaksAndFixes>.Logger.Msg(
-            //     $"ToConstructor: " +
-            //     $"bool newShip {newShip}, " +
-            //     $"Ship viewShip {(viewShip != null ? viewShip.Name(false, false) : "NULL")}, " +
-            //     $"bool allowEdit {allowEdit}, " +
-            //     // $"IEnumerable<Ship> allowEditMany {(allowEditMany != null ? new List<Ship>(allowEditMany).Count : "NULL")}, " +
-            //     $"IEnumerable<Ship> allowEditMany {allowEditMany}, " +
-            //     $"ShipType shipTypeNew, {(shipTypeNew != null ? shipTypeNew.nameUi : "NULL")} " +
-            //     $"bool needCleanup, {needCleanup} " +
-            //     $"Player newPlayer {(newPlayer != null ? newPlayer.Name(false) : "NULL")} "
-            // );
+
+            if (newShip && allowEdit && viewShip == null)
+            {
+            }
+            else if (!newShip && allowEdit && viewShip != null)
+            {
+            }
+            else if (!newShip && !allowEdit && viewShip != null)
+            {
+            }
+            else
+            {
+                Melon<TweaksAndFixes>.Logger.Error($"Unknown constructor state! Using fallback!");
+                Melon<TweaksAndFixes>.Logger.Error(
+                    $"ToConstructor: " +
+                    $"bool newShip {newShip}, " +
+                    $"Ship viewShip {(viewShip != null ? viewShip.Name(false, false) : "NULL")}, " +
+                    $"bool allowEdit {allowEdit}, " +
+                    // $"IEnumerable<Ship> allowEditMany {(allowEditMany != null ? new List<Ship>(allowEditMany).Count : "NULL")}, " +
+                    $"IEnumerable<Ship> allowEditMany {allowEditMany}, " +
+                    $"ShipType shipTypeNew, {(shipTypeNew != null ? shipTypeNew.nameUi : "NULL")} " +
+                    $"bool needCleanup, {needCleanup} " +
+                    $"Player newPlayer {(newPlayer != null ? newPlayer.Name(false) : "NULL")} "
+                );
+                newShip = true;
+                allowEdit = true;
+            }
 
             Patch_Ui.OnConstructorShipChanged();
+
+            return true;
         }
 
 
@@ -123,6 +151,7 @@ namespace TweaksAndFixes
 
 
             Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
+            UiM.UpdateShipTypeButtons(true);
             // Melon<TweaksAndFixes>.Logger.Msg($"  Active Ship: {(Patch_Ship.LastCreatedShip == null ? "NULL" : Patch_Ship.LastCreatedShip.Name(false, false))}");
         }
 
@@ -140,6 +169,42 @@ namespace TweaksAndFixes
             Patch_ShipGenRandom.OnShipgenStart();
         }
 
+        [HarmonyPatch(nameof(GameManager.ToCustomBattle))]
+        [HarmonyPrefix]
+        internal static bool Postfix_ToCustomBattle(bool doBuild, bool isRestart)
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"Prefix_ToCustomBattle");
+
+            GameManager.Instance.ChangeState(GameManager.GameState.LoadingCustom, true);
+
+            Melon<TweaksAndFixes>.Logger.Msg($"State Changed");
+
+            MelonCoroutines.Start(Patch_BattleManager.UpdateLoadingCustomBattleM(doBuild, isRestart));
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Corutine Called");
+
+            return false;
+        }
+
+        [HarmonyPatch(nameof(GameManager.CustomBattleConstructorFinished))]
+        [HarmonyPrefix]
+        internal static bool Postfix_CustomBattleConstructorFinished()
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"Prefix_CustomBattleConstructorFinished");
+
+            BattleManager.Instance.CustomBattleSavePlayerDesigns();
+
+            GameManager.Instance.ChangeState(GameManager.GameState.LoadingCustom, true);
+
+            Melon<TweaksAndFixes>.Logger.Msg($"State Changed");
+
+            MelonCoroutines.Start(Patch_BattleManager.UpdateLoadingCustomBattleM(true, false));
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Corutine Called");
+
+            return false;
+        }
+
         // [HarmonyPrefix]
         // [HarmonyPatch(nameof(GameManager.UpdateLoadingConstructor))]
         // internal static void Prefix_UpdateLoadingConstructor(bool needCleanup, Il2CppSystem.Action onDone)
@@ -147,12 +212,17 @@ namespace TweaksAndFixes
         //     Melon<TweaksAndFixes>.Logger.Msg($"UpdateLoadingConstructor: bool needCleanup {needCleanup}, Il2CppSystem.Action onDone {(onDone != null ? onDone.method_ptr : "NULL")}");
         // }
 
-        // [HarmonyPrefix]
-        // [HarmonyPatch(nameof(GameManager.ChangeState))]
-        // internal static void Prefix_ChangeState(GameState newState, bool raiseEnterStateEvents)
-        // {
-        //     Melon<TweaksAndFixes>.Logger.Msg($"ChangeState: GameState newState {newState}, bool raiseEnterStateEvents {raiseEnterStateEvents}");
-        // }
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(GameManager.ChangeState))]
+        internal static void Prefix_ChangeState(GameManager.GameState newState, bool raiseEnterStateEvents)
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"ChangeState: GameState newState {newState}, bool raiseEnterStateEvents {raiseEnterStateEvents}");
+            if (newState == GameManager.GameState.CustomBattleSetup
+                 || newState == GameManager.GameState.Battle)
+            {
+                UiM.SelectedShip = Guid.Empty;
+            }
+        }
 
         // [HarmonyPrefix]
         // [HarmonyPatch(nameof(GameManager.CanHandleMouseInput))]

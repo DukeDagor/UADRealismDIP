@@ -764,6 +764,10 @@ namespace TweaksAndFixes
 
         public static void UpdateConstructorUi()
         {
+            Text SaveBtnText = G.ui.conUpperButtons.GetChild("Layout").GetChild("Save").GetChild("Text").GetComponent<Text>();
+            if (GameManager.IsCustomBattle)
+                SaveBtnText.text = ModUtils.LocalizeF("$Ui_Constr_SaveDesign");
+
             var speedSlider = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Left/Scroll View/Viewport/Cont/FoldShipSettings/ShipSettings/Speed/Slider").GetComponent<Slider>();
 
             float inc = Config.Param("speed_step", 0.1f);
@@ -969,9 +973,922 @@ namespace TweaksAndFixes
 
         public static void ApplyMainMenuModifications()
         {
+            ApplySkirmishSetupModifications();
+
             G.ui.NewGameWindow.ChangeFleetCreation(1);
             G.ui.NewGameWindow.ChangeDesignUsage(1);
             G.ui.NewGameWindow.ChangeSharedDesigns(1);
+        }
+
+        public class SkirmishSetupMod
+        {
+            public class SkirmishPlayer
+            {
+                public Dictionary<ShipType, Dictionary<Guid, int>> shipAmounts = new();
+                public Dictionary<Guid, Ship> shipInstances = new();
+                public Dictionary<Guid, Ship.Store> shipDesigns = new();
+                public Dictionary<ShipType, bool> shipTypeAvailible = new();
+                public int year = 1890;
+                public PlayerData player = null;
+
+                public void ClearShips()
+                {
+                    shipInstances.Clear();
+                    shipDesigns.Clear();
+
+                    foreach (var type in G.GameData.shipTypes)
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"{type.Key}");
+
+                        if (type.Value.paramx.ContainsKey("no_build"))
+                            continue;
+
+                        if (!shipAmounts.ContainsKey(type.Value))
+                            continue;
+
+                        shipAmounts[type.Value].Clear();
+                    }
+                }
+            }
+
+            public bool initialized = false;
+            public SkirmishPlayer player1 = new();
+            public SkirmishPlayer player2 = new();
+            public DayCycleAndWeather.TimesOfDay daytime = DayCycleAndWeather.TimesOfDay.Day;
+            public DayCycleAndWeather.WeatherType weather = DayCycleAndWeather.WeatherType.Clear;
+            public int distance = 10000;
+            public bool useShared = true;
+            public bool usePredefs = true;
+
+            public void Randomize()
+            {
+                player1.ClearShips();
+                player2.ClearShips();
+
+                float fleetSizeMod = (float)System.Random.Shared.NextDouble() * 0.5f + 0.5f;
+
+                for (int i = 0; i < 2; i++)
+                {
+                    var currPlayer = i == 0 ? player1 : player2;
+
+                    foreach (var type in G.GameData.shipTypes)
+                    {
+                        if (type.Value.paramx.ContainsKey("no_build"))
+                            continue;
+
+                        Melon<TweaksAndFixes>.Logger.Msg($"{type.Key}");
+
+                        int max = ModUtils.toInt(type.Value.buildRatio * fleetSizeMod * 1.25f);
+                        int amount = ModUtils.toInt(System.Random.Shared.NextDouble() * max + 0.5f);
+
+                        Melon<TweaksAndFixes>.Logger.Msg($"  {amount} / {max} / {type.Value.buildRatio}");
+
+                        if (amount == 0 || amount > type.Value.buildRatio * fleetSizeMod)
+                            continue;
+
+                        int numClasses = 1 + ModUtils.toInt(System.Random.Shared.NextDouble() * 2.5f * Mathf.Log10(amount));
+                        int avgPerClass = amount / numClasses;
+
+                        Melon<TweaksAndFixes>.Logger.Msg($"  {numClasses} | {avgPerClass}");
+
+                        var counts = currPlayer.shipAmounts.ValueOrNew(type.Value);
+
+                        for (int k = 0; k < 10 && amount > 0; k++)
+                        {
+                            int num = 1 + ModUtils.toInt((0.25f + System.Random.Shared.NextDouble() * 0.75f) * (avgPerClass - 1) * 2f);
+
+                            if (amount >= num)
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"  {num} / {amount}");
+
+                                amount -= num;
+                            }
+                            else
+                            {
+                                num = amount;
+
+                                Melon<TweaksAndFixes>.Logger.Msg($"  {num} / {amount}");
+
+                                amount = 0;
+                            }
+
+                            counts.Add(Guid.NewGuid(), num);
+                        }
+                    }
+                }
+            }
+
+            public void Clear()
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Clearing");
+
+                skirmishSetupMod.weather = DayCycleAndWeather.WeatherType.Clear;
+                skirmishSetupMod.daytime = DayCycleAndWeather.TimesOfDay.Day;
+                skirmishSetupMod.distance = 10000;
+                skirmishSetupMod.player1.year = 1890;
+                skirmishSetupMod.player1.ClearShips();
+                skirmishSetupMod.player2.year = 1890;
+                skirmishSetupMod.player2.ClearShips();
+
+                ApplyToSK();
+            }
+
+            public void ApplyToSK()
+            {
+                var sk = G.ui.skirmishSetup;
+                var skm = UiM.skirmishSetupMod;
+
+                if (!skm.initialized)
+                {
+                    foreach (var type in G.GameData.shipTypes)
+                    {
+                        skm.player1.shipAmounts.ValueOrNew(type.Value);
+                        skm.player2.shipAmounts.ValueOrNew(type.Value);
+                    }
+
+                    skm.initialized = true;
+                }
+
+                sk.daytime = skm.daytime;
+                sk.weather = skm.weather;
+                sk.distance = skm.distance;
+                sk.player1.year = skm.player1.year;
+                sk.player2.year = skm.player2.year;
+
+                foreach (var type in G.GameData.shipTypes)
+                {
+                    if (!skm.player1.shipAmounts.ContainsKey(type.Value)
+                        || !skm.player2.shipAmounts.ContainsKey(type.Value))
+                        continue;
+
+                    sk.player1.shipAmounts.AddOrSet(type.Value, skm.player1.shipAmounts[type.Value].Count);
+                    sk.player2.shipAmounts.AddOrSet(type.Value, skm.player2.shipAmounts[type.Value].Count);
+                }
+
+                BattleManager.Instance.QueryCustomBattleAvailableHulls(
+                    sk, out var p1IsHullAvailible, out var p2IsHullAvailible
+                );
+
+                foreach (var type in G.GameData.shipTypes)
+                {
+                    if (p1IsHullAvailible.ContainsKey(type.Value))
+                        sk.player1.isHullAvailable.AddOrSet(type.Value, p1IsHullAvailible[type.Value]);
+                    if (p2IsHullAvailible.ContainsKey(type.Value))
+                        sk.player2.isHullAvailable.AddOrSet(type.Value, p2IsHullAvailible[type.Value]);
+                }
+
+                G.ui.Refresh();
+            }
+
+            public bool InitializePlayerMadeShips()
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Reiniting Player Ships:");
+
+                // TODO: Store a full copy of each ship in DontDestroyOnLoad to copy from.
+                //       The game deletes the pointers to our ship/store objects.
+                //       This is required for us to do multi-year stuff.
+
+                // TODO: Stopgap = just remove design refferences we can't find in the full shiplist.
+
+                // player1.shipInstances.Clear();
+
+                bool foundAll = true;
+
+                foreach (var design in player1.shipDesigns.ToList())
+                {
+                    // if (player1.shipInstances.HasValue(design.Key))
+                    //     continue;
+
+                    // var p = G.ui.skirmishSetup.player1.country.Player();
+                    // 
+                    // var ship = Ship.Create(null, p, false, false, false);
+                    // var guidRet = new Il2CppSystem.Nullable<Il2CppSystem.Guid>();
+                    // if (!ship.FromStore(design.Value, guidRet, null, p, false))
+                    // {
+                    //     Melon<TweaksAndFixes>.Logger.Error($"Couldn't load {design.Value.vesselName} ({design.Value.hullName}, {design.Value.YearCreated})");
+                    //     ship.Erase();
+                    //     continue;
+                    // }
+
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Ship: {player1.shipInstances.ValOrDef(design.Key, null)?.Name(false, false) ?? "NULL!"}");
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Design: {design.Value.vesselName}");
+
+                    bool success = false;
+
+                    foreach (var s in ShipM.GetAllShips())
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"    {s.Name(false, false)} : {s.id}");
+
+                        if (s.id == design.Value.id)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"      MATCH!");
+                            player1.shipInstances.AddOrSet(design.Key, s);
+                            success = true;
+                            break;
+                        }
+                    }
+
+                    if (!success)
+                    {
+                        player1.shipInstances.Remove(design.Key);
+                        player1.shipDesigns.Remove(design.Key);
+
+                        // foundAll = false;
+                    }
+                }
+
+                // player2.shipInstances.Clear();
+
+                Melon<TweaksAndFixes>.Logger.Msg($"Reiniting Enemy Ships:");
+
+                foreach (var design in player2.shipDesigns.ToList())
+                {
+                    // if (player2.shipInstances.HasValue(design.Key))
+                    //     continue;
+
+                    // var p = G.ui.skirmishSetup.player2.country.Player();
+                    // 
+                    // var ship = Ship.Create(null, p, false, false, false);
+                    // var guidRet = new Il2CppSystem.Nullable<Il2CppSystem.Guid>();
+                    // if (!ship.FromStore(design.Value, guidRet, null, p, false))
+                    // {
+                    //     Melon<TweaksAndFixes>.Logger.Error($"Couldn't load {design.Value.vesselName} ({design.Value.hullName}, {design.Value.YearCreated})");
+                    //     ship.Erase();
+                    //     continue;
+                    // }
+
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Ship: {player2.shipInstances.ValOrDef(design.Key, null)?.Name(false, false) ?? "NULL!"}");
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Design: {design.Value.vesselName}");
+
+                    bool success = false;
+
+                    foreach (var s in ShipM.GetAllShips())// G.ui.skirmishSetup.player2.country.Player().fleet.ToList())
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"    {s.Name(false, false)} : {s.id}");
+
+                        if (s.id == design.Value.id)
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"      MATCH!");
+                            player2.shipInstances.AddOrSet(design.Key, s);
+                            success = true;
+                            break;
+                        }
+                    }
+
+                    if (!success)
+                    {
+                        player2.shipInstances.Remove(design.Key);
+                        player2.shipDesigns.Remove(design.Key);
+
+                        // foundAll = false;
+                    }
+                }
+
+                // Melon<TweaksAndFixes>.Logger.Msg($" Found all: {foundAll}");
+
+                return foundAll;
+            }
+
+            public void UpdateShip(Ship.Store updated)
+            {
+                foreach (var design in player1.shipDesigns.ToList())
+                {
+                    if (design.Value.id == updated.id)
+                    {
+                        player1.shipInstances.Remove(design.Key);
+                        player1.shipDesigns.AddOrSet(design.Key, updated);
+                        break;
+                    }
+                }
+
+                foreach (var design in player2.shipDesigns.ToList())
+                {
+                    if (design.Value.id == updated.id)
+                    {
+                        player2.shipInstances.Remove(design.Key);
+                        player2.shipDesigns.AddOrSet(design.Key, updated);
+                        break;
+                    }
+                }
+            }
+        }
+
+        public static SkirmishSetupMod skirmishSetupMod = new SkirmishSetupMod();
+        
+        public static GameObject playerUi;
+        public static GameObject playerUi1;
+        public static GameObject fleetList1;
+        public static GameObject fleetList1ScrollView;
+        public static GameObject fleetList1Container;
+
+        public static GameObject playerUi2;
+        public static GameObject fleetList2;
+        public static GameObject fleetList2ScrollView;
+        public static GameObject fleetList2Container;
+
+        public static GameObject sTypeEntryTemplate;
+        public static GameObject sClassEntryTemplate;
+
+        public static void ApplySkirmishSetupModifications()
+        {
+            GameObject upperButtons = ModUtils.GetChildAtPath("Global/Ui/UiMain/Skirmish/Window/Buttons/ButtonsSub2/");
+
+            GameObject random = ModUtils.GetChildAtPath("Random", upperButtons);
+            GameObject tafRandom = GameObject.Instantiate(random);
+            tafRandom.transform.SetParent(upperButtons, false);
+            tafRandom.transform.SetSiblingIndex(random.transform.GetSiblingIndex());
+            tafRandom.GetComponent<Button>().onClick.RemoveAllListeners();
+            tafRandom.GetComponent<Button>().onClick.AddListener(new System.Action(() =>
+            {
+                G.ui.SkirmishSetupRandomize();
+                skirmishSetupMod.Randomize();
+                G.ui.Refresh();
+            }));
+            random.active = false;
+
+            GameObject clear = ModUtils.GetChildAtPath("Clear", upperButtons);
+            GameObject tafClear = GameObject.Instantiate(clear);
+            tafClear.transform.SetParent(upperButtons, false);
+            tafClear.transform.SetSiblingIndex(clear.transform.GetSiblingIndex());
+            tafClear.GetComponent<Button>().onClick.RemoveAllListeners();
+            tafClear.GetComponent<Button>().onClick.AddListener(new System.Action(() =>
+            {
+                G.ui.SkirmishSetupClear();
+                skirmishSetupMod.Clear();
+                G.ui.Refresh();
+            }));
+            clear.active = false;
+
+            // GameObject unlock = ModUtils.GetChildAtPath("Unlock", upperButtons);
+
+            GameObject sharedDesignsBase = ModUtils.GetChildAtPath("Shared Designs", upperButtons);
+
+            GameObject sharedDesigns = GameObject.Instantiate(sharedDesignsBase);
+            sharedDesigns.name = "TAF Shared Designs";
+            sharedDesigns.transform.SetParent(upperButtons, false);
+            sharedDesigns.transform.SetSiblingIndex(5);
+            sharedDesigns.GetComponent<LayoutElement>().preferredWidth = 150;
+            AddTooltip(sharedDesigns, "$TAF_tooltip_skirmish_shared_design_toggle");
+            var sharedDesignsText = sharedDesigns.GetChild("Text").GetComponent<Text>();
+            sharedDesignsText.text = ModUtils.LocalizeF(
+                    "$TAF_Ui_SkirmishSettup_SharedDesignToggle_" + (skirmishSetupMod.useShared ? "On" : "Off"));
+            var sharedDesignsButton = sharedDesigns.GetComponent<Button>();
+            sharedDesignsButton.onClick.RemoveAllListeners();
+            sharedDesignsButton.onClick.AddListener(new System.Action(() =>
+            {
+                skirmishSetupMod.useShared = !skirmishSetupMod.useShared;
+                sharedDesignsText.text = ModUtils.LocalizeF(
+                        "$TAF_Ui_SkirmishSettup_SharedDesignToggle_" + (skirmishSetupMod.useShared ? "On" : "Off"));
+            }));
+
+            GameObject predefDesigns = GameObject.Instantiate(sharedDesignsBase);
+            predefDesigns.name = "TAF Predef Designs";
+            predefDesigns.transform.SetParent(upperButtons, false);
+            predefDesigns.transform.SetSiblingIndex(6);
+            predefDesigns.GetComponent<LayoutElement>().preferredWidth = 150;
+            AddTooltip(predefDesigns, "$TAF_tooltip_skirmish_predef_design_toggle");
+            var predefDesignsText = predefDesigns.GetChild("Text").GetComponent<Text>();
+            predefDesignsText.text = ModUtils.LocalizeF(
+                    "$TAF_Ui_SkirmishSettup_PredefDesignToggle_" + (skirmishSetupMod.usePredefs ? "On" : "Off"));
+            var predefDesignsButton = predefDesigns.GetComponent<Button>();
+            predefDesignsButton.onClick.RemoveAllListeners();
+            predefDesignsButton.onClick.AddListener(new System.Action(() =>
+            {
+                skirmishSetupMod.usePredefs = !skirmishSetupMod.usePredefs;
+                predefDesignsText.text = ModUtils.LocalizeF(
+                        "$TAF_Ui_SkirmishSettup_PredefDesignToggle_" + (skirmishSetupMod.usePredefs ? "On" : "Off"));
+            }));
+
+            sharedDesignsBase.active = false;
+
+            GameObject weatherSettings = ModUtils.GetChildAtPath("Weather Settings", upperButtons);
+            weatherSettings.GetComponent<LayoutElement>().preferredWidth = 150;
+
+            GameObject daytimeSettings = ModUtils.GetChildAtPath("Daytime Settings", upperButtons);
+            daytimeSettings.GetComponent<LayoutElement>().preferredWidth = 150;
+
+            playerUi = ModUtils.GetChildAtPath("Global/Ui/UiMain/Skirmish/Window/Players");
+            playerUi1 = ModUtils.GetChildAtPath("Player1", playerUi);
+            playerUi1.GetChild("Spacer").active = false;
+            fleetList1 = ModUtils.GetChildAtPath("FleetList", playerUi1);
+            fleetList1.active = false;
+
+            GameObject conSv = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Right/Scroll View");
+
+            fleetList1ScrollView = GameObject.Instantiate(conSv);
+            fleetList1ScrollView.SetParent(playerUi1);
+            fleetList1ScrollView.name = "TAF_FleetList";
+            fleetList1ScrollView.transform.localPosition = Vector3.zero;
+            fleetList1ScrollView.transform.SetScale(1, 1, 1);
+            fleetList1ScrollView.GetComponent<LayoutElement>().preferredWidth = 350;
+
+            GameObject fleetList1SvVp = fleetList1ScrollView.GetChild("Viewport");
+            fleetList1SvVp.GetComponent<Image>().enabled = true;
+            fleetList1SvVp.GetComponent<Mask>().enabled = true;
+
+            fleetList1Container = ModUtils.GetChildAtPath("Viewport/Cont", fleetList1ScrollView);
+            fleetList1Container.GetComponent<VerticalLayoutGroup>().spacing = 0;
+            foreach (var child in fleetList1Container.GetChildren())
+            {
+                child.TryDestroy(true);
+            }
+
+            sTypeEntryTemplate = GameObject.Instantiate(ModUtils.GetChildAtPath("Line", fleetList1));
+            sTypeEntryTemplate.name = "ShipType";
+            sTypeEntryTemplate.transform.SetParent(fleetList1Container.transform);
+            sTypeEntryTemplate.active = false;
+            sTypeEntryTemplate.transform.localPosition = Vector3.zero;
+            sTypeEntryTemplate.transform.SetScale(1, 1, 1);
+            sTypeEntryTemplate.GetChild("MoreLess").GetChild("Less").TryDestroy(true);
+            sTypeEntryTemplate.GetChild("MoreLess").GetChild("More").GetComponent<LayoutElement>().minWidth = 30;   
+
+            sClassEntryTemplate = GameObject.Instantiate(ModUtils.GetChildAtPath("Line", fleetList1));
+            sClassEntryTemplate.name = "Class";
+            sClassEntryTemplate.transform.SetParent(fleetList1Container.transform);
+            sClassEntryTemplate.active = false;
+            sClassEntryTemplate.transform.localPosition = Vector3.zero;
+            sClassEntryTemplate.transform.SetScale(1, 1, 1);
+            sClassEntryTemplate.GetChild("MoreLess").GetChild("More").GetComponent<LayoutElement>().minWidth = 30;
+            sClassEntryTemplate.GetChild("MoreLess").GetChild("Less").GetComponent<LayoutElement>().minWidth = 30;
+            GameObject sClassEntryDelete = GameObject.Instantiate(sClassEntryTemplate.GetChild("MoreLess").GetChild("Less"));
+            sClassEntryDelete.SetParent(sClassEntryTemplate);
+            sClassEntryDelete.name = "Delete";
+            sClassEntryDelete.transform.SetScale(0.8f, 0.8f, 0.8f);
+            sClassEntryDelete.transform.SetAsFirstSibling();
+            sClassEntryDelete.GetComponent<LayoutElement>().minWidth = 30;
+
+            var rawData = File.ReadAllBytes(Config._BasePath + "/TAFData/cross.png");
+            var cross = new Texture2D(256, 256, TextureFormat.DXT5, true);
+            if (!ImageConversion.LoadImage(cross, rawData))
+            {
+                Melon<TweaksAndFixes>.Logger.Error("Failed to load cross.png from TAFData!");
+            }
+            var crossSprite = Sprite.Create(cross, new(0, 0, cross.width, cross.height), new(0.5f, 0.5f));
+            sClassEntryDelete.GetChild("Image").GetComponent<Image>().sprite = crossSprite;
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"fleetList1 {ModUtils.DumpHierarchy(playerUi1.transform.parent.gameObject)}");
+
+            // ChangeShipTypeInSkirmish
+            
+        }
+
+        public static void GetSkirmishSetupPlayer2Ui()
+        {
+            playerUi2 = ModUtils.GetChildAtPath("Player2", playerUi);
+            fleetList2 = ModUtils.GetChildAtPath("FleetList", playerUi2);
+            fleetList2ScrollView = ModUtils.GetChildAtPath("TAF_FleetList", playerUi2);
+            fleetList2Container = ModUtils.GetChildAtPath("Viewport/Cont", fleetList2ScrollView);
+        }
+
+        public static void UpdateSkirmishSetupModifications()
+        {
+            // Global/Ui/UiMain/Constructor/Right/Scroll View
+
+            // Global/Ui/UiMain/Skirmish/Window/Players/Player1/FleetList/Line
+
+            // Check for invalid state and initialization status
+
+            if (playerUi1 == null)
+                return;
+
+            if (G.GameData.shipTypes == null)
+                return;
+
+            if (playerUi.GetChild("Player2", true) == null)
+                return;
+
+            if (!skirmishSetupMod.initialized)
+                return;
+
+            // Cache the stored values from the base UI container
+            //   No point in redoing this, since it works fine.
+            if (G.ui.skirmishSetup?.player1?.isHullAvailable != null)
+            {
+                var ShipTypeAvailibleM = skirmishSetupMod.player1.shipTypeAvailible;
+                ShipTypeAvailibleM.Clear();
+                
+                foreach (var type in G.GameData.shipTypes)
+                {
+                    if (!G.ui.skirmishSetup.player1.isHullAvailable.ContainsKey(type.Value))
+                        continue;
+
+                    ShipTypeAvailibleM.Add(type.Value, G.ui.skirmishSetup.player1.isHullAvailable[type.Value]);
+
+                    if (!G.ui.skirmishSetup.player1.isHullAvailable[type.Value])
+                    {
+                        G.ui.skirmishSetup.player1.shipAmounts[type.Value] = 0;
+                    }
+                }
+
+                skirmishSetupMod.weather = G.ui.skirmishSetup.weather;
+                skirmishSetupMod.daytime = G.ui.skirmishSetup.daytime;
+                skirmishSetupMod.distance = G.ui.skirmishSetup.distance;
+
+                if (skirmishSetupMod.player1.player != G.ui.skirmishSetup.player1.country
+                    || skirmishSetupMod.player1.year != G.ui.skirmishSetup.player1.year)
+                {
+                    // TODO: Add an "Are you sure?" message when changing nations
+                    // MessageBoxUI.Show(
+                    //     "Clear Selected Designs",
+                    //     "Changing the player will clear the selected ship list. Are you sure you want to continue?",
+                    //     null, false, ModUtils.LocalizeF("$Ui_Popup_Generic_Yes"),
+                    //     ModUtils.LocalizeF("$Ui_Popup_Generic_No"),
+                    //     new System.Action(() => {
+                    //     })
+                    // );
+
+                    skirmishSetupMod.player1.shipAmounts.Clear();
+                    skirmishSetupMod.player1.shipDesigns.Clear();
+                    skirmishSetupMod.player1.shipInstances.Clear();
+                }
+
+                if (skirmishSetupMod.player2.player != G.ui.skirmishSetup.player2.country
+                    || skirmishSetupMod.player1.year != G.ui.skirmishSetup.player1.year
+                    || skirmishSetupMod.player2.year != G.ui.skirmishSetup.player2.year)
+                {
+                    // TODO: Add an "Are you sure?" message when changing nations
+                    // MessageBoxUI.Show(
+                    //     "Clear Selected Designs",
+                    //     "Changing the player will clear the selected ship list. Are you sure you want to continue?",
+                    //     null, false, ModUtils.LocalizeF("$Ui_Popup_Generic_Yes"),
+                    //     ModUtils.LocalizeF("$Ui_Popup_Generic_No"),
+                    //     new System.Action(() => {
+                    //     })
+                    // );
+
+                    skirmishSetupMod.player2.shipAmounts.Clear();
+                    skirmishSetupMod.player2.shipDesigns.Clear();
+                    skirmishSetupMod.player2.shipInstances.Clear();
+                }
+
+                skirmishSetupMod.player1.player = G.ui.skirmishSetup.player1.country;
+                skirmishSetupMod.player1.year = G.ui.skirmishSetup.player1.year;
+                skirmishSetupMod.player2.player = G.ui.skirmishSetup.player2.country;
+                skirmishSetupMod.player2.year = G.ui.skirmishSetup.player2.year;
+            }
+
+            if (G.ui.skirmishSetup?.player2?.isHullAvailable != null)
+            {
+                var ShipTypeAvailibleM = skirmishSetupMod.player2.shipTypeAvailible;
+                ShipTypeAvailibleM.Clear();
+
+                foreach (var type in G.GameData.shipTypes)
+                {
+                    if (!G.ui.skirmishSetup.player2.isHullAvailable.ContainsKey(type.Value))
+                        continue;
+
+                    ShipTypeAvailibleM.Add(type.Value, G.ui.skirmishSetup.player2.isHullAvailable[type.Value]);
+
+                    if (!G.ui.skirmishSetup.player2.isHullAvailable[type.Value])
+                    {
+                        G.ui.skirmishSetup.player2.shipAmounts[type.Value] = 0;
+                    }
+                }
+            }
+
+            // Init player2 UI separately, since it's created dynamically.
+            if (playerUi2 == null)
+                GetSkirmishSetupPlayer2Ui();
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Destroying old entries:");
+
+            // Destroy all active UI to be recreated
+            foreach (var child in fleetList1Container.GetChildren())
+            {
+                if (!child.active) continue;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Destroy {child.name}");
+
+                child.TryDestroy(true);
+            }
+
+            // Destroy all active UI to be recreated
+            foreach (var child in fleetList2Container.GetChildren())
+            {
+                if (!child.active) continue;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Destroy {child.name}");
+
+                child.TryDestroy(true);
+            }
+
+            foreach (var type in G.GameData.shipTypes)
+            {
+                if ((type.Value.paramx.ContainsKey("no_build") && type.Key != "tr")
+                    || !skirmishSetupMod.player1.shipTypeAvailible.ValOrDef(type.Value, false))
+                    continue;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Type {type.Value.nameUi}");
+
+                var sType = GameObject.Instantiate(sTypeEntryTemplate);
+                sType.active = true;
+                sType.transform.SetParent(fleetList1Container, false);
+
+                var counts = skirmishSetupMod.player1.shipAmounts.ValueOrNew(type.Value);
+                var designs = skirmishSetupMod.player1.shipDesigns;
+                var instances = skirmishSetupMod.player1.shipInstances;
+
+                var typeText = sType.GetChild("Type").GetComponent<Text>();
+                typeText.text = $"{type.Value.nameFull} Classes";
+                float alpha = counts.Count > 0 ? 1 : 0.5f;
+                typeText.color = new(1, 1, 1, alpha);
+
+                var sTypeAmountText = sType.GetChild("Amount").GetComponent<Text>();
+                sTypeAmountText.text = $"{counts.Count}";
+
+                int classIndex = sType.transform.GetSiblingIndex() + 1;
+                int classNumber = 1;
+
+                foreach (var sClassEntry in counts)
+                {
+                    var sClass = GameObject.Instantiate(sClassEntryTemplate);
+                    sClass.active = true;
+                    sClass.transform.SetParent(fleetList1Container, false);
+                    // subEntry.transform.SetScale(1,1,1);
+                    sClass.transform.SetSiblingIndex(classIndex++);
+
+                    var classText = sClass.GetChild("Type").GetComponent<Text>();
+                    if (!skirmishSetupMod.player1.shipInstances.ContainsKey(sClassEntry.Key))
+                    {
+                        classText.text = $"Class #{classNumber++}";
+                        classText.color = new(1, 1, 1, 1);
+                    }
+                    else
+                    {
+                        classText.text = $"{skirmishSetupMod.player1.shipInstances[sClassEntry.Key].Name(false, false)}";
+                        classText.color = new(0.8f, 1, 0.8f, 1);
+                    }
+
+                    var sClassAmountText = sClass.GetChild("Amount").GetComponent<Text>();
+                    sClassAmountText.text = $"{sClassEntry.Value}";
+
+                    var addShipCountBtn = ModUtils.GetChildAtPath("MoreLess/More", sClass).GetComponent<Button>();
+                    var subShipCountBtn = ModUtils.GetChildAtPath("MoreLess/Less", sClass).GetComponent<Button>();
+                    var subShipCountBtnImg = ModUtils.GetChildAtPath("Bg", subShipCountBtn.gameObject).GetComponent<Image>();
+                    var delShipCountBtn = ModUtils.GetChildAtPath("Delete", sClass).GetComponent<Button>();
+
+                    if (sClassEntry.Value <= 1)
+                    {
+                        subShipCountBtn.interactable = false;
+                        subShipCountBtnImg.color = new(1, 1, 1, 0.5f);
+                        skirmishSetupMod.player1.shipAmounts[type.Value][sClassEntry.Key] = 1;
+                    }
+                    else
+                    {
+                        subShipCountBtn.interactable = true;
+                        subShipCountBtnImg.color = new(1, 1, 1, 1);
+                    }
+
+                    addShipCountBtn.onClick.RemoveAllListeners();
+                    addShipCountBtn.onClick.AddListener(new Action(() => {
+                        skirmishSetupMod.player1.shipAmounts[type.Value][sClassEntry.Key]++;
+
+                        subShipCountBtn.interactable = true;
+                        subShipCountBtnImg.color = new(1, 1, 1, 1);
+
+                        sClassAmountText.text = $"{skirmishSetupMod.player1.shipAmounts[type.Value][sClassEntry.Key]}";
+                    }));
+
+                    subShipCountBtn.onClick.RemoveAllListeners();
+                    subShipCountBtn.onClick.AddListener(new Action(() => {
+                        skirmishSetupMod.player1.shipAmounts[type.Value][sClassEntry.Key]--;
+
+                        if (skirmishSetupMod.player1.shipAmounts[type.Value][sClassEntry.Key] == 1)
+                        {
+                            subShipCountBtn.interactable = false;
+                            subShipCountBtnImg.color = new(1, 1, 1, 0.5f);
+                        }
+                        else
+                        {
+                            subShipCountBtn.interactable = true;
+                            subShipCountBtnImg.color = new(1, 1, 1, 1);
+                        }
+
+                        sClassAmountText.text = $"{skirmishSetupMod.player1.shipAmounts[type.Value][sClassEntry.Key]}";
+                    }));
+
+                    delShipCountBtn.onClick.RemoveAllListeners();
+                    delShipCountBtn.onClick.AddListener(new Action(() => {
+
+                        if (designs.ContainsKey(sClassEntry.Key))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg(
+                                $"Removing: {designs[sClassEntry.Key].vesselName} ({designs[sClassEntry.Key].id})"
+                            );
+
+                            foreach (var vessel in CampaignController.Instance.CampaignData.GetShips)
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"  Vessel: {vessel.vesselName} ({vessel.id})");
+
+                                if (vessel.id == designs[sClassEntry.Key].id)
+                                {
+                                    Melon<TweaksAndFixes>.Logger.Msg($"    Found!");
+                                    // vessel.Erase();
+                                    vessel.isShipChoisedInCustomBattle = false;
+                                    break;
+                                }
+                            }
+                        }
+
+                        designs.TryRemove(sClassEntry.Key);
+                        instances.TryRemove(sClassEntry.Key);
+                        if (SelectedShip == sClassEntry.Key)
+                            SelectedShip = Guid.Empty;
+                        counts.Remove(sClassEntry.Key);
+                        G.ui.skirmishSetup.player1.shipAmounts[type.Value] = counts.Count;
+                        G.ui.skirmishSetup.Dirty();
+                        G.ui.Refresh();
+                    }));
+                }
+
+                var addShipClassBtn = sType.GetChild("MoreLess").GetChild("More").GetComponent<Button>();
+                addShipClassBtn.onClick.RemoveAllListeners();
+                addShipClassBtn.onClick.AddListener(new Action(() => {
+                    counts.Add(Guid.NewGuid(), 1);
+                    G.ui.skirmishSetup.player1.shipAmounts[type.Value] = counts.Count;
+                    G.ui.skirmishSetup.Dirty();
+                    G.ui.Refresh();
+                }));
+
+                // Disable unavailible shiptypes
+            }
+
+            foreach (var type in G.GameData.shipTypes)
+            {
+                if ((type.Value.paramx.ContainsKey("no_build") && type.Key != "tr")
+                    || !skirmishSetupMod.player2.shipTypeAvailible.ValOrDef(type.Value, false))
+                    continue;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  Type {type.Value.nameUi}");
+
+                var sType = GameObject.Instantiate(sTypeEntryTemplate);
+                sType.active = true;
+                sType.transform.SetParent(fleetList2Container, false);
+
+                var counts = skirmishSetupMod.player2.shipAmounts.ValueOrNew(type.Value);
+                var designs = skirmishSetupMod.player2.shipDesigns;
+                var instances = skirmishSetupMod.player2.shipInstances;
+
+                var typeText = sType.GetChild("Type").GetComponent<Text>();
+                typeText.text = $"{type.Value.nameFull} Classes";
+                float alpha = counts.Count > 0 ? 1 : 0.5f;
+                typeText.color = new(1, 1, 1, alpha);
+
+                var sTypeAmountText = sType.GetChild("Amount").GetComponent<Text>();
+                sTypeAmountText.text = $"{counts.Count}";
+
+                int classIndex = sType.transform.GetSiblingIndex() + 1;
+                int classNumber = 1;
+
+                foreach (var sClassEntry in counts)
+                {
+                    var sClass = GameObject.Instantiate(sClassEntryTemplate);
+                    sClass.active = true;
+                    sClass.transform.SetParent(fleetList2Container, false);
+                    // subEntry.transform.SetScale(1,1,1);
+                    sClass.transform.SetSiblingIndex(classIndex++);
+
+                    var classText = sClass.GetChild("Type").GetComponent<Text>();
+                    if (!skirmishSetupMod.player2.shipInstances.ContainsKey(sClassEntry.Key))
+                    {
+                        classText.text = $"Class #{classNumber++}";
+                        classText.color = new(1, 1, 1, 1);
+                    }
+                    else
+                    {
+                        classText.text = $"{skirmishSetupMod.player2.shipInstances[sClassEntry.Key].Name(false, false)}";
+                        classText.color = new(0.8f, 1, 0.8f, 1);
+                    }
+
+                    var sClassAmountText = sClass.GetChild("Amount").GetComponent<Text>();
+                    sClassAmountText.text = $"{sClassEntry.Value}";
+
+                    var addShipCountBtn = ModUtils.GetChildAtPath("MoreLess/More", sClass).GetComponent<Button>();
+                    var subShipCountBtn = ModUtils.GetChildAtPath("MoreLess/Less", sClass).GetComponent<Button>();
+                    var subShipCountBtnImg = ModUtils.GetChildAtPath("Bg", subShipCountBtn.gameObject).GetComponent<Image>();
+                    var delShipCountBtn = ModUtils.GetChildAtPath("Delete", sClass).GetComponent<Button>();
+
+                    if (sClassEntry.Value <= 1)
+                    {
+                        subShipCountBtn.interactable = false;
+                        subShipCountBtnImg.color = new(1, 1, 1, 0.5f);
+                        skirmishSetupMod.player2.shipAmounts[type.Value][sClassEntry.Key] = 1;
+                    }
+                    else
+                    {
+                        subShipCountBtn.interactable = true;
+                        subShipCountBtnImg.color = new(1, 1, 1, 1);
+                    }
+
+                    addShipCountBtn.onClick.RemoveAllListeners();
+                    addShipCountBtn.onClick.AddListener(new Action(() => {
+                        skirmishSetupMod.player2.shipAmounts[type.Value][sClassEntry.Key]++;
+
+                        sClassAmountText.text = $"{skirmishSetupMod.player2.shipAmounts[type.Value][sClassEntry.Key]}";
+
+                        subShipCountBtn.interactable = true;
+                        subShipCountBtnImg.color = new(1, 1, 1, 1);
+                    }));
+
+                    subShipCountBtn.onClick.RemoveAllListeners();
+                    subShipCountBtn.onClick.AddListener(new Action(() => {
+                        skirmishSetupMod.player2.shipAmounts[type.Value][sClassEntry.Key]--;
+
+                        if (skirmishSetupMod.player2.shipAmounts[type.Value][sClassEntry.Key] == 1)
+                        {
+                            subShipCountBtn.interactable = false;
+                            subShipCountBtnImg.color = new(1, 1, 1, 0.5f);
+                        }
+                        else
+                        {
+                            subShipCountBtn.interactable = true;
+                            subShipCountBtnImg.color = new(1, 1, 1, 1);
+                        }
+
+                        sClassAmountText.text = $"{skirmishSetupMod.player2.shipAmounts[type.Value][sClassEntry.Key]}";
+                    }));
+
+                    delShipCountBtn.onClick.RemoveAllListeners();
+                    delShipCountBtn.onClick.AddListener(new Action(() => {
+
+                        if (designs.ContainsKey(sClassEntry.Key))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg(
+                                $"Removing: {designs[sClassEntry.Key].vesselName} ({designs[sClassEntry.Key].id})"
+                            );
+
+                            foreach (var vessel in CampaignController.Instance.CampaignData.GetShips)
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"  Vessel: {vessel.vesselName} ({vessel.id})");
+
+                                if (vessel.id == designs[sClassEntry.Key].id)
+                                {
+                                    Melon<TweaksAndFixes>.Logger.Msg($"    Found!");
+                                    // vessel.Erase();
+                                    vessel.isShipChoisedInCustomBattle = false;
+                                    break;
+                                }
+                            }
+                        }
+
+                        designs.TryRemove(sClassEntry.Key);
+                        instances.TryRemove(sClassEntry.Key);
+                        if (SelectedShip == sClassEntry.Key)
+                            SelectedShip = Guid.Empty;
+                        counts.Remove(sClassEntry.Key);
+                        G.ui.skirmishSetup.player2.shipAmounts[type.Value] = counts.Count;
+                        G.ui.skirmishSetup.Dirty();
+                        G.ui.Refresh();
+                    }));
+                }
+
+                var addShipClassBtn = sType.GetChild("MoreLess").GetChild("More").GetComponent<Button>();
+                addShipClassBtn.onClick.RemoveAllListeners();
+                addShipClassBtn.onClick.AddListener(new Action(() => {
+                    counts.Add(Guid.NewGuid(), 1);
+                    G.ui.skirmishSetup.player2.shipAmounts[type.Value] = counts.Count;
+                    G.ui.skirmishSetup.Dirty();
+                    G.ui.Refresh();
+                }));
+            }
+        }
+
+        public static void OnStartCustomBattle(bool doBuild)
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"{doBuild} && {SelectedShip} != {Guid.Empty}");
+
+            // Listen to change player & year => Clear ship lists
+            // Listen to remove ship class => Remove from list & update selected
+
+            if (doBuild && SelectedShip != Guid.Empty)
+            {
+                var player =
+                    G.ui.IsCustomBattleShipsPlayers()
+                    ? skirmishSetupMod.player1
+                    : skirmishSetupMod.player2;
+
+                var playerSk =
+                    G.ui.IsCustomBattleShipsPlayers()
+                    ? G.ui.skirmishSetup.player1
+                    : G.ui.skirmishSetup.player2;
+
+                skirmishSetupMod.InitializePlayerMadeShips();
+
+                // if (player.shipInstances.ContainsKey(SelectedShip))
+                // {
+                //     Melon<TweaksAndFixes>.Logger.Msg($"  {SelectedShip} exists!");
+                // 
+                //     skirmishSetupMod.InitializePlayerMadeShips();
+                // 
+                //     // Calls UpdateShipTypeButtons(true), which grabs and stores the new selected ship
+                //     GameManager.Instance.ToConstructor(
+                //         false, player.shipInstances[SelectedShip],
+                //         true, null, null, false, playerSk.country.Player()
+                //     );
+                // }
+            }
+
+            UpdateShipTypeButtons(doBuild);
         }
 
         // ========== CAMPAIGN ========== //
@@ -1613,6 +2530,26 @@ namespace TweaksAndFixes
             CreateTopBarRotationText();
             CreateArmorQualityButton();
 
+            G.ui.conUpperButtons.GetChild("Layout").GetChild("SpaceEater").active = false;
+            GameObject Launch = GameObject.Instantiate(G.ui.conUpperButtons.GetChild("Layout").GetChild("Save"));
+            Launch.GetChild("IconGood").TryDestroy(true);
+            HorizontalLayoutGroup group = G.ui.conUpperButtons.GetChild("Layout").GetComponent<HorizontalLayoutGroup>();
+            Launch.transform.SetParent(group.transform, false);//ui.conUpperButtons.GetChild("Layout"));
+            Launch.transform.SetSiblingIndex(G.ui.conUpperButtons.GetChild("Layout").GetChildren().Count - 7);
+            Launch.name = "TAF_Launch_To_Custom_Battle";
+            AddTooltip(Launch, "$TAF_tooltip_launch_to_custom_battle");
+            var LaunchText = Launch.GetChild("Text").GetComponent<Text>();
+            LaunchText.text = ModUtils.LocalizeF("$TAF_Ui_Dockyard_Launch");
+            var LaunchButton = Launch.GetComponent<Button>();
+            LaunchButton.onClick.RemoveAllListeners();
+            LaunchButton.onClick.AddListener(new System.Action(() =>
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"To battle!");
+                GameManager.Instance.CustomBattleConstructorFinished();
+            }));
+            LayoutElement layout = Launch.GetComponent<LayoutElement>();
+            layout.preferredWidth = 100;
+
             GameObject bugReporter = G.ui.commonUi.GetChild("Options").GetChild("BugReport");
 
             GameObject CloneShip  = G.ui.conUpperButtons.GetChild("Layout").GetChild("CloneShip");
@@ -1629,6 +2566,8 @@ namespace TweaksAndFixes
                 {
                     RemoveConstructorKeyButtons();
                 }
+
+                Launch.active = !GameManager.IsCampaign && !GameManager.IsSharedDesignConstructor;
 
                 // New UI elements
                 if (Config.Param("taf_dockyard_new_logic", 1) == 1)
@@ -1654,12 +2593,428 @@ namespace TweaksAndFixes
             }));
         }
 
+        public static GameObject SSCDropdown;
+        public static GameObject SSCDropdownDropdownContainer;
+        public static GameObject SSCDropdownElementTemplate;
+        public static GameObject SSCDropdownButton;
+        public static Button SSCDropdownButtonComp;
+        public static Text SSCDropdownButtonText;
+        public static bool SkipNextUpdateShipTypeButtons = false;
+
+        public static Guid SelectedShip;
+
         public static void ApplyShipTypeButtonsModifications()
         {
             // MAX -265 -50
             // MIN 780 0
 
-            UiM.ModifyUi(G.ui.conUpperRight).ReplaceOffsets(new Vector2(780, 0), new Vector2(-265, -50));
+            Ui ui = G.ui;
+            HorizontalLayoutGroup group = ui.conUpperButtons.GetChild("Layout").GetComponent<HorizontalLayoutGroup>();
+
+            SSCDropdown = new GameObject();
+            SSCDropdown.name = "TAF_SelectShipClassDropdown";
+            SSCDropdown.active = false;
+            LayoutElement layout = SSCDropdown.AddComponent<LayoutElement>();
+            SSCDropdown.transform.SetParent(group.transform, false);
+            SSCDropdown.transform.SetAsLastSibling();
+            layout.preferredWidth = 100;
+
+            GameObject conSv = ModUtils.GetChildAtPath("Global/Ui/UiMain/Constructor/Right/Scroll View");
+
+            var SSCDropdownScrollView = GameObject.Instantiate(conSv);
+            SSCDropdownScrollView.SetParent(SSCDropdown, false);
+            SSCDropdownScrollView.name = "TAF_FleetList";
+            SSCDropdownScrollView.transform.localPosition = Vector3.zero;
+            SSCDropdownScrollView.active = false;
+            var SSCDropdownSvRt = SSCDropdownScrollView.GetComponent<RectTransform>();
+            SSCDropdownSvRt.offsetMax = new(110, -45);
+            SSCDropdownSvRt.offsetMin = new(0, -575);
+
+            GameObject SSCDropdownSvVp = SSCDropdownScrollView.GetChild("Viewport");
+            SSCDropdownSvVp.GetComponent<Image>().enabled = true;
+            SSCDropdownSvVp.GetComponent<Mask>().enabled = true;
+
+            SSCDropdownDropdownContainer = ModUtils.GetChildAtPath("Viewport/Cont", SSCDropdownScrollView);
+            SSCDropdownDropdownContainer.GetComponent<VerticalLayoutGroup>().spacing = 0;
+            foreach (var child in SSCDropdownDropdownContainer.GetChildren())
+            {
+                child.TryDestroy(true);
+            }
+
+
+            SSCDropdownButton = GameObject.Instantiate(ModUtils.GetChildAtPath("Layout/Undo", ui.conUpperButtons));
+            SSCDropdownButton.transform.SetParent(SSCDropdown, false);
+            SSCDropdownButton.transform.localPosition = Vector3.zero;
+            var SSCDropdownButtonRt = SSCDropdownButton.GetComponent<RectTransform>();
+            SSCDropdownButtonRt.offsetMax = new(100, 0);
+            SSCDropdownButtonRt.offsetMin = new(0, -40);
+            SSCDropdownButton.name = "Dropdown_Button";
+            AddTooltip(SSCDropdownButton, "$TAF_tooltip_skirmish_ship_type_dropdown");
+
+            SSCDropdownButton.GetChild("Text").TryDestroyComponent<LocalizeText>();
+            SSCDropdownButtonText = SSCDropdownButton.GetChild("Text").GetComponent<Text>();
+            SSCDropdownButtonText.text = ModUtils.LocalizeF(
+                "$TAF_Ui_Dockyard_TopBar_SkirmishShipType",
+                "Random AI Ship", "?", "??", "?"
+            );
+            
+            SSCDropdownButtonComp = SSCDropdownButton.GetComponent<Button>();
+            SSCDropdownButtonComp.onClick.RemoveAllListeners();
+            SSCDropdownButtonComp.onClick.AddListener(new System.Action(() =>
+            {
+                SSCDropdownScrollView.active = !SSCDropdownScrollView.active;
+            }));
+
+
+            SSCDropdownElementTemplate = GameObject.Instantiate(SSCDropdownButton);
+            SSCDropdownElementTemplate.transform.SetParent(SSCDropdownDropdownContainer, false);
+            SSCDropdownElementTemplate.active = false;
+            SSCDropdownElementTemplate.name = "Template";
+            SSCDropdownElementTemplate.GetComponent<LayoutElement>().preferredWidth = 100;
+            SSCDropdownElementTemplate.TryDestroyComponent<Shadow>();
+            var SSCDropdownElementTemplateBg = SSCDropdownElementTemplate.GetComponent<Image>();
+            SSCDropdownElementTemplateBg.material = new Material(Shader.Find("UI/Default"));
+            SSCDropdownElementTemplateBg.material.SetColor("_Color", new(0.5f, 0.5f, 0.5f, 0.5f));
+            SSCDropdownElementTemplate.TryDestroyComponent<OnEnter>();
+            SSCDropdownElementTemplate.TryDestroyComponent<OnLeave>();
+
+            // UiM.ModifyUi(G.ui.conUpperRight).ReplaceOffsets(new Vector2(780, 0), new Vector2(-265, -50));
+            G.ui.conUpperRight.active = false;
+        }
+
+        public static bool ToConstructorAfterSwitchPlayer()
+        {
+            var player =
+                !G.ui.IsCustomBattleShipsPlayers()
+                ? skirmishSetupMod.player1
+                : skirmishSetupMod.player2;
+
+            var playerSk =
+                !G.ui.IsCustomBattleShipsPlayers()
+                ? G.ui.skirmishSetup.player1
+                : G.ui.skirmishSetup.player2;
+
+            ShipType preferredType = null;
+            Guid preferredId = Guid.Empty;
+
+            foreach (var type in G.GameData.shipTypes)
+            {
+                if (type.Value.paramx.ContainsKey("no_build"))
+                    continue;
+
+                if (!player.shipTypeAvailible.ValOrDef(type.Value, false))
+                    continue;
+
+                var counts = player.shipAmounts.ValueOrNew(type.Value);
+
+                foreach (var sClassEntry in counts)
+                {
+                    if (preferredType == null)
+                    {
+                        preferredType = type.Value;
+                        preferredId = sClassEntry.Key;
+                    }
+
+                    if (!player.shipInstances.HasValue(sClassEntry.Key))
+                        continue;
+
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Found: {player.shipInstances[sClassEntry.Key] == null} => {player.shipInstances[sClassEntry.Key].Name(false, false)}");
+
+                    SelectedShip = sClassEntry.Key;
+                    GameManager.Instance.ToConstructor(
+                        false, player.shipInstances[sClassEntry.Key],
+                        true, null, type.Value, false, G.ui.GetEnemyForPlayer()
+                    );
+                    G.ui.currentShipInSkirmish = G.ui.GetIntNumberFromShipType(type.Value);
+
+                    return true;
+                }
+            }
+
+            if (preferredType == null || preferredId == Guid.Empty)
+            {
+                return false;
+            }
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Searching for shared design:");
+
+            foreach (var sDesign in CampaignController.Instance.CampaignData.GetShips)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"  {sDesign.vesselName}");
+                if (sDesign.IsSharedDesign
+                    && sDesign.player == playerSk.country.Player()
+                    && sDesign.shipType == preferredType)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"    Match!");
+
+                    SelectedShip = preferredId;
+                    GameManager.Instance.ToConstructor(
+                        false, sDesign, true, null, preferredType, false, playerSk.country.Player()
+                    );
+                    G.ui.currentShipInSkirmish = G.ui.GetIntNumberFromShipType(preferredType);
+                    return true;
+                }
+            }
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Creating: {preferredType.name}");
+
+            SelectedShip = preferredId;
+            GameManager.Instance.ToConstructor(
+                true, null, true, null, preferredType, false, G.ui.GetEnemyForPlayer()
+            );
+
+            G.ui.currentShipInSkirmish = G.ui.GetIntNumberFromShipType(preferredType);
+
+            return true;
+        }
+
+        public static void UpdateShipTypeButtons(bool doBuild)
+        {
+            if (SkipNextUpdateShipTypeButtons)
+            {
+                SkipNextUpdateShipTypeButtons = false;
+                return;
+            }
+
+            // When entering with saved ships, override the ship it opens the constructor with
+
+            if (doBuild && !GameManager.IsCampaign && !GameManager.IsSharedDesignConstructor)
+            {
+                SSCDropdown.active = true;
+            }
+            else
+            {
+                SSCDropdown.active = false;
+                return;
+            }
+
+            foreach (var child in SSCDropdownDropdownContainer.GetChildren())
+            {
+                if (child.activeSelf == false) continue;
+                child.TryDestroy(true);
+            }
+
+            bool first = true;
+
+            Melon<TweaksAndFixes>.Logger.Msg($"UpdateShipTypeButtons: {SelectedShip}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"  {ShipM.GetActiveShip()?.Name(false, false) ?? "NULL!"}");
+
+            if (ShipM.GetActiveShip() == null)
+                return;
+
+            var SwitchPlayerTypeBtn = G.ui.conUpperButtons.GetChild("Layout").GetChild("SwitchPlayerType").GetComponent<Button>();
+            var SwitchPlayerTypeTxt = G.ui.conUpperButtons.GetChild("Layout").GetChild("SwitchPlayerType").GetChild("Text").GetComponent<Text>();
+            SwitchPlayerTypeBtn.onClick.RemoveAllListeners();
+            SwitchPlayerTypeBtn.onClick.AddListener(new System.Action(() => {
+                bool success = ToConstructorAfterSwitchPlayer();
+
+                if (!success)
+                    return;
+
+                if (G.ui.IsCustomBattleShipsPlayers())
+                    SwitchPlayerTypeTxt.text = ModUtils.LocalizeF("$Ui_Academy_MissionInfo_Detail_Enemy");
+                else
+                    SwitchPlayerTypeTxt.text = ModUtils.LocalizeF("$Ui_Academy_MissionInfo_Detail_You");
+            }));
+
+            var player =
+                G.ui.IsCustomBattleShipsPlayers()
+                ? skirmishSetupMod.player1
+                : skirmishSetupMod.player2;
+
+            var playerSk =
+                G.ui.IsCustomBattleShipsPlayers()
+                ? G.ui.skirmishSetup.player1
+                : G.ui.skirmishSetup.player2;
+
+            if (SelectedShip == Guid.Empty && player.shipInstances.Count != 0)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"  {PlayerController.Instance.Ship.Name(false, false) ?? "NULL"}");
+
+                if (!skirmishSetupMod.InitializePlayerMadeShips())
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"    Failed to re-init ships!");
+                    return;
+                }
+
+                foreach (var ship in player.shipInstances)
+                {
+                    if (ship.Value == PlayerController.Instance.Ship)
+                    {
+                        SelectedShip = ship.Key;
+                        break;
+                    }
+                }
+
+                Melon<TweaksAndFixes>.Logger.Msg($"  {SelectedShip}");
+            }
+
+            foreach (var type in G.GameData.shipTypes)
+            {
+                if (type.Value.paramx.ContainsKey("no_build"))
+                    continue;
+
+                if (!player.shipTypeAvailible.ValOrDef(type.Value, false))
+                    continue;
+
+                // Melon<TweaksAndFixes>.Logger.Msg($"  {type.Key}");
+
+                var counts = player.shipAmounts.ValueOrNew(type.Value);
+
+                int index = 1;
+
+                foreach (var sClassEntry in counts)
+                {
+                    // Melon<TweaksAndFixes>.Logger.Msg($"  {sClassEntry.Key}");
+
+                    if (player.shipInstances.HasValue(sClassEntry.Key))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"  Instance: {player.shipInstances[sClassEntry.Key].Name(false, false)}");
+                    }
+
+                    if (player.shipDesigns.HasValue(sClassEntry.Key))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"  Designs: {player.shipDesigns[sClassEntry.Key].vesselName}");
+                    }
+
+                    var SSCDropdownElement = GameObject.Instantiate(SSCDropdownElementTemplate);
+                    SSCDropdownElement.transform.SetParent(SSCDropdownDropdownContainer, false);
+                    SSCDropdownElement.active = true;
+
+                    if (player.shipDesigns.HasValue(sClassEntry.Key)
+                        && !player.shipInstances.HasValue(sClassEntry.Key))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"  Null ship detected!");
+                        skirmishSetupMod.InitializePlayerMadeShips();
+                    }
+
+                    if (first && player.shipInstances.Count == 0)
+                    {
+                        SelectedShip = sClassEntry.Key;
+                        var currShip = PlayerController.Instance.Ship;
+                        player.shipInstances.AddOrSet(sClassEntry.Key, currShip);
+                        player.shipDesigns.AddOrSet(sClassEntry.Key, currShip.ToStore());
+                        // G.ui.customBattleShipListUI[G.ui.GetIntNumberFromShipType(currShip.shipType)] = currShip;
+                        Melon<TweaksAndFixes>.Logger.Msg($"  1 {sClassEntry.Key} -> {currShip.Name(false, false)}");
+                        first = false;
+                    }
+
+                    else if (SelectedShip == sClassEntry.Key)
+                    {
+                        var currShip = PlayerController.Instance.Ship;
+                        player.shipInstances.AddOrSet(SelectedShip, currShip);
+                        player.shipDesigns.AddOrSet(SelectedShip, currShip.ToStore());
+                        // G.ui.customBattleShipListUI[G.ui.GetIntNumberFromShipType(currShip.shipType)] = currShip;
+                        Melon<TweaksAndFixes>.Logger.Msg($"  2 {SelectedShip} -> {currShip.Name(false, false)}");
+                    }
+
+                    string locText = ModUtils.LocalizeF(
+                        "$TAF_Ui_Dockyard_TopBar_SkirmishShipType",
+                        player.shipInstances.ContainsKey(sClassEntry.Key) ?
+                            player.shipInstances[sClassEntry.Key].Name(false, false) : "Random AI Ship",
+                        $"{sClassEntry.Value}", $"{type.Value.nameUi}", $"{index++}"
+                    );
+
+                    var SSCDropdownElementText = SSCDropdownElement.GetChild("Text").GetComponent<Text>();
+                    SSCDropdownElementText.text = locText;
+
+                    var SSCDropdownElementButton = SSCDropdownElement.GetComponent<Button>();
+                    SSCDropdownElementButton.onClick.RemoveAllListeners();
+                    SSCDropdownElementButton.onClick.AddListener(new Action(() => {
+                        bool hasDesign = player.shipInstances.ContainsKey(sClassEntry.Key);
+
+                        if (hasDesign && !player.shipInstances.HasValue(sClassEntry.Key))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg(
+                                $"  Error! ID {sClassEntry.Key} has null ship!" +
+                                $" Design = {(player.shipDesigns.HasValue(sClassEntry.Key) ? player.shipDesigns[sClassEntry.Key].vesselName : "NULL")}");
+                            return;
+                        }
+
+                        if (player.shipInstances.HasValue(sClassEntry.Key))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"  Clicked Instance: {player.shipInstances[sClassEntry.Key].Name(false, false)}");
+                        }
+
+                        if (player.shipDesigns.HasValue(sClassEntry.Key))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg($"  Clicked Designs: {player.shipDesigns[sClassEntry.Key].vesselName}");
+                        }
+
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  #### {ShipM.GetActiveShip().Name(false, false)} {ShipM.GetActiveShip().parts.Count > 0}");
+
+                        // Ask to delete design if it has no parts on it
+                        // if (ShipM.GetActiveShip().parts.Count == 0)
+                        // {
+                        //     var shipBeforeSwitch = ShipM.GetActiveShip();
+                        // 
+                        //     Melon<TweaksAndFixes>.Logger.Msg($"  {shipBeforeSwitch.Name(false, false)} is empty!");
+                        // 
+                        //     MessageBoxUI.Show(
+                        //         "Empty Design",
+                        //         "The current design is empty, do you want to delete it?",
+                        //         null, false, ModUtils.LocalizeF("$Ui_Popup_Generic_Yes"),
+                        //         ModUtils.LocalizeF("$Ui_Popup_Generic_No"),
+                        //         new System.Action(() => {
+                        //             shipBeforeSwitch.Erase();
+                        //             player.shipInstances.TryRemove(SelectedShip);
+                        //             player.shipDesigns.TryRemove(SelectedShip);
+                        //             UpdateShipTypeButtons(true);
+                        //         })
+                        //     );
+                        // }
+
+                        Melon<TweaksAndFixes>.Logger.Msg($"  {hasDesign} : {BattleManager.Instance.customBattleSharedDesigns.Count}");
+
+                        // First try and get a random shared design
+                        if (!hasDesign)
+                        {
+                            foreach (var sDesign in CampaignController.Instance.CampaignData.GetShips)
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg($"  {sDesign.vesselName}");
+                                Melon<TweaksAndFixes>.Logger.Msg($"    {sDesign.IsSharedDesign}");
+                                Melon<TweaksAndFixes>.Logger.Msg($"    {sDesign.player == playerSk.country.Player()}");
+                                Melon<TweaksAndFixes>.Logger.Msg($"    {sDesign.shipType == type.Value}");
+                                if (sDesign.IsSharedDesign
+                                    && sDesign.player == playerSk.country.Player()
+                                    && sDesign.shipType == type.Value)
+                                {
+                                    Melon<TweaksAndFixes>.Logger.Msg($"    Match!");
+
+                                    SelectedShip = sClassEntry.Key;
+                                    GameManager.Instance.ToConstructor(
+                                        false, sDesign, true, null, type.Value, false, playerSk.country.Player()
+                                    );
+                                    G.ui.currentShipInSkirmish = G.ui.GetIntNumberFromShipType(type.Value);
+                                    SSCDropdownButtonText.text = locText;
+
+                                    // G.ui.customBattleShipListUI[G.ui.GetIntNumberFromShipType(ShipM.GetActiveShip().shipType)] = ShipM.GetActiveShip();
+                                    Melon<TweaksAndFixes>.Logger.Msg($"  3 {sClassEntry.Key} -> {ShipM.GetActiveShip().Name(false, false)}");
+                                    return;
+                                }
+                            }
+                        }
+
+                        // If no shared designs exist, then create a new hull
+                        SelectedShip = sClassEntry.Key;
+                        // Calls UpdateShipTypeButtons(true), which grabs and stores the new selected ship
+                        GameManager.Instance.ToConstructor(
+                            !hasDesign,
+                            hasDesign ? player.shipInstances[sClassEntry.Key] : null,
+                            true, null, type.Value, false, playerSk.country.Player()
+                        );
+                        G.ui.currentShipInSkirmish = G.ui.GetIntNumberFromShipType(type.Value);
+                        SSCDropdownButtonText.text = locText;
+                        // G.ui.customBattleShipListUI[G.ui.GetIntNumberFromShipType(ShipM.GetActiveShip().shipType)] = ShipM.GetActiveShip();
+                        if (!hasDesign) Melon<TweaksAndFixes>.Logger.Msg($"  3 {sClassEntry.Key} -> {ShipM.GetActiveShip().Name(false, false)}");
+                    }));
+
+                    if (SelectedShip == sClassEntry.Key)
+                    {
+                        SSCDropdownButtonText.text = locText;
+                    }
+                }
+            }
         }
 
         public static void DisableKeyButton(Button button, System.Action before = null, System.Action after = null)
@@ -1896,7 +3251,7 @@ namespace TweaksAndFixes
                 Patch_Ui.UpdateRotationIncrament();
             }));
             LayoutElement layout = RotationIncramentControl.GetComponent<LayoutElement>();
-            layout.preferredWidth = 145;
+            layout.preferredWidth = 100;
         }
 
         public static void UpdateTopBarRotationButton()
@@ -1935,7 +3290,7 @@ namespace TweaksAndFixes
                 Patch_Ui.AutoOrient();
             }));
             LayoutElement layout = RotationValueControl.GetComponent<LayoutElement>();
-            layout.preferredWidth = 145;
+            layout.preferredWidth = 100;
             RotationValueControlText = RotationValueControl.GetChild("Text").GetComponent<Text>();
             RotationValueControl.GetChild("Text").TryDestroyComponent<LocalizeText>();
         }

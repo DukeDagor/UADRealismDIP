@@ -19,5 +19,14 @@ namespace TweaksAndFixes
         {
             UiM.SaveSettings();
         }
+
+        // LoadCustomBattleData
+
+        [HarmonyPatch(nameof(Settings.SaveCustomBattleData))]
+        [HarmonyPrefix]
+        internal static bool Prefix_SaveCustomBattleData()
+        {
+            return false;
+        }
     }
 }

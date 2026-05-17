@@ -168,6 +168,276 @@ namespace TweaksAndFixes
                 CampaignControllerM.RequestForcedGameSave = true;
             }
         }
+
+        [HarmonyPatch(nameof(BattleManager.StartCustomBattle))]
+        [HarmonyPrefix]
+        internal static void Prefix_StartCustomBattle(Ui.SkirmishSetup skirmishSetup, bool doBuild)
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"Prefix_StartCustomBattle");
+            UiM.SkipNextUpdateShipTypeButtons = true;
+        }
+
+        [HarmonyPatch(nameof(BattleManager.StartCustomBattle))]
+        [HarmonyPostfix]
+        internal static void Postfix_StartCustomBattle(BattleManager __instance, Ui.SkirmishSetup skirmishSetup, bool doBuild)
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"Postfix_StartCustomBattle");
+            UiM.OnStartCustomBattle(doBuild);
+        }
+
+        public static System.Collections.IEnumerator UpdateLoadingCustomBattleM(bool doBuild, bool isRestart)
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"Start loading");
+
+            G.ui._loadingText_k__BackingField = ModUtils.LocalizeF("$Ui_Battle_StartingCustomBattle");
+
+            yield return new WaitForEndOfFrame();
+            yield return new WaitForEndOfFrame();
+            yield return new WaitForEndOfFrame();
+
+            var sk = UiM.skirmishSetupMod;
+
+            // if (GameManager.IsCustomBattle)
+            // {
+            //     G.ui.InitialCustomBattleShipList();
+            // }
+
+            UiM.skirmishSetupMod.InitializePlayerMadeShips();
+
+            bool canContinue = true;
+            bool anyError = false;
+            
+            Player player = PlayerController.Instance;
+            Player enemy = CampaignController.Instance.CampaignData.Players[0] == player
+                ? CampaignController.Instance.CampaignData.Players[1]
+                : CampaignController.Instance.CampaignData.Players[0];
+
+            List<Il2CppSystem.Guid> sharedIgnoreList = new();
+            List<Il2CppSystem.Guid> predefIgnoreList = new();
+
+            for (int i = 0; i < 2; i++)
+            {
+                Player currPlayer =
+                    i == 0 ? player : enemy;
+                UiM.SkirmishSetupMod.SkirmishPlayer currSkPlayer =
+                    i == 0 ? sk.player1 : sk.player2;
+            
+                Melon<TweaksAndFixes>.Logger.Msg($"  Player {currPlayer.data.name} ({i})");
+            
+                foreach (var sType in currSkPlayer.shipAmounts.ToList())
+                {
+                    if (!currSkPlayer.shipTypeAvailible.ValOrDef(sType.Key, false))
+                        continue;
+
+                    int sDesignNextNum = 1;
+            
+                    Melon<TweaksAndFixes>.Logger.Msg($"    Ship Type {sType.Key.nameUi}");
+            
+                    foreach (var sDesign in sType.Value.ToList())
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"      Design #{sDesignNextNum}");
+            
+                        if (isRestart || currSkPlayer.shipInstances.HasValue(sDesign.Key))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg(
+                                $"        Manual/reset design {currSkPlayer.shipInstances[sDesign.Key].Name(false, false)} : {currSkPlayer.shipInstances[sDesign.Key].id}"
+                            );
+
+                            sharedIgnoreList.Add(currSkPlayer.shipInstances[sDesign.Key].id);
+                        }
+
+                        else if (sk.useShared)
+                        {
+                            // Pull shared design
+                            var sd = CampaignControllerM.GetSharedDesign(
+                                CampaignController.Instance, currPlayer, sType.Key,
+                                G.ui.skirmishSetup.player1.year, false, true, sharedIgnoreList
+                            );
+
+                            if (sd == null)
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg(
+                                    $"        Shared design {sType.Key.nameFull} #{sDesignNextNum}: Failed!"
+                                );
+                            }
+                            else
+                            {
+                                Melon<TweaksAndFixes>.Logger.Msg(
+                                    $"        Shared design {sd.Name(false, false)} : {sd.id}"
+                                );
+                                currSkPlayer.shipInstances.AddOrSet(sDesign.Key, sd);
+                                currSkPlayer.shipDesigns.AddOrSet(sDesign.Key, sd.ToStore());
+                                sharedIgnoreList.Add(sd.id);
+                            }
+                        }
+
+                        if (sk.usePredefs && sType.Key.canBuild && !currSkPlayer.shipInstances.HasValue(sDesign.Key))
+                        {
+                            Melon<TweaksAndFixes>.Logger.Msg(
+                                $"        Loading predefs"
+                            );
+
+                            var cc = CampaignController.Instance;
+                            bool failed = false;
+
+                            if (cc._currentDesigns == null)
+                            {
+                                if (!PredefinedDesignsData.Instance.LoadPredefSets(true))
+                                {
+                                    Melon<TweaksAndFixes>.Logger.BigError("Tried to load predefined designs but failed!");
+                                    sk.usePredefs = false;
+                                    failed = true;
+                                }
+                            }
+
+                            int sDesignNum = sDesignNextNum++;
+
+                            G.ui._loadingText_k__BackingField =
+                                ModUtils.LocalizeF("$Ui_Battle_Building0", $"{currPlayer.Name(false)} - {sType.Key.nameFull} #{sDesignNum}");
+
+                            for (int k = 0; !failed && k < 20; k++)
+                            {
+                                var pd = PredefinedDesignsData.Instance.GetRandomShip(currPlayer, sType.Key, currSkPlayer.year);
+                                var ps = Ship.Create(null, null, false, false, false);
+
+                                if (!ps.FromStore(pd, new Il2CppSystem.Nullable<Il2CppSystem.Guid>(), null, null, false))
+                                {
+                                    Melon<TweaksAndFixes>.Logger.Error(
+                                        $"Failed to load predef {pd.vesselName} for {currPlayer.Name(false)} ({currSkPlayer.year})." +
+                                        $" Trying again..."
+                                    );
+                                    ps.Erase();
+                                    continue;
+                                }
+
+                                if (predefIgnoreList.Contains(pd.id))
+                                {
+                                    ps.Erase();
+                                    continue;
+                                }
+
+                                predefIgnoreList.Add(pd.id);
+
+                                ps.CrewTrainingAmount = (float)(System.Random.Shared.NextDouble() * 100.0);
+                                currSkPlayer.shipInstances.AddOrSet(sDesign.Key, ps);
+                                currSkPlayer.shipDesigns.AddOrSet(sDesign.Key, pd);
+
+                                Melon<TweaksAndFixes>.Logger.Msg(
+                                    $"        Predef design {ps.Name(false, false)} : {ps.id}"
+                                );
+
+                                break;
+                            }
+
+                            yield return new WaitForEndOfFrame();
+                        }
+
+                        if (!currSkPlayer.shipInstances.HasValue(sDesign.Key))
+                        {
+                            // Generate
+
+                            int sDesignNum = sDesignNextNum++;
+
+                            G.ui._loadingText_k__BackingField =
+                                ModUtils.LocalizeF("$Ui_Battle_Building0", $"{currPlayer.Name(false)} - {sType.Key.nameFull} #{sDesignNum}");
+
+                            bool done = false;
+
+                            var onDone = new System.Action<Ship>((Ship s) =>
+                            {
+                                done = true;
+
+                                if (s == null || s.status == VesselEntity.Status.Erased)
+                                {
+                                    Melon<TweaksAndFixes>.Logger.Msg(
+                                        $"        Finished {sType.Key.nameFull} #{sDesignNum}: Failed!"
+                                    );
+                                    return;
+                                }
+
+                                Melon<TweaksAndFixes>.Logger.Msg(
+                                    $"        Finished {sType.Key.nameFull} #{sDesignNum}: {s.Name(false, false)}:" +
+                                    $" {s.parts.Count} parts, {s.mainGuns?.Count} guns"
+                                );
+
+                                currSkPlayer.shipInstances.AddOrSet(sDesign.Key, s);
+                                currSkPlayer.shipDesigns.AddOrSet(sDesign.Key, s.ToStore());
+                            });
+
+                            G.ui.StartCoroutine_Auto(ShipM.Ship_CreateRandom(
+                                sType.Key, currPlayer, sType.Key.name == "tr", true, onDone, false, false
+                            ));
+
+                            while (!done)
+                            {
+                                yield return new WaitForEndOfFrame();
+                            }
+
+                            Melon<TweaksAndFixes>.Logger.Msg(
+                                $"        Generate design " +
+                                $"{currSkPlayer.shipInstances[sDesign.Key].Name(false, false)}"
+                            );
+
+                            // Ask player if they want to continue after failing to gen ship
+                            //   If no, set canContinue = false
+                        }
+
+                        // Create full count
+                        var design = currSkPlayer.shipInstances[sDesign.Key];
+                        
+                        design.UpdateOwner();
+                        
+                        var ships = PlayerController.Instance.BuildShipsFromDesign(
+                            design, sDesign.Value, true, null
+                        );
+
+                        foreach (var ship in ships)
+                        {
+                            ship._isTempForBattle_k__BackingField = true;
+                            Melon<TweaksAndFixes>.Logger.Msg($"          Make ship from design: {ship.Name(false, false)} : {ship.id}");
+                        }
+                    }
+                }
+
+                currSkPlayer.shipInstances.Clear();
+            }
+            
+            Melon<TweaksAndFixes>.Logger.Msg($"  Finished generating");
+            
+            G.ui._loadingText_k__BackingField = ModUtils.LocalizeF("$Ui_Battle_StartingBattle");
+            
+            var battle = new CampaignBattle();
+            battle.CurrentState = 0;
+            battle.Date = CampaignController.Instance.CurrentDate;
+            battle.Type = G.GameData.battleTypesEx["custom_battle"];
+            
+            battle.Attacker = player;
+            battle.AttackerShips = new(player.fleet);
+            battle.Defender = enemy;
+            battle.DefenderShips = new(enemy.fleet);
+            
+            Melon<TweaksAndFixes>.Logger.Msg($"  Configured battle");
+            
+            G.sound.PlayMusic("music_battle_start", true, false);
+            
+            Melon<TweaksAndFixes>.Logger.Msg($"  Playing music:");
+            
+            G.ui._dontChangeLoadingScreen_k__BackingField = true;
+            GameManager.Instance.ToBattle(
+                battle,
+                new Il2CppSystem.Nullable<float>(36000),
+                new Il2CppSystem.Nullable<float>(G.ui.skirmishSetup.distance),
+                new Il2CppSystem.Nullable<float>(1000)
+            );
+            BattleManager.Instance.StartDistance = G.ui.skirmishSetup.distance;
+            BattleManager.Instance.StartSpread = 1000;
+            battle.Timer.Run(36000);
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Battle start");
+
+            // Start battle corutine
+            yield break;
+        }
     }
 
 
