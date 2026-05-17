@@ -3,7 +3,7 @@ using UnityEngine;
 using Il2Cpp;
 
 [assembly: MelonGame("Game Labs", "Ultimate Admiral Dreadnoughts")]
-[assembly: MelonInfo(typeof(TweaksAndFixes.TweaksAndFixes), "TweaksAndFixes-RC7", "3.20.3", "NathanKell & DukeDagor")]
+[assembly: MelonInfo(typeof(TweaksAndFixes.TweaksAndFixes), "TweaksAndFixes-RC11", "3.20.3", "NathanKell & DukeDagor")]
 [assembly: MelonColor(255, 220, 220, 0)]
 [assembly: HarmonyDontPatchAll]
 
@@ -72,7 +72,17 @@ namespace TweaksAndFixes
             string logStr = $"[Unity]: {condition ?? string.Empty}";
             switch (type)
             {
-                case LogType.Log: Melon<TweaksAndFixes>.Logger.Msg(logStr); break;
+                case LogType.Log:
+                    // Silence warning: "for ship 'name' tonnage # is out of bounds #/#, clamped"
+                    if (condition != null && condition.Contains("OnLeaveState"))
+                        break;
+
+                    // Silence warning: "for ship 'name' tonnage # is out of bounds #/#, clamped"
+                    if (condition != null && condition.Contains("OnEnterState"))
+                        break;
+
+                    Melon<TweaksAndFixes>.Logger.Msg(logStr);
+                    break;
                 case LogType.Warning:
                     // Silence warning: "for ship 'name' tonnage # is out of bounds #/#, clamped"
                     if (condition != null && condition.StartsWith("for ship '") && condition.EndsWith(", clamped"))
