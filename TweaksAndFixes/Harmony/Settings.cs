@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Il2Cpp;
+using MelonLoader;
 
 namespace TweaksAndFixes
 {
@@ -20,7 +21,17 @@ namespace TweaksAndFixes
             UiM.SaveSettings();
         }
 
-        // LoadCustomBattleData
+        [HarmonyPatch(nameof(Settings.LoadCustomBattleData))]
+        [HarmonyPrefix]
+        internal static bool Prefix_LoadCustomBattleData()
+        {
+            if (File.Exists(Storage.prefix + "custom_battle_data.bin"))
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Deleting deprecated file: '{Storage.prefix + "custom_battle_data.bin"}'");
+                File.Delete(Storage.prefix + "custom_battle_data.bin");
+            }
+            return false;
+        }
 
         [HarmonyPatch(nameof(Settings.SaveCustomBattleData))]
         [HarmonyPrefix]
