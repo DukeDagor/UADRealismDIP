@@ -159,7 +159,7 @@ namespace TweaksAndFixes.Harmony
                             isOurs &= selection.Sold.text.Length == 0;
                         }
 
-                        if (selectedCount == 0 || isUnavailible || !isOurs)
+                        if (selectedCount == 0 || isUnavailible || isBeingBuilt || !isOurs)
                         {
                             setCrewObj.GetComponent<Button>().interactable = false;
                         }
