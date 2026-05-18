@@ -152,6 +152,7 @@ namespace TweaksAndFixes
             G.ui.refreshPending = true;
 
             var activeShip = PlayerController.Instance.Ship;
+            activeShip.IsSharedDesign = true;
             var activeShipStore = activeShip.ToStore();
             var activeShipStoreSerialzied = Util.SerializeObjectByte(activeShipStore);
 
