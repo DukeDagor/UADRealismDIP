@@ -1,6 +1,7 @@
 ﻿using MelonLoader;
 using UnityEngine;
 using Il2Cpp;
+using Il2CppLitJson;
 
 [assembly: MelonGame("Game Labs", "Ultimate Admiral Dreadnoughts")]
 [assembly: MelonInfo(typeof(TweaksAndFixes.TweaksAndFixes), "TweaksAndFixes-RC11", "3.20.3", "NathanKell & DukeDagor")]
@@ -67,69 +68,84 @@ namespace TweaksAndFixes
             base.OnDeinitializeMelon();
         }
 
+        private bool FilteredMessage(ref string condition)
+        {
+            // Silence warning: "for ship 'name' tonnage # is out of bounds #/#, clamped"
+            if (condition != null && condition.StartsWith("for ship '") && condition.EndsWith(", clamped"))
+                return true;
+
+            // Silence warning: "BoxColliders does not support negative scale or size..."
+            if (condition != null && condition.StartsWith("BoxColliders does not support negative scale or size."))
+                return true;
+
+            // Silence warning: "failed to generate random ship of type `type`, hull hull_name in X tries"
+            if (condition != null && condition.StartsWith("failed to generate random ship of type"))
+                return true;
+
+            // Silence warning: "not found varients: ..."
+            if (condition != null && (condition.StartsWith("not found varients: ") || condition.StartsWith("not found variants:")))
+                return true;
+
+            // Silence warning: during autogeneration, tonnage limit is below min tonnage, clamped to min
+            if (condition != null && condition.StartsWith("during autogeneration, tonnage limit is below min tonnage, clamped to min"))
+                return true;
+
+            // Silence warning: dontChangeLoadingScreen improperly set
+            if (condition != null && condition.StartsWith("dontChangeLoadingScreen improperly set"))
+                return true;
+
+            // Silence warning: Parent of RectTransform is being set with parent property.
+            if (condition != null && condition.StartsWith("Parent of RectTransform is being set with parent property."))
+                return true;
+
+            // Silence error: "failed to generate ship of type `type`, hull hull_name in X tries"
+            if (condition != null && condition.StartsWith("failed to generate ship of type"))
+                return true;
+
+            // Silence error: "self-col ..."
+            if (condition != null && condition.StartsWith("self-col"))
+                return true;
+
+            // Silence error: "unable to make non-interlapping shot ..."
+            if (condition != null && condition.StartsWith("unable to make non-interlapping shot"))
+                return true;
+
+            // Replace error text: "S3"
+            if (condition != null && condition == "S3")
+            {
+                condition = $"Failed to connect to the Steam API. Restart your computer and try again. (Error = 'S3')";
+
+                LoadLoc();
+                MessageBoxUI.Show(
+                    _localLoc["$TAF_LoadError_SteamFail_Title"],
+                    _localLoc["$TAF_LoadError_SteamFail_Text"],
+                    null, false, null, null,
+                    new System.Action(() => { GameManager.Quit(); })
+                );
+            }
+
+            return false;
+        }
+
         private void Application_logMessageReceived(string condition, string stackTrace, LogType type)
         {
             string logStr = $"[Unity]: {condition ?? string.Empty}";
+
+            if (condition != null && FilteredMessage(ref condition))
+            {
+                return;
+            }
+
             switch (type)
             {
                 case LogType.Log:
-                    // Silence warning: "for ship 'name' tonnage # is out of bounds #/#, clamped"
-                    if (condition != null && condition.Contains("OnLeaveState"))
-                        break;
-
-                    // Silence warning: "for ship 'name' tonnage # is out of bounds #/#, clamped"
-                    if (condition != null && condition.Contains("OnEnterState"))
-                        break;
-
                     Melon<TweaksAndFixes>.Logger.Msg(logStr);
                     break;
                 case LogType.Warning:
-                    // Silence warning: "for ship 'name' tonnage # is out of bounds #/#, clamped"
-                    if (condition != null && condition.StartsWith("for ship '") && condition.EndsWith(", clamped"))
-                        break;
-
-                    // Silence warning: "BoxColliders does not support negative scale or size..."
-                    if (condition != null && condition.StartsWith("BoxColliders does not support negative scale or size."))
-                        break;
-
-                    // Silence warning: "failed to generate random ship of type `type`, hull hull_name in X tries"
-                    if (condition != null && condition.StartsWith("failed to generate random ship of type"))
-                        break;
-
-                    // Silence warning: "not found varients: ..."
-                    if (condition != null && (condition.StartsWith("not found varients: ") || condition.StartsWith("not found variants:")))
-                        break;
-
-                    // Silence warning: during autogeneration, tonnage limit is below min tonnage, clamped to min
-                    if (condition != null && condition.StartsWith("during autogeneration, tonnage limit is below min tonnage, clamped to min"))
-                        break;
-
-                    // Silence warning: dontChangeLoadingScreen improperly set
-                    if (condition != null && condition.StartsWith("dontChangeLoadingScreen improperly set"))
-                        break;
-
-                    // Silence warning: Parent of RectTransform is being set with parent property.
-                    if (condition != null && condition.StartsWith("Parent of RectTransform is being set with parent property."))
-                        break;
-
                     Melon<TweaksAndFixes>.Logger.Warning(logStr);
                     break;
                 case LogType.Error:
                 case LogType.Exception:
-
-                    // Silence error: "failed to generate ship of type `type`, hull hull_name in X tries"
-                    if (condition != null && condition.StartsWith("failed to generate ship of type"))
-                        break;
-
-                    // Replace error text: "S3"
-                    if (condition != null && condition == "S3")
-                    {
-                        condition = $"Failed to connect to the Steam API. Restart your computer and try again. (Error = 'S3')";
-
-                        LoadLoc();
-                        MessageBoxUI.Show(_localLoc["$TAF_LoadError_SteamFail_Title"], _localLoc["$TAF_LoadError_SteamFail_Text"], null, false, null, null, new System.Action(() => { GameManager.Quit(); }));
-                    }
-
                     Melon<TweaksAndFixes>.Logger.Error($"[Unity]: {condition}\n{stackTrace}");
                     //Melon<TweaksAndFixes>.Logger.Error(logStr);
                     break;
