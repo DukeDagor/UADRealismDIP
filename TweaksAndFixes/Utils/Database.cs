@@ -4,6 +4,7 @@ using MelonLoader;
 using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
+using Harmony;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8601
@@ -30,8 +31,8 @@ namespace TweaksAndFixes
 
         private static string[] _TorpGradeTechs;
         private static int[] _TorpGradeYears;
-        private static string[] _TorpTubeTechs;
-        private static int[] _TorpTubeYears;
+        private static List<Dictionary<string, string>> _TorpTubeTechs;
+        private static List<Dictionary<string, int>> _TorpTubeYears;
 
         public static void FillDatabase()
         {
@@ -39,8 +40,16 @@ namespace TweaksAndFixes
             _GunGradeYears = new int[21, Config.MaxGunGrade + 1];
             _TorpGradeTechs = new string[Config.MaxTorpGrade + 1];
             _TorpGradeYears = new int[Config.MaxTorpGrade + 1];
-            _TorpTubeTechs = new string[Config.MaxTorpBarrels + 1];
-            _TorpTubeYears = new int[Config.MaxTorpBarrels + 1];
+            _TorpTubeTechs = new();
+            for (int i = 0; i < Config.MaxTorpBarrels + 1; i++)
+            {
+                _TorpTubeTechs.Add(new Dictionary<string, string>());
+            }
+            _TorpTubeYears = new();
+            for (int j = 0; j < Config.MaxTorpBarrels + 1; j++)
+            {
+                _TorpTubeYears.Add(new Dictionary<string, int>());
+            }
             _PartYears.Clear();
             _PartTechs.Clear();
             _TechParts.Clear();
@@ -139,15 +148,48 @@ namespace TweaksAndFixes
                             break;
                         case "torpedo_tubes":
                             isImprovement = true;
-                            foreach (var effList in kvpE.Value)
+                            int tubes = -1;
+                            List<string> list = new List<string>();
+                            foreach (var effList in kvpE.Value[0])
                             {
-                                if (effList.Count < 1)
+                                if (effList.Length < 1)
+                                {
+                                    Melon<TweaksAndFixes>.Logger.Error("Invalid torpedo_tubes tech effect format! Ensure there are no duplicate semicolons!");
                                     continue;
-                                if (!int.TryParse(effList[0], out var tubes))
+                                }
+                                if (G.GameData.shipTypes.ContainsKey(effList))
+                                {
+                                    list.Add(effList);
+                                }
+                                else if (!int.TryParse(effList, out tubes))
+                                {
+                                    Melon<TweaksAndFixes>.Logger.Error("Invalid torpedo_tubes tech effect shiptype or number: \"" + effList + "\"!");
                                     continue;
-                                _TorpTubeTechs[tubes] = kvpT.Key;
-                                _TorpTubeYears[tubes] = kvpT.Value.year;
+                                }
                             }
+
+                            if (tubes == -1) 
+                            {
+                                Melon<TweaksAndFixes>.Logger.Error("Invalid torpedo_tubes tech effect format! You must specify the number of tubes!");
+                                continue;
+                            }
+
+                            if (list.Count == 0)
+                            {
+                                foreach (var type in G.GameData.shipTypes.Keys)
+                                {
+                                    list.Add(type);
+                                }
+                            }
+
+                            // string text = "";
+                            foreach (string item in list)
+                            {
+                                // text = text + item + " ";
+                                _TorpTubeTechs[tubes][item] = kvpT.Key;
+                                _TorpTubeYears[tubes][item] = kvpT.Value.year;
+                            }
+
                             break;
 
                         default:
@@ -428,14 +470,14 @@ namespace TweaksAndFixes
             return _TorpGradeTechs[grade];
         }
 
-        public static string GetTorpTubeTech(int tubes)
+        public static string GetTorpTubeTech(int tubes, string shipTypes)
         {
-            if (tubes < 0 || tubes >= _TorpTubeTechs.Length)
+            if (tubes < 0 || tubes >= Config.MaxTorpBarrels)
             {
                 Melon<TweaksAndFixes>.Logger.Error($"Tried to get Torp Tube Tech for tube count {tubes}");
                 return string.Empty;
             }
-            return _TorpTubeTechs[tubes];
+            return _TorpTubeTechs[tubes][shipTypes];
         }
 
         public static bool IsTechRequiredForShipDesign(string techName)

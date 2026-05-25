@@ -528,7 +528,8 @@ namespace TweaksAndFixes
             _ExtraReqTechs.Clear();
             foreach (var t in store.techs)
             {
-                if (Database.IsTechRequiredForShipDesign(t)
+                if (t.StartsWith("tactics")
+                    && Database.IsTechRequiredForShipDesign(t)
                     && !_TechsPlayer.Contains(t))
                     return -1f;
 
@@ -539,12 +540,12 @@ namespace TweaksAndFixes
             foreach (var p in store.parts)
             {
                 if (!G.GameData.parts.TryGetValue(p.name, out var part))
-                    return -1f;
+                    return -2f;
                 var tech = Database.GetPartTech(p.name);
                 if (!string.IsNullOrEmpty(tech))
                 {
                     if (!_TechsPlayer.Contains(tech))
-                        return -1f;
+                        return -3f;
                     _ExtraReqTechs.Add(tech);
                 }
 
@@ -561,7 +562,7 @@ namespace TweaksAndFixes
                 if (!string.IsNullOrEmpty(tech))
                 {
                     if (!_TechsPlayer.Contains(tech))
-                        return -1f;
+                        return -4f;
                     _ExtraReqTechs.Add(tech);
                 }
             }
@@ -580,7 +581,7 @@ namespace TweaksAndFixes
                     tech = Database.GetGunTech(cal, grade);
                 }
                 if (!_TechsPlayer.Contains(tech))
-                    return -1f;
+                    return -5f;
                 _ExtraReqTechs.Add(tech);
                 for (int i = grade - 1; i > 0; --i)
                     _ExtraReqTechs.Add(Database.GetGunTech(cal, i));
@@ -588,12 +589,12 @@ namespace TweaksAndFixes
 
             if (maxTubeCount >= 0)
             {
-                string tubeTech = Database.GetTorpTubeTech(maxTubeCount);
+                string tubeTech = Database.GetTorpTubeTech(maxTubeCount, store.shipType);
                 if (!_TechsPlayer.Contains(tubeTech))
-                    return -1f;
+                    return -6f;
                 _ExtraReqTechs.Add(tubeTech);
                 for (int i = maxTubeCount - 1; i-- > 0;)
-                    _ExtraReqTechs.Add(Database.GetTorpTubeTech(i));
+                    _ExtraReqTechs.Add(Database.GetTorpTubeTech(i, store.shipType));
 
                 int grade = TAFShipData.TorpGradeFromStore(store, false);
                 string tech;
@@ -602,7 +603,7 @@ namespace TweaksAndFixes
                 else
                     tech = Database.GetTorpGradeTech(grade);
                 if (!_TechsPlayer.Contains(tech))
-                    return -1f;
+                    return -7f;
                 _ExtraReqTechs.Add(tech);
                 for (int i = grade - 1; i > 0; --i)
                     _ExtraReqTechs.Add(Database.GetTorpGradeTech(i));
