@@ -979,6 +979,15 @@ namespace TweaksAndFixes
                     }
 
                     if (!Ship.IsCasemateGun(data)
+                        && max_sec_gun_count == 0)
+                    {
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Sec guns disabled!");
+                        __result = false;
+                        denyReason = "count";
+                        return false;
+                    }
+
+                    else if (!Ship.IsCasemateGun(data)
                         && max_sec_gun_count != -1)
                     {
                         int gunCounts = new();
