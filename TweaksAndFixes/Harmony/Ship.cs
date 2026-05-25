@@ -1222,7 +1222,7 @@ namespace TweaksAndFixes
 
             // Melon<TweaksAndFixes>.Logger.Msg($"Mod stats for ship {ship.Name(false, false)}:");
 
-            if (lastState.speed != ship.SpeedMax())
+            // if (lastState.speed != ship.SpeedMax())
             {
                 float val =
                     ModUtils.roundToInc(
