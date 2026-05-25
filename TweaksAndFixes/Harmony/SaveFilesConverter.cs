@@ -147,9 +147,9 @@ namespace TweaksAndFixes
             bool useStock = false;
             if (!PredefinedDesignsData.LoadPredefs(Path.Combine(Config._BasePath, Config._PredefinedDesignsFile.name), out var predefs, out int dCount, false) || predefs == null)
             {
-                useStock = true;
-                PredefinedDesignsData.LoadPredefs(null, out predefs, out dCount, false);
-                Melon<TweaksAndFixes>.Logger.Warning("Using vanilla predefined designs to save to shared designs");
+                // useStock = true;
+                // PredefinedDesignsData.LoadPredefs(null, out predefs, out dCount, false);
+                // Melon<TweaksAndFixes>.Logger.Warning("Using vanilla predefined designs to save to shared designs");
             }
 
 
@@ -215,8 +215,10 @@ namespace TweaksAndFixes
         {
             int count = 0;
 
+            Melon<TweaksAndFixes>.Logger.Msg($"Loading shared designs (this can take quite a while)");
             if (G.GameData.sharedDesignsPerNation == null || G.GameData.sharedDesignsPerNation.Count == 0)
                 G.GameData.LoadSharedDesigns();
+            Melon<TweaksAndFixes>.Logger.Msg($"Done!");
 
             int sCount = 0;
 
@@ -301,10 +303,13 @@ namespace TweaksAndFixes
                 count = dCount;
             }
 
+            Melon<TweaksAndFixes>.Logger.Msg($"Serializing");
             var bytes = Util.SerializeObjectByte<CampaignDesigns.Store>(predefs);
             if (Config._PredefinedDesignsFile.Exists)
                 File.Delete(Config._PredefinedDesignsFile.path);
+            Melon<TweaksAndFixes>.Logger.Msg($"Writing file");
             File.WriteAllBytes(Config._PredefinedDesignsFile.path, bytes);
+            Melon<TweaksAndFixes>.Logger.Msg($"Converted {count} shared designs to a predef file!");
             return count;
         }
 
