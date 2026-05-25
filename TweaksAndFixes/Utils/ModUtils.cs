@@ -158,6 +158,11 @@ namespace TweaksAndFixes
             return output.ToArray();
         }
 
+        internal static Il2CppSystem.Collections.IEnumerator NullIl2CppEnumerator()
+        {
+            return G.ui.FleetWindow.SetScrollBarValue();
+        }
+
         public static readonly CultureInfo _InvariantCulture = CultureInfo.InvariantCulture;
 
         private static string[] months = {
