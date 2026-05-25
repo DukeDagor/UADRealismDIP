@@ -150,8 +150,11 @@ namespace TweaksAndFixes
                             continue;
                         }
 
-                        // Melon<TweaksAndFixes>.Logger.Msg($"  {subchild.name} ({subchild.transform.GetSiblingIndex()})");
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Deleting:");
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  {G.sound.currentlyPlaying.Count}");
+                        G.sound.Stop(subchild);
                         subchild.TryDestroy(true);
+                        // Melon<TweaksAndFixes>.Logger.Msg($"  {G.sound.currentlyPlaying.Count}");
                     }
                 }
         }
