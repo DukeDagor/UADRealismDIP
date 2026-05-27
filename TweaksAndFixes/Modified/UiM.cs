@@ -1497,7 +1497,7 @@ namespace TweaksAndFixes
                     //     })
                     // );
 
-                    skirmishSetupMod.player1.shipAmounts.Clear();
+                    // skirmishSetupMod.player1.shipAmounts.Clear();
                     skirmishSetupMod.player1.shipDesigns.Clear();
                     skirmishSetupMod.player1.shipInstances.Clear();
                 }
@@ -1516,7 +1516,7 @@ namespace TweaksAndFixes
                     //     })
                     // );
 
-                    skirmishSetupMod.player2.shipAmounts.Clear();
+                    // skirmishSetupMod.player2.shipAmounts.Clear();
                     skirmishSetupMod.player2.shipDesigns.Clear();
                     skirmishSetupMod.player2.shipInstances.Clear();
                 }
