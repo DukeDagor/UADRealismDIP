@@ -189,8 +189,8 @@ namespace TweaksAndFixes
         internal static readonly FilePath _MountsFile = new FilePath(FilePath.DirType.ModsDir, "mounts.csv");
         internal static readonly FilePath _GenArmorDefaultsFile = new FilePath(FilePath.DirType.DataDir, "genArmorDefaults.csv", true);
         internal static readonly FilePath _PredefinedDesignsFile = new FilePath(FilePath.DirType.ModsDir, "predefinedDesigns.bin");
-        internal static readonly FilePath _PredefinedDesignsDataFile = new FilePath(FilePath.DirType.ModsDir, "predefinedDesignsFileData.csv");
-        internal static readonly FilePath _PredefinedDesignsFileDataFile = new FilePath(FilePath.DirType.ModsDir, "predefinedDesignsData.csv");
+        internal static readonly FilePath _PredefinedDesignsDataFile = new FilePath(FilePath.DirType.ModsDir, "predefinedDesignsData.csv");
+        internal static readonly FilePath _PredefinedDesignsFileDataFile = new FilePath(FilePath.DirType.ModsDir, "predefinedDesignsFileData.csv");
         internal static readonly FilePath _BatchShipGeneratorConfigDataFile = new FilePath(FilePath.DirType.ModsDir, "batchShipGeneratorConfig.csv");
         internal static readonly FilePath _LocFile = new FilePath(FilePath.DirType.DataDir, "locText.lng");
 
