@@ -93,6 +93,49 @@ namespace TweaksAndFixes
         //     SetTimeSpeedLimit();
         // }
 
+        public static void BeforeLoadScene()
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"BeforeLoadScene");
+
+            var bm = BattleManager.Instance;
+            Melon<TweaksAndFixes>.Logger.Msg($"  CalculateDamage");
+            bm.CalculateDamage(bm.CurrentBattle);
+            Melon<TweaksAndFixes>.Logger.Msg($"  BattleCompleteCalculateRelation");
+            bm.BattleCompleteCalculateRelation(bm.CurrentBattle);
+            Melon<TweaksAndFixes>.Logger.Msg($"  CalculateCrewTraining");
+            bm.CalculateCrewTraining(bm.CurrentBattle);
+            Melon<TweaksAndFixes>.Logger.Msg($"  RefreshFleetWindow");
+            G.ui.RefreshFleetWindow();
+            Melon<TweaksAndFixes>.Logger.Msg($"  ReportBattle");
+            G.ui.ReportBattle(bm.CurrentBattle);
+            Melon<TweaksAndFixes>.Logger.Msg($"  Refresh");
+            G.ui.Refresh();
+            Melon<TweaksAndFixes>.Logger.Msg($"  CheckBattle");
+            Ui.CheckBattle(bm.CurrentBattle);
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Making auto save...");
+            // GameManager.Instance.SaveCampaignProgress();
+            GameManager.Instance.SaveInternal(true);
+            Melon<TweaksAndFixes>.Logger.Msg($"Save complete!");
+        }
+
+        public static void AfterLoadScene()
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"AfterLoadScene");
+
+            var pos = BattleManager.Instance.CurrentBattle.BattleWorldPos;
+
+            var bm = BattleManager.Instance;
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Cleaning up...");
+            G.ui._dontChangeLoadingScreen_k__BackingField = false;
+            G.ui._quickLoadingScreen_k__BackingField = true;
+            Melon<TweaksAndFixes>.Logger.Msg($"  Moving camera...");
+            Cam.Instance.LookAtPointEx(pos);
+            G.ui.CompleteLoadingScreen();
+            Melon<TweaksAndFixes>.Logger.Msg($"  Transition complete!");
+        }
+
 
         [HarmonyPatch(nameof(BattleManager.Update))]
         [HarmonyPostfix]

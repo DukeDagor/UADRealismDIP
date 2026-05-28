@@ -286,6 +286,85 @@ namespace TweaksAndFixes
 
             return true;
         }
+
+
+        public static System.Collections.IEnumerator BackToCampaignCoroutine(
+            Il2CppSystem.Action<Il2CppSystem.Action> onLoaded, GameManager.UIState overrideState)
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"Start loading");
+            // OnDone -> DisplayClass100
+            // BackToCampaignCoroutine_b__97
+
+            // G.ui._loadingText_k__BackingField = ModUtils.LocalizeF("$Ui_World_LoadingGame");
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Loading World");
+
+            G.ui._loadingText_k__BackingField = ModUtils.LocalizeF("$Ui_World_LoadingWorld");
+
+            yield return new WaitForEndOfFrame();
+            // ========== //
+
+            G.ui._dontChangeLoadingScreen_k__BackingField = true;
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Updaing game state");
+
+            GameManager.Instance.ChangeState(GameManager.GameState.World);
+
+            yield return new WaitForEndOfFrame();
+            // ========== //
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Showing world");
+
+            WorldCampaign.instance.Show(true);
+
+            yield return new WaitForEndOfFrame();
+            // ========== //
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Changing UI state");
+
+            if (overrideState != GameManager.UIState.None)
+                GameManager.Instance.ChangeStateUI(overrideState);
+            else
+                GameManager.Instance.ChangeStateUI(GameManager.Instance.PrevStateUI);
+
+            yield return new WaitForEndOfFrame();
+            // ========== //
+
+            Patch_BattleManager.BeforeLoadScene();
+
+            yield return new WaitForEndOfFrame();
+            // ========== //
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Loading scene");
+
+            // Why in gods name did they use the Async version for this stuff only?
+            //   The scenes being loaded are tiny, only taking a couple microseconds to load...
+            UnityEngine.SceneManagement.SceneManager.LoadScene(G.level.worldScene);
+
+            Melon<TweaksAndFixes>.Logger.Msg($"  Done!");
+
+            yield return new WaitForEndOfFrame();
+            // ========== //
+
+            Patch_BattleManager.AfterLoadScene();
+
+            yield return new WaitForEndOfFrame();
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(GameManager.BackToCampaign))]
+        internal static bool Prefix_BackToCampaign(Il2CppSystem.Action<Il2CppSystem.Action> onLoaded, GameManager.UIState overrideState)
+        {
+            if (GameManager.Instance.CurrentState != GameManager.GameState.Battle)
+                return true;
+
+            GameManager.Instance.ChangeState(GameManager.GameState.LoadingCustom);
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Calling BackToCampaign coroutine...");
+            MelonCoroutines.Start(BackToCampaignCoroutine(onLoaded, overrideState));
+
+            return false;
+        }
     }
 
     [HarmonyPatch(typeof(GameManager._LoadCampaign_d__98))]
