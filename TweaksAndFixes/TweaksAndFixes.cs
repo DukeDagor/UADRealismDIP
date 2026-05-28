@@ -4,7 +4,7 @@ using Il2Cpp;
 using Il2CppLitJson;
 
 [assembly: MelonGame("Game Labs", "Ultimate Admiral Dreadnoughts")]
-[assembly: MelonInfo(typeof(TweaksAndFixes.TweaksAndFixes), "TweaksAndFixes-RC11", "3.20.3", "NathanKell & DukeDagor")]
+[assembly: MelonInfo(typeof(TweaksAndFixes.TweaksAndFixes), "TAF-3.21.0", "3.21.0", "NathanKell & DukeDagor")]
 [assembly: MelonColor(255, 220, 220, 0)]
 [assembly: HarmonyDontPatchAll]
 
