@@ -528,10 +528,13 @@ namespace TweaksAndFixes
             _ExtraReqTechs.Clear();
             foreach (var t in store.techs)
             {
-                if (t.StartsWith("tactics")
+                if (!t.StartsWith("tactics")
                     && Database.IsTechRequiredForShipDesign(t)
                     && !_TechsPlayer.Contains(t))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Missing required tech: {t}");
                     return -1f;
+                }
 
                 _TechsShip.Add(t);
             }
@@ -540,12 +543,18 @@ namespace TweaksAndFixes
             foreach (var p in store.parts)
             {
                 if (!G.GameData.parts.TryGetValue(p.name, out var part))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Missing required part: {p.name}");
                     return -2f;
+                }
                 var tech = Database.GetPartTech(p.name);
                 if (!string.IsNullOrEmpty(tech))
                 {
                     if (!_TechsPlayer.Contains(tech))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"Missing required part tech: {tech}");
                         return -3f;
+                    }
                     _ExtraReqTechs.Add(tech);
                 }
 
@@ -562,7 +571,10 @@ namespace TweaksAndFixes
                 if (!string.IsNullOrEmpty(tech))
                 {
                     if (!_TechsPlayer.Contains(tech))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg($"Missing required component tech: {tech}");
                         return -4f;
+                    }
                     _ExtraReqTechs.Add(tech);
                 }
             }
@@ -581,7 +593,10 @@ namespace TweaksAndFixes
                     tech = Database.GetGunTech(cal, grade);
                 }
                 if (!_TechsPlayer.Contains(tech))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Missing required gun tech: {tech}");
                     return -5f;
+                }
                 _ExtraReqTechs.Add(tech);
                 for (int i = grade - 1; i > 0; --i)
                     _ExtraReqTechs.Add(Database.GetGunTech(cal, i));
@@ -591,7 +606,10 @@ namespace TweaksAndFixes
             {
                 string tubeTech = Database.GetTorpTubeTech(maxTubeCount, store.shipType);
                 if (!_TechsPlayer.Contains(tubeTech))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Missing required torp tube tech: {tubeTech}");
                     return -6f;
+                }
                 _ExtraReqTechs.Add(tubeTech);
                 for (int i = maxTubeCount - 1; i-- > 0;)
                     _ExtraReqTechs.Add(Database.GetTorpTubeTech(i, store.shipType));
@@ -603,7 +621,10 @@ namespace TweaksAndFixes
                 else
                     tech = Database.GetTorpGradeTech(grade);
                 if (!_TechsPlayer.Contains(tech))
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"Missing required torp grade tech: {tech}");
                     return -7f;
+                }
                 _ExtraReqTechs.Add(tech);
                 for (int i = grade - 1; i > 0; --i)
                     _ExtraReqTechs.Add(Database.GetTorpGradeTech(i));

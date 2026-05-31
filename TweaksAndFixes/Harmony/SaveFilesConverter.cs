@@ -325,6 +325,33 @@ namespace TweaksAndFixes
 
             if (!splitByYear && !splitByNation) return DesignsToPredefs();
 
+            var prefix = Storage.prefix + $"Resorted/";
+            var dirs = Directory.GetDirectories(prefix);
+
+            string folderName = string.Empty;
+            Dictionary<string, List<ValueTuple<Ship.Store, string>>> designs = new();
+            var files = Directory.GetFiles("", "*.bindesign");
+            int fCount = 0;
+            foreach (var f in files)
+            {
+                fCount++;
+                var store = Util.DeserializeObjectByte<Ship.Store>(File.ReadAllBytes(f));
+
+                if (folderName == string.Empty)
+                {
+                    folderName = store.playerName;
+                    designs.Add(folderName, new());
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Dir name: {folderName}");
+                }
+
+                designs[folderName].Add(new(store, string.Empty));
+
+                if (fCount % 1000 == 0)
+                {
+                    Melon<TweaksAndFixes>.Logger.Msg($"  Loaded {fCount}/{files.Length} designs...");
+                }
+            }
+
             if (G.GameData.sharedDesignsPerNation == null || G.GameData.sharedDesignsPerNation.Count == 0)
                 G.GameData.LoadSharedDesigns();
 

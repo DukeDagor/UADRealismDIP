@@ -637,8 +637,9 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static void Prefix_CheckPredefinedDesigns(CampaignController __instance, bool prewarm)
         {
-            if (__instance._currentDesigns == null || (PredefinedDesignsData.NeedLoadRestrictive(prewarm) && !PredefinedDesignsData.Instance.LastLoadWasRestrictive))
+            if (__instance._currentDesigns == null || (PredefinedDesignsData.NeedLoadRestrictive() && !PredefinedDesignsData.Instance.LastLoadWasRestrictive))
             {
+                Melon<TweaksAndFixes>.Logger.Msg($"Is null: {__instance._currentDesigns == null} | need: {PredefinedDesignsData.NeedLoadRestrictive()} | wasn't: {!PredefinedDesignsData.Instance.LastLoadWasRestrictive}");
                 if (!PredefinedDesignsData.Instance.LoadPredefSets(prewarm))
                 {
                     Melon<TweaksAndFixes>.Logger.BigError("Tried to load predefined designs but failed! YOUR CAMPAIGN WILL NOT WORK.");
