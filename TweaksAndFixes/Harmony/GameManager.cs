@@ -222,6 +222,11 @@ namespace TweaksAndFixes
             {
                 UiM.SelectedShip = Guid.Empty;
             }
+
+            if (newState == GameManager.GameState.MainMenu)
+            {
+                // TODO: Clear extraData
+            }
         }
 
         // [HarmonyPrefix]
@@ -245,13 +250,38 @@ namespace TweaksAndFixes
         public static bool GameSavedInfoTextInitalized = false;
         public static bool HasFadeEnded = true;
 
+        public static void SaveCampaignStore(CampaignController.Store store, int index, bool autosave = false)
+        {
+            Storage.WriteByte(
+                $"Saves/save_{index}.bin",
+                Util.SerializeObjectByte(store)
+            );
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch(nameof(GameManager.SaveInternal))]
-        internal static void Prefix_SaveInternal(bool force, bool ignoreStateCheck)
+        internal static bool Prefix_SaveInternal(GameManager __instance, bool force, bool ignoreStateCheck)
         {
             Melon<TweaksAndFixes>.Logger.Msg($"Save Game: forced = {force}, ignoreStateCheck = {ignoreStateCheck}");
 
+            if (!GameManager.IsActualGame && !ignoreStateCheck)
+                return false;
+
+            if (!GameManager.IsCampaign && !force)
+                return false;
+
+            __instance.savePending = false;
+
+            if (CampaignController.Instance.IsFinished)
+                return false;
+
+            var store = CampaignController.Instance.GetStore();
+
+            SaveCampaignStore(store, GameManager.Instance.currentCampaignSlotIndex);
+
             UiM.ShowTextTopLeft(ModUtils.LocalizeF("$TAF_Ui_FadeText_GameSaved"));
+
+            return false;
         }
 
         public static void Update()

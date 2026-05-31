@@ -38,11 +38,14 @@ namespace TweaksAndFixes
             Config.LoadConfig();
             // TODO: Add a multicast delegate to run post-load config
 
-            Melon<TweaksAndFixes>.Logger.Msg("************************************************** Loading TAF data:");
+            Melon<TweaksAndFixes>.Logger.Msg("************************************************** Loading TAF Data:");
             GradeExtensions.LoadData();
             GenArmorData.LoadData();
             AccuraciesExInfo.LoadData();
             MountOverrideData.LoadData();
+
+            Melon<TweaksAndFixes>.Logger.Msg("************************************************** Loading Save File Data:");
+            TAFCampaignData.LoadCampaignStores();
 
             // Disable `Mising required mount ...` error when starting battle. It's harmless.
             Part.flagCheckCorrectMounting = false;

@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using Il2CppTMPro;
 using Il2CppUiExt;
 using UnityEngine.EventSystems;
+using TweaksAndFixes.Harmony;
 
 #pragma warning disable CS8600
 #pragma warning disable CS8603
@@ -978,6 +979,8 @@ namespace TweaksAndFixes
             G.ui.NewGameWindow.ChangeFleetCreation(1);
             G.ui.NewGameWindow.ChangeDesignUsage(1);
             G.ui.NewGameWindow.ChangeSharedDesigns(1);
+
+            Patch_UISaveLoadWindow.InitUi();
         }
 
         public class SkirmishSetupMod

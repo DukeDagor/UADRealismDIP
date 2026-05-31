@@ -3,12 +3,42 @@ using HarmonyLib;
 using Il2Cpp;
 using Il2CppSystem.Linq;
 using static Il2Cpp.CampaignController;
+using TweaksAndFixes.Harmony;
+using TweaksAndFixes.Data;
 
 #pragma warning disable CS8602
 #pragma warning disable CS8604
 
 namespace TweaksAndFixes
 {
+    // GetFriendlyName
+
+    [HarmonyPatch(typeof(CampaignController.Store))]
+    internal class Patch_CampaignControllerStore
+    {
+        [HarmonyPatch(nameof(CampaignController.Store.GetFriendlyName))]
+        [HarmonyPrefix]
+        internal static bool Prefix_GetFriendlyName(CampaignController.Store __instance, bool force, ref string __result)
+        {
+            // if (__instance.FriendlyName != String.Empty && __instance.FriendlyName.StartsWith("{"))
+            // {
+            //     Melon<TweaksAndFixes>.Logger.Msg($"Data: '{__instance.FriendlyName}'");
+            //     __result = __instance.FriendlyName;
+            //     return false;
+            // }
+            // 
+            // Melon<TweaksAndFixes>.Logger.Msg($"No data:");
+            // 
+            // __instance.FriendlyName = ;
+            // 
+            // Melon<TweaksAndFixes>.Logger.Msg($"  New data: '{__instance.FriendlyName}'");
+            
+            __result = __instance.FriendlyName;
+
+            return false;
+        }
+    }
+
     [HarmonyPatch(typeof(CampaignController))]
     internal class Patch_CampaignController
     {
@@ -67,6 +97,8 @@ namespace TweaksAndFixes
                         __result.Ships.RemoveAt(i);
                 }
             }
+
+            __result.FriendlyName = TAFCampaignData.GetStoreByIndex(GameManager.Instance.currentCampaignSlotIndex).ToString(); 
         }
 
 
@@ -386,8 +418,16 @@ namespace TweaksAndFixes
 
         [HarmonyPatch(nameof(CampaignController.Init))]
         [HarmonyPrefix]
-        internal static void Prefix_Init(ref int campaignDesignsUsage)
+        internal static void Prefix_Init(int startYear, ref int campaignDesignsUsage, PlayerData mainPlayer)
         {
+            // TODO: Localize
+            // currentData.saveName = nextCampaignName == string.Empty ? "Unamed Campaign" : nextCampaignName;
+
+            TAFCampaignData.DeleteStoreByIndex(GameManager.Instance.currentCampaignSlotIndex);
+            TAFCampaignData.MakeNewDataStore(startYear, mainPlayer);
+
+            Patch_UISaveLoadWindow._this.Init();
+
             if (Config.ForceNoPredefsInNewGames)
                 campaignDesignsUsage = 0;
         }
@@ -669,7 +709,7 @@ namespace TweaksAndFixes
             if (!GameManager.IsMainMenu)
                 return;
 
-            PredefinedDesignsData.AddUIforBSG();
+            // PredefinedDesignsData.AddUIforBSG();
         }
     }
 
