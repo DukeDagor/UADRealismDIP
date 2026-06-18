@@ -537,7 +537,7 @@ namespace TweaksAndFixes
             Patch_SceneManager.From.transform.position += new Vector3(0, 0.1f, 0);
             Patch_SceneManager.To.transform.position += new Vector3(0, 0.1f, 0);
 
-            if (Config.Param("taf_use_old_constructor_lighting", 0) == 1)
+            if (Config.Param("taf_use_old_constructor_lighting", 0) == 0)
             {
                 Patch_SceneManager.LevelConstructor.GetChild("Sun").active = false;
                 Patch_SceneManager.LevelBattle.GetChild("Scene Lighting").active = true;
