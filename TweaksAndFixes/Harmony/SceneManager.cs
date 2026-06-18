@@ -114,6 +114,18 @@ namespace TweaksAndFixes
 
             Melon<TweaksAndFixes>.Logger.Msg($"ConfigureScene: {state}");
 
+            if (Config.Param("taf_use_old_constructor_lighting", 0) == 1
+                || state == GameManager.GameState.Battle)
+            {
+                LevelConstructor.GetChild("Sun").active = false;
+                LevelBattle.GetChild("Scene Lighting").active = true;
+            }
+            else
+            {
+                LevelConstructor.GetChild("Sun").active = true;
+                LevelBattle.GetChild("Scene Lighting").active = false;
+            }
+
             if (state == GameManager.GameState.Battle)
                 hasCleanedUpBattle = false;
 

@@ -537,7 +537,17 @@ namespace TweaksAndFixes
             Patch_SceneManager.From.transform.position += new Vector3(0, 0.1f, 0);
             Patch_SceneManager.To.transform.position += new Vector3(0, 0.1f, 0);
 
-            Patch_SceneManager.LevelConstructor.GetChild("Sun").active = false;
+            if (Config.Param("taf_use_old_constructor_lighting", 0) == 1)
+            {
+                Patch_SceneManager.LevelConstructor.GetChild("Sun").active = false;
+                Patch_SceneManager.LevelBattle.GetChild("Scene Lighting").active = true;
+            }
+            else
+            {
+                Patch_SceneManager.LevelConstructor.GetChild("Sun").active = true;
+                Patch_SceneManager.LevelBattle.GetChild("Scene Lighting").active = false;
+            }
+
             var dockA = ModUtils.GetChildAtPath("Dock/DryDock_001", Patch_SceneManager.LevelConstructor);
 
             var waterAll = dockA.GetChild("water_all_001");
