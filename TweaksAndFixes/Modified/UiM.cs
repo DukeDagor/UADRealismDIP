@@ -4372,6 +4372,9 @@ namespace TweaksAndFixes
 
             if (_this.plane != null)
             {
+                // Override center for visual consistancy
+                _this.plane.center = new(_this.plane.center.x, 5f, _this.plane.center.z);
+
                 // Check if the camera has been panned
                 _this.inputScroll = deltaPan != Vector3.zero;
 
