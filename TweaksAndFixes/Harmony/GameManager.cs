@@ -3,6 +3,7 @@ using HarmonyLib;
 using UnityEngine;
 using Il2Cpp;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 namespace TweaksAndFixes
 {
@@ -224,6 +225,13 @@ namespace TweaksAndFixes
             }
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(GameManager.ChangeState))]
+        internal static void Posfix_ChangeState(GameManager.GameState newState, bool raiseEnterStateEvents)
+        {
+            Patch_SceneManager.ConfigureScene(newState);
+        }
+
         // [HarmonyPrefix]
         // [HarmonyPatch(nameof(GameManager.CanHandleMouseInput))]
         // internal static bool Prefix_CanHandleMouseInput(ref bool __result)
@@ -287,6 +295,329 @@ namespace TweaksAndFixes
             return true;
         }
 
+        internal static bool firstLoad = true;
+
+        public static System.Collections.IEnumerator ToMainMenuCoroutine()
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"Start loading");
+
+            yield return new WaitForEndOfFrame();
+
+            G.ui.loadingText = ModUtils.LocalizeF("$Ui_LoadingMaiMenu");
+
+            yield return new WaitForEndOfFrame();
+
+            if (GameManager.IsCampaign)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Unload Campaign");
+                GameManager.Instance.UnloadCampaign();
+            }
+
+            yield return new WaitForEndOfFrame();
+
+            string currScene = SceneManager.GetActiveScene().name;
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Current scene: {currScene}");
+            if (currScene == G.level.mainMenuScene)
+                yield break;
+
+            Util.ClearResourcesCache();
+            DecalsManager.Release();
+            // if (!firstLoad)
+            //     SceneManager.LoadScene(G.level.emptyScene);
+            Resources.UnloadUnusedAssets();
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Loaded empty scene");
+
+            yield return new WaitForEndOfFrame();
+
+            GC.Collect();
+            GameManager.Instance.LoadCampaignProgress();
+
+            // if (!firstLoad)
+            // {
+            //     // SceneManager.LoadScene(G.level.mainMenuScene);
+            //     goto FINISH;
+            // }
+
+            yield return new WaitForEndOfFrame();
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Caching constructor objects");
+            Patch_SceneManager.bypass = true;
+            SceneManager.LoadScene(G.level.constructorScene);
+
+            yield return new WaitForEndOfFrame();
+
+            GameObject _LevelConstructor = null;
+            GameObject _ReflectionProbesCamera = null;
+            
+            foreach (var go in SceneManager.GetActiveScene().GetRootGameObjects())
+            {
+                if (go == null) continue;
+
+                Melon<TweaksAndFixes>.Logger.Msg($"  {go.name}");
+                go.active = false;
+                if (go.name == "LevelConstructor")
+                {
+                    _LevelConstructor = GameObject.Instantiate(go, G.container.transform);
+                    _LevelConstructor.name = go.name;
+                }
+                if (go.name == "Reflection Probes Camera")
+                {
+                    _ReflectionProbesCamera = GameObject.Instantiate(go, G.container.transform);
+                    _ReflectionProbesCamera.name = go.name;
+                }
+            }
+
+            if (_LevelConstructor == null
+                // || _LevelConstructorEnvMinimal == null
+                || _ReflectionProbesCamera == null)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Failed to instantiate constructor scene!");
+                Melon<TweaksAndFixes>.Logger.Msg($"  {_LevelConstructor == null}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"  {_LevelConstructorEnvMinimal == null}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  {_ReflectionProbesCamera == null}");
+                yield break;
+            }
+
+            yield return new WaitForEndOfFrame();
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Caching campaign objects");
+            SceneManager.LoadScene(G.level.worldScene);
+
+            yield return new WaitForEndOfFrame();
+
+            GameObject _Mesh = null;
+            GameObject _Mesh2 = null;
+            GameObject _BordersMesh = null;
+            GameObject _From = null;
+            GameObject _To = null;
+
+            foreach (var go in SceneManager.GetActiveScene().GetRootGameObjects())
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"  {go.name}");
+                go.active = false;
+                if (go.name == "Mesh")
+                {
+                    _Mesh = GameObject.Instantiate(go, G.container.transform);
+                    _Mesh.name = go.name;
+                }
+                if (go.name == "Mesh2")
+                {
+                    _Mesh2 = GameObject.Instantiate(go, G.container.transform);
+                    _Mesh2.name = go.name;
+                }
+                if (go.name == "BordersMesh")
+                {
+                    _BordersMesh = GameObject.Instantiate(go, G.container.transform);
+                    _BordersMesh.name = go.name;
+                }
+                if (go.name == "From")
+                {
+                    _From = GameObject.Instantiate(go, G.container.transform);
+                    _From.name = go.name;
+                }
+                if (go.name == "To")
+                {
+                    _To = GameObject.Instantiate(go, G.container.transform);
+                    _To.name = go.name;
+                }
+            }
+            
+            if (_Mesh == null
+                || _Mesh2 == null
+                || _BordersMesh == null
+                || _From == null
+                || _To == null)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Failed to instantiate campaign scene!");
+                Melon<TweaksAndFixes>.Logger.Msg($"  {_Mesh == null}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  {_Mesh2 == null}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  {_BordersMesh == null}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  {_From == null}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  {_To == null}");
+                yield break;
+            }
+
+            yield return new WaitForEndOfFrame();
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Loading base scene");
+            SceneManager.LoadScene(G.level.battleScene);
+
+            yield return new WaitForEndOfFrame();
+
+            GameObject DayCycleAndWeatherO = null;
+            GameObject LevelBattle = null;
+            GameObject WaterSurfaceCam = null;
+
+            foreach (var go in SceneManager.GetActiveScene().GetRootGameObjects())
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"  {go.name}");
+                if (go.name == "Day cycle & weather")
+                {
+                    DayCycleAndWeatherO = go;
+                }
+                if (go.name == "LevelBattle")
+                {
+                    LevelBattle = go;
+                }
+                if (go.name == "WaterSurfaceCam")
+                {
+                    WaterSurfaceCam = go;
+                }
+            }
+
+            yield return new WaitForEndOfFrame();
+
+            GameObject LevelConstructor = GameObject.Instantiate(_LevelConstructor);
+            LevelConstructor.name = _LevelConstructor.name;
+            GameObject ReflectionProbesCamera = GameObject.Instantiate(_ReflectionProbesCamera);
+            ReflectionProbesCamera.name = _ReflectionProbesCamera.name;
+            
+            GameObject Mesh0 = GameObject.Instantiate(_Mesh);
+            Mesh0.name = _Mesh.name;
+            GameObject Mesh2 = GameObject.Instantiate(_Mesh2);
+            Mesh2.name = _Mesh2.name;
+            GameObject BordersMesh = GameObject.Instantiate(_BordersMesh);
+            BordersMesh.name = _BordersMesh.name;
+            GameObject From = GameObject.Instantiate(_From);
+            From.name = _From.name;
+            GameObject To = GameObject.Instantiate(_To);
+            To.name = _To.name;
+
+            yield return new WaitForEndOfFrame();
+
+            _LevelConstructor.TryDestroy(true);
+            _ReflectionProbesCamera.TryDestroy(true);
+
+            yield return new WaitForEndOfFrame();
+
+            if (LevelConstructor == null
+                || ReflectionProbesCamera == null
+                || DayCycleAndWeatherO == null
+                || LevelBattle == null
+                || WaterSurfaceCam == null
+                || Mesh0 == null
+                || Mesh2 == null
+                || BordersMesh == null
+                || From == null
+                || To == null)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Failed to coalesce constructor and battle scene!");
+                Melon<TweaksAndFixes>.Logger.Msg($"  LevelConstructor           : {LevelConstructor == null}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  ReflectionProbesCamera     : {ReflectionProbesCamera == null}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  DayCycleAndWeatherO        : {DayCycleAndWeatherO == null}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  LevelBattle                : {LevelBattle == null}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  WaterSurfaceCam            : {WaterSurfaceCam == null}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  Mesh                       : {Mesh0 == null}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  Mesh2                      : {Mesh2 == null}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  BordersMesh                : {BordersMesh == null}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  From                       : {From == null}");
+                Melon<TweaksAndFixes>.Logger.Msg($"  To                         : {To == null}");
+                yield break;
+            }
+
+            Patch_SceneManager.LevelConstructor = LevelConstructor;
+            Patch_SceneManager.ReflectionProbesCamera = ReflectionProbesCamera;
+            Patch_SceneManager.DayCycleAndWeatherO = DayCycleAndWeatherO;
+            Patch_SceneManager.LevelBattle = LevelBattle;
+            Patch_SceneManager.WaterSurfaceCam = WaterSurfaceCam;
+            Patch_SceneManager.Mesh0 = Mesh0;
+            Patch_SceneManager.Mesh2 = Mesh2;
+            Patch_SceneManager.BordersMesh = BordersMesh;
+            Patch_SceneManager.From = From;
+            Patch_SceneManager.To = To;
+
+            Patch_SceneManager.bypass = false;
+            Patch_SceneManager.inited = true;
+
+            Patch_SceneManager.Mesh0.transform.position += new Vector3(0, 0.1f, 0);
+            Patch_SceneManager.Mesh2.transform.position += new Vector3(0, 0.1f, 0);
+            Patch_SceneManager.BordersMesh.transform.position += new Vector3(0, 0.1f, 0);
+            Patch_SceneManager.From.transform.position += new Vector3(0, 0.1f, 0);
+            Patch_SceneManager.To.transform.position += new Vector3(0, 0.1f, 0);
+
+            Patch_SceneManager.LevelConstructor.GetChild("Sun").active = false;
+            var dockA = ModUtils.GetChildAtPath("Dock/DryDock_001", Patch_SceneManager.LevelConstructor);
+
+            var waterAll = dockA.GetChild("water_all_001");
+
+            var waterHC = GameObject.Instantiate(waterAll, dockA.transform);
+            waterHC.name = "water_in_huge_dock_002";
+            waterHC.transform.localPosition = new(500f, 0.5f, 245f);
+            waterHC.transform.SetScale(0.06f, 0.1f, 0.25f);
+
+            var waterBC = GameObject.Instantiate(waterAll, dockA.transform);
+            waterBC.name = "water_in_big_dock_002";
+            waterBC.transform.localPosition = new(250f, 0.5f, 135f);
+            waterBC.transform.SetScale(0.04f, 0.1f, 0.15f);
+
+            var waterMC = GameObject.Instantiate(waterAll, dockA.transform);
+            waterMC.name = "water_in_middle_dock_002";
+            waterMC.transform.localPosition = new(0, 0.5f, 85f);
+            waterMC.transform.SetScale(0.05f, 0.1f, 0.12f);
+
+            var waterSC = GameObject.Instantiate(waterAll, dockA.transform);
+            waterSC.name = "water_in_smoll_dock_002";
+            waterSC.transform.localPosition = new(-250f, 0.5f, 65f);
+            waterSC.transform.SetScale(0.03f, 0.1f, 0.11f);
+
+            waterAll.active = false;
+
+            Patch_SceneManager.SetConstructorWeather();
+
+            yield return new WaitForEndOfFrame();
+
+            GameManager.Instance.ChangeState(GameManager.GameState.MainMenu);
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Loaded main menu");
+
+            yield break;
+
+            // Unused
+            // while (!MigrationManager.IsDone())
+
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(GameManager.ToMainMenu))]
+        internal static bool Prefix_BackToCampaign()
+        {
+            if (!firstLoad)
+                return true;
+
+            firstLoad = false;
+
+            if (GameManager.Instance.CurrentState == GameManager.GameState.Loading
+                || GameManager.Instance.CurrentState == GameManager.GameState.LoadingCustom)
+            {
+                G.ui.dontChangeLoadingScreen = true;
+            }
+
+            G.ui.quickLoadingScreen = true;
+
+            if (GameManager.Instance.CurrentState == GameManager.GameState.World)
+            {
+                GameManager.Save(true, false);
+            }
+
+            if (GameManager.IsCampaign && GameManager.Instance.CurrentState == GameManager.GameState.Constructor)
+            {
+                G.ui.ExitFromRefitMode();
+            }
+
+            if (GameManager.IsCampaign)
+            {
+                G.ui.OnCampaignLeave();
+            }
+
+            GameManager.Instance.ChangeState(GameManager.GameState.LoadingCustom);
+
+            Melon<TweaksAndFixes>.Logger.Msg($"Calling ToMainMenuCoroutine coroutine...");
+            MelonCoroutines.Start(ToMainMenuCoroutine());
+
+            return false;
+        }
 
         public static System.Collections.IEnumerator BackToCampaignCoroutine(
             Il2CppSystem.Action<Il2CppSystem.Action> onLoaded, GameManager.UIState overrideState)

@@ -70,48 +70,52 @@ namespace TweaksAndFixes
 
         private bool FilteredMessage(ref string condition)
         {
+            // Silence warning: "in object 'X' can not find direct child 'Y' with component 'Z'"
+            if (condition.Contains("' can not find direct child '"))
+                return true;
+
             // Silence warning: "for ship 'name' tonnage # is out of bounds #/#, clamped"
-            if (condition != null && condition.StartsWith("for ship '") && condition.EndsWith(", clamped"))
+            if (condition.StartsWith("for ship '") && condition.EndsWith(", clamped"))
                 return true;
 
             // Silence warning: "BoxColliders does not support negative scale or size..."
-            if (condition != null && condition.StartsWith("BoxColliders does not support negative scale or size."))
+            if (condition.StartsWith("BoxColliders does not support negative scale or size."))
                 return true;
 
             // Silence warning: "failed to generate random ship of type `type`, hull hull_name in X tries"
-            if (condition != null && condition.StartsWith("failed to generate random ship of type"))
+            if (condition.StartsWith("failed to generate random ship of type"))
                 return true;
 
             // Silence warning: "not found varients: ..."
-            if (condition != null && (condition.StartsWith("not found varients: ") || condition.StartsWith("not found variants:")))
+            if ((condition.StartsWith("not found varients: ") || condition.StartsWith("not found variants:")))
                 return true;
 
             // Silence warning: during autogeneration, tonnage limit is below min tonnage, clamped to min
-            if (condition != null && condition.StartsWith("during autogeneration, tonnage limit is below min tonnage, clamped to min"))
+            if (condition.StartsWith("during autogeneration, tonnage limit is below min tonnage, clamped to min"))
                 return true;
 
             // Silence warning: dontChangeLoadingScreen improperly set
-            if (condition != null && condition.StartsWith("dontChangeLoadingScreen improperly set"))
+            if (condition.StartsWith("dontChangeLoadingScreen improperly set"))
                 return true;
 
             // Silence warning: Parent of RectTransform is being set with parent property.
-            if (condition != null && condition.StartsWith("Parent of RectTransform is being set with parent property."))
+            if (condition.StartsWith("Parent of RectTransform is being set with parent property."))
                 return true;
 
             // Silence error: "failed to generate ship of type `type`, hull hull_name in X tries"
-            if (condition != null && condition.StartsWith("failed to generate ship of type"))
+            if (condition.StartsWith("failed to generate ship of type"))
                 return true;
 
             // Silence error: "self-col ..."
-            if (condition != null && condition.StartsWith("self-col"))
+            if (condition.StartsWith("self-col"))
                 return true;
 
             // Silence error: "unable to make non-interlapping shot ..."
-            if (condition != null && condition.StartsWith("unable to make non-interlapping shot"))
+            if (condition.StartsWith("unable to make non-interlapping shot"))
                 return true;
 
             // Replace error text: "S3"
-            if (condition != null && condition == "S3")
+            if (condition == "S3")
             {
                 condition = $"Failed to connect to the Steam API. Restart your computer and try again. (Error = 'S3')";
 

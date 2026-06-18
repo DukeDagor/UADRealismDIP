@@ -57,6 +57,8 @@ namespace TweaksAndFixes
                 HasDestroyedSubmarineButton = true;
             }
 
+            WorldCampaign.instance.transform.position += new Vector3(0, 0.1f, 0);
+
             GameObject mapImage = ModUtils.GetChildAtPath("2DMap/Map", WorldCampaign.instance.worldEx);
             var mapRenderer = mapImage.GetComponent<MeshRenderer>();
             mapRenderer.enabled = UiM.TAF_Settings.settings.showMapImage;

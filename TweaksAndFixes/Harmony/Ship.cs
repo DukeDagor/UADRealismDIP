@@ -245,6 +245,7 @@ namespace TweaksAndFixes
                 // Melon<TweaksAndFixes>.Logger.Msg($"  {stat.modifiers}");
                 // Melon<TweaksAndFixes>.Logger.Msg($"  {stat.total}");
 
+                // Max = 150
                 if (stat.total > Config.Param("taf_ship_stat_floatability_cap", 140f))
                 {
                     stat.basic = Config.Param("taf_ship_stat_floatability_cap", 140f) - stat.modifiers;
@@ -262,6 +263,7 @@ namespace TweaksAndFixes
                 // Melon<TweaksAndFixes>.Logger.Msg($"  {stat.modifiers}");
                 // Melon<TweaksAndFixes>.Logger.Msg($"  {stat.total}");
 
+                // Max = 200
                 if (stat.total > Config.Param("taf_ship_stat_endurance_cap", 175f))
                 {
                     stat.basic = Config.Param("taf_ship_stat_endurance_cap", 175f) - stat.modifiers;
@@ -316,6 +318,16 @@ namespace TweaksAndFixes
             }
         }
 
+        [HarmonyPatch(nameof(Ship.EnterConstructor))]
+        [HarmonyPrefix]
+        internal static void Prefix_EnterConstructor(Ship __instance)
+        {
+            if (GameManager.IsWorld && __instance.player.isAi)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Making {__instance.vesselName} visible in world.");
+                __instance.gameObject.transform.position += new Vector3(0, -1000, 0);
+            }
+        }
 
         // ########## Ship Scuttling ########## //
 

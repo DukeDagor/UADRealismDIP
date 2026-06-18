@@ -700,6 +700,7 @@ namespace TweaksAndFixes
 
         //private static string? _MountErrorLoc = null;
         internal static bool _IgnoreNextActiveBad = false;
+        internal static Dictionary<string, Color> matColors = new();
 
         [HarmonyPatch(nameof(Part.SetVisualMode))]
         [HarmonyPrefix]
@@ -734,6 +735,46 @@ namespace TweaksAndFixes
                     }
                     //}
                 }
+            }
+
+            if (m == Part.VisualMode.Bad || m == Part.VisualMode.ActiveBad || m == Part.VisualMode.BadOverlap)
+            {
+                foreach (var visual in __instance.visualRenderers)
+                    foreach (var mat in visual.materials)
+                    {
+                        if (!matColors.ContainsKey(mat.name))
+                            matColors.Add(mat.name, mat.GetColor("_Color"));
+                        mat.SetColor("_Color", new(1, 0, 0, 0.2f));
+                    }
+            }
+            else if (m == Part.VisualMode.Highlight || m == Part.VisualMode.Active)
+            {
+                foreach (var visual in __instance.visualRenderers)
+                    foreach (var mat in visual.materials)
+                    {
+                        if (!matColors.ContainsKey(mat.name))
+                            matColors.Add(mat.name, mat.GetColor("_Color"));
+                        mat.SetColor("_Color", new(0.2f, 0.8f, 0.2f, 0.2f));
+                    }
+            }
+            else if (m == Part.VisualMode.Warn)
+            {
+                foreach (var visual in __instance.visualRenderers)
+                    foreach (var mat in visual.materials)
+                    {
+                        if (!matColors.ContainsKey(mat.name))
+                            matColors.Add(mat.name, mat.GetColor("_Color"));
+                        mat.SetColor("_Color", new(1f, 0.8f, 0, 0.4f));
+                    }
+            }
+            else
+            {
+                foreach (var visual in __instance.visualRenderers)
+                    foreach (var mat in visual.materials)
+                    {
+                        if (matColors.ContainsKey(mat.name))
+                            mat.SetColor("_Color", matColors[mat.name]);
+                    }
             }
         }
 

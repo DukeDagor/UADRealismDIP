@@ -469,6 +469,7 @@ namespace TweaksAndFixes
             Melon<TweaksAndFixes>.Logger.Msg($"  Playing music:");
             
             G.ui._dontChangeLoadingScreen_k__BackingField = true;
+            Patch_SceneManager.ConfigureScene(GameManager.GameState.Battle);
             GameManager.Instance.ToBattle(
                 battle,
                 new Il2CppSystem.Nullable<float>(36000),

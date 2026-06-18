@@ -4076,7 +4076,7 @@ namespace TweaksAndFixes
             );
         }
 
-        private static void UpdateCampaignCamera(Cam _this)
+        public static void UpdateCampaignCamera(Cam _this)
         {
             // Melon<TweaksAndFixes>.Logger.Msg($"  Campaign:");
 
@@ -4095,7 +4095,6 @@ namespace TweaksAndFixes
             if (!_this.cameraComp.orthographic)
             {
                 _this.cameraComp.orthographic = true;
-
                 _this.cameraComp.transform.eulerAngles = new(90, 180, 0);
             }
 
@@ -4190,6 +4189,9 @@ namespace TweaksAndFixes
                 _this.CampaignModePositionChanged = true;
             }
 
+            // Force to proper y position for map
+            _this.newCameraPos = new(_this.newCameraPos.x, 10f, _this.newCameraPos.z);
+
             // Update position and clamp to map bounds
             _this.transform.position = _this.newCameraPos;
             _this.CheckCameraBorders();
@@ -4211,7 +4213,7 @@ namespace TweaksAndFixes
         private static bool ignoreFirstRmbFrame = true;
         private static bool ignoreFirstMmbFrame = true;
 
-        private static void UpdateOrbitCamera(Cam _this)
+        public static void UpdateOrbitCamera(Cam _this)
         {
             // Melon<TweaksAndFixes>.Logger.Msg($"  Not Campaign:");
 
@@ -4221,9 +4223,8 @@ namespace TweaksAndFixes
             if (_this.cameraComp.orthographic)
             {
                 _this.cameraComp.orthographic = false;
+                _this.cameraComp.fieldOfView = 50;
             }
-
-            _this.startingRotationX = 60;
 
             // ========== Get Input ========== //
 
@@ -4235,6 +4236,10 @@ namespace TweaksAndFixes
             bool allowCameraControl = G.ui.AllowCameraControl() && isMouseOverGame;
 
             Vector3 deltaPan = new Vector3();
+
+            bool isBattle = Patch_SceneManager.sceneState == GameManager.GameState.Battle;
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"{isMouseOverGame} | {G.ui.AllowCameraControl()} | {GameManager.CanHandleMouseInput()}");
 
             if (allowCameraControl && GameManager.CanHandleMouseInput())
             {
@@ -4314,12 +4319,12 @@ namespace TweaksAndFixes
             // Keyboard camera rotation
             if (allowCameraControl && !Util.FocusIsInInputField() && GameManager.CanHandleKeyboardInput())
             {
-                if (Input.GetKey(GameManager.IsBattle ?
+                if (Input.GetKey(isBattle ?
                     G.settings.Bindings.BattleCameraRotationLeft.Code :
                     G.settings.Bindings.ConstructorCameraRotationLeft.Code))
                     _this.rotationY = (dt * _this.rotationSensitivityKeyMod * _this.rotationSensitivityY) + _this.rotationY;
 
-                if (Input.GetKey(GameManager.IsBattle ?
+                if (Input.GetKey(isBattle ?
                     G.settings.Bindings.BattleCameraRotationRight.Code :
                     G.settings.Bindings.ConstructorCameraRotationRight.Code))
                     _this.rotationY = -(dt * _this.rotationSensitivityKeyMod * _this.rotationSensitivityY) + _this.rotationY;
@@ -4411,7 +4416,7 @@ namespace TweaksAndFixes
                 Vector3 verticalOffset = new Vector3();
 
                 // Battle camera has different camera positioning
-                if (GameManager.IsBattle)
+                if (isBattle)
                 {
                     // Several hours of my life were spent finding these ratios...
                     focusOffset = new Vector3(0, _this.distance / 6f, 0);
@@ -4439,27 +4444,138 @@ namespace TweaksAndFixes
             }
         }
 
+        public static void SettupMainMenuCam(Cam _this)
+        {
+            // Melon<TweaksAndFixes>.Logger.Msg($"  Not Campaign:");
+
+            // ========== Configuration ========== //
+
+            // Orthographic config
+            if (_this.cameraComp.orthographic)
+            {
+                _this.cameraComp.orthographic = false;
+                _this.cameraComp.fieldOfView = 50;
+            }
+
+            // Zoom transition
+            if (_this.transition != null)
+            {
+                if (_this.transition.isRunning)
+                {
+                    Vector3 ease = Util.EaseInOut(
+                        _this.transitionFrom,
+                        _this.transitionTo,
+                        _this.transition.progress
+                    );
+
+                    _this.lookingAt = ease;
+
+                    float zoomTo = Util.Clamp(
+                        (ease - _this.transitionFrom).magnitude
+                            * Mathf.Sin(_this.transition.progress * 3.14159265f) * 0.2f
+                            + _this.transitionDistance, 0, 4000
+                    );
+
+                    _this.distance = zoomTo;
+                    _this.distanceDesired = zoomTo;
+                }
+                else
+                {
+                    _this.lookingAt = _this.transitionTo;
+                    _this.distance = _this.transitionDistance;
+                    _this.transition = null;
+                }
+            }
+
+            // Parse Pan input
+            float radX = (_this.limitMaxRotationX - _this.rotationX + _this.limitMinRotationX) / 180f * Mathf.PI;
+            float radY = (_this.rotationY - 90f) / 180f * Mathf.PI;
+
+            // Update position & rotation
+            Vector3 offset = new Vector3(
+                _this.distance * _this.distanceMod * Mathf.Sin(-radX) * Mathf.Cos(-radY),
+                _this.distance * _this.distanceMod * Mathf.Cos(-radX),
+                _this.distance * _this.distanceMod * Mathf.Sin(-radX) * Mathf.Sin(-radY)
+            );
+            
+            _this.transform.position = _this.lookingAt + offset;
+            _this.transform.forward = -offset;
+
+            // Update tracking variables
+            _this.cameraMovement = new();
+            _this.prevMousePos = Input.mousePosition;
+            _this.lookingAtPosition = _this.transform.TransformPoint(_this.lookingAt);
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"{_this.prevMousePos.ToString("F0"),-16}");
+
+            var dof = _this.GetComponent<UnityStandardAssets.ImageEffects.DepthOfField>();
+            if (dof != null)
+            {
+                dof.focalLength = _this.distance * _this.distanceMod;
+                // Melon<TweaksAndFixes>.Logger.Msg($"      F-Len: {dof.focalLength}");
+            }
+        }
+
         public static void CamUpdate(Cam _this)
         {
+            _this.rotationSensitivityKeyMod = 10;
+            _this.panSensitivityX = 50;
+            _this.panSensitivityY = 50;
+
+            _this.distanceMin = 1;
+            _this.limitMaxRotationX = 89.95f;
+
             _this.CampaignModePositionChanged = false;
 
-            // Melon<TweaksAndFixes>.Logger.Msg($"Update: {GameManager.Instance.CurrentState} : {_this.transform.position} : {_this.transform.eulerAngles}");
-
-            if (GameManager.IsCampaign && !GameManager.IsBattle && !GameManager.IsConstructor
-                && GameManager.Instance.CurrentState != GameManager.GameState.LoadingCustom)
+            // Melon<TweaksAndFixes>.Logger.Msg($"Update: {GameManager.Instance.CurrentState}");
+            
+            switch (Patch_SceneManager.sceneState)
             {
-                UpdateCampaignCamera(_this);
-            }
-            else
-            {
-                if (GameManager.Instance.CurrentState == GameManager.GameState.LoadingCustom)
-                {
-                    _this.rotationX = _this.startingRotationX;
-                    _this.rotationY = _this.startingRotationY;
-                    _this.distance = _this.distanceStart;
-                }
+                case GameManager.GameState.Battle:
+                case GameManager.GameState.Constructor:
+                    if (Patch_SceneManager.sceneState == GameManager.GameState.Constructor
+                        && PlayerController.Instance.Ship != null)
+                    {
+                        _this.distanceMax = 300;
+                        _this.distanceStart = PlayerController.Instance.Ship.hullSize.size.z;
+                        _this.startingRotationX = 45;
+                        _this.startingRotationY = 270;
+                    }
+                    else if (Patch_SceneManager.sceneState == GameManager.GameState.Battle)
+                    {
+                        _this.distanceMax = 5000;
+                        _this.distanceStart = 500;
+                        _this.startingRotationX = 30;
+                        _this.startingRotationY = 0;
+                    }
 
-                UpdateOrbitCamera(_this);
+                    if (GameManager.Instance.CurrentState == GameManager.GameState.LoadingCustom)
+                    {
+                        _this.rotationX = _this.startingRotationX;
+                        _this.rotationY = _this.startingRotationY;
+                        _this.distance = _this.distanceStart;
+                        _this.distanceDesired = _this.distanceStart;
+                        if(PlayerController.Instance.Ship != null)
+                        {
+                            _this.lookingAt = PlayerController.Instance.Ship.transform.position;
+                            _this.distance = PlayerController.Instance.Ship.hullSize.size.z;
+                        }
+                        // isFirstAnimation = true;
+                    }
+
+                    UpdateOrbitCamera(_this);
+                    break;
+                
+                case GameManager.GameState.World:
+                    if (GameManager.Instance.CurrentState != GameManager.GameState.LoadingCustom)
+                        UpdateCampaignCamera(_this);
+                    // else
+                    //     _this.CampaignModePositionChanged = true;
+                    break;
+
+                default:
+                    break;
+
             }
         }
 

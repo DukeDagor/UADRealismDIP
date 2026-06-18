@@ -8,6 +8,7 @@ using System.Text;
 using TweaksAndFixes.Data;
 using TweaksAndFixes.Modified;
 using UnityEngine.EventSystems;
+using Il2CppSystem.Linq;
 
 #pragma warning disable CS8604
 #pragma warning disable CS8625
@@ -117,27 +118,45 @@ namespace TweaksAndFixes
         // ########## MAIN MENU ########## //
 
         // public static bool hasLoadedPredefsAsync = false;
-        // 
-        // [HarmonyPatch(nameof(Ui.HideLoadingScreen))]
-        // [HarmonyPostfix]
-        // internal static void Postfix_HideLoadingScreen(Ui __instance)
-        // {
-        //     if (hasLoadedPredefsAsync) return;
-        // 
-        //     Melon<TweaksAndFixes>.Logger.Msg($"Attempting to load predefs asynchronusly...");
-        // 
-        //     // PredefinedDesignsDataAsync.BinToBinTaf();
-        // 
-        //     // Melon<TweaksAndFixes>.Logger.Msg($"To Store");
-        // 
-        //     // PredefinedDesignsData.BinTafToStore();
-        // 
-        //     // Melon<TweaksAndFixes>.Logger.Msg($"Done");
-        // 
-        //     // PredefinedDesignsDataAsync.LoadData();
-        //     // PredefinedDesignsDataAsync.LoadPredefSetsAsync();
-        //     hasLoadedPredefsAsync = true;
-        // }
+
+        internal static System.Collections.IEnumerator DelayedUpdateMapIcons()
+        {
+            yield return new WaitForSeconds(0.1f);
+            // yield return new WaitForEndOfFrame();
+            Melon<TweaksAndFixes>.Logger.Msg($" Update map icons");
+            G.cam.CampaignModePositionChanged = true;
+            G.cam.CampaignMapFovPercents = (5 - G.cam.MinFov) / (G.cam.MaxFov - G.cam.MinFov);
+            CampaignMap.Instance.UIMap.LateUpdate();
+        }
+
+        [HarmonyPatch(nameof(Ui.HideLoadingScreen))]
+        [HarmonyPrefix]
+        internal static void Prefix_HideLoadingScreen(Ui __instance, bool animate, ref Il2CppSystem.Action onHided)
+        {
+            Melon<TweaksAndFixes>.Logger.Msg($"Hide loading screen");
+
+            if (GameManager.IsWorld)
+            {
+                MelonCoroutines.Start(DelayedUpdateMapIcons());
+                Melon<TweaksAndFixes>.Logger.Msg($" Overrode action");
+            }
+
+            // if (hasLoadedPredefsAsync) return;
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Attempting to load predefs asynchronusly...");
+
+            // PredefinedDesignsDataAsync.BinToBinTaf();
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"To Store");
+
+            // PredefinedDesignsData.BinTafToStore();
+
+            // Melon<TweaksAndFixes>.Logger.Msg($"Done");
+
+            // PredefinedDesignsDataAsync.LoadData();
+            // PredefinedDesignsDataAsync.LoadPredefSetsAsync();
+            // hasLoadedPredefsAsync = true;
+        }
 
         // ########## Shared Design Modifications ########## //
 
@@ -940,9 +959,9 @@ namespace TweaksAndFixes
                                         // if (mat.mainTexture == null) continue;
 
                                         // if (!hasPrinted) Melon<TweaksAndFixes>.Logger.Msg($"New Mat: {string.Concat(path)} : {obj.name}");
-                                    
+
                                         hasPrinted = true;
-                                    
+
                                         Melon<TweaksAndFixes>.Logger.Msg($"{mat.name} : {(mat.mainTexture == null ? "" : mat.mainTexture.name)} : {mat.color}");
 
                                         materials.Add(mat.name);
@@ -2863,13 +2882,6 @@ namespace TweaksAndFixes
         [HarmonyPrefix]
         internal static bool Prefix_Update(Cam __instance)
         {
-            __instance.rotationSensitivityKeyMod = 10;
-            __instance.panSensitivityX = 50;
-            __instance.panSensitivityY = 50;
-
-            __instance.distanceMin = 1;
-            __instance.limitMaxRotationX = 89.95f;
-
             if (overrideCamBounds)
             {
                 __instance.plane.center = new Vector3(0,1,0);
@@ -2883,6 +2895,78 @@ namespace TweaksAndFixes
             UiM.CamUpdate(__instance);
 
             return false;
+        }
+    }
+
+
+    [HarmonyPatch(typeof(MapCanal))]
+    internal class Patch_MapCanal
+    {
+        [HarmonyPatch(nameof(MapCanal.OnMouseOver))]
+        [HarmonyPostfix]
+        internal static void Postfix_OnMouseOver(MapCanal __instance)
+        {
+            if (!CampaignController.Instance.CanalWasOpened(__instance.name))
+                return;
+
+            __instance.VisualCanal.active = true;
+        }
+
+        [HarmonyPatch(nameof(MapCanal.OnMouseExit))]
+        [HarmonyPostfix]
+        internal static void Postfix_OnMouseExit(MapCanal __instance)
+        {
+            if (!CampaignController.Instance.CanalWasOpened(__instance.name))
+                return;
+
+            __instance.VisualCanal.active = false;
+        }
+    }
+
+    [HarmonyPatch(typeof(MapUI))]
+    internal class Patch_MapUI
+    {
+        [HarmonyPatch(nameof(MapUI.SetRoutePath))]
+        [HarmonyPrefix]
+        internal static bool Prefix_SetRoutePath(
+            LineRenderer line, Il2CppSystem.Collections.Generic.IEnumerable<Vector3> path, bool canShow)
+        {
+            line.positionCount = 0;
+            line.SetPositions(new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<Vector3>(0));
+            var go = line.gameObject;
+
+            if (path == null)
+            {
+                go.active = false;
+                return false;
+            }
+
+            go.active = canShow;
+
+            line.useWorldSpace = true;
+            line.positionCount = path.Count();
+
+            int i = 0;
+            foreach (var point in new Il2CppSystem.Collections.Generic.List<Vector3>(path))
+            {
+                line.SetPosition(i, Util.ChangeY(point, go.transform.localPosition.y + 0.1f));
+                i++;
+            }
+
+            return false;
+        }
+
+        [HarmonyPatch(nameof(MapUI.RefreshSpecialEventsList))]
+        [HarmonyPostfix]
+        internal static void Postfix_RefreshSpecialEventsList(MapUI __instance)
+        {
+            //Melon<TweaksAndFixes>.Logger.Msg($"{WorldCampaign.instance}");
+
+            foreach (var child in __instance.GetChild("WorldEx").GetChild("Zones").GetChildren())
+            {
+                //Melon<TweaksAndFixes>.Logger.Msg($"  {child.name}");
+                child.transform.localPosition = new(child.transform.localPosition.x, 0, child.transform.localPosition.z);
+            }
         }
     }
 }
