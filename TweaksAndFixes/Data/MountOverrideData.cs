@@ -168,7 +168,12 @@ namespace TweaksAndFixes
             // Melon<TweaksAndFixes>.Logger.Msg($"      {mount.transform.position} -> {mount.transform.localPosition} -> {mountOverride.positionParsed}");
 
             mount.transform.localPosition = mountOverride.positionParsed;
-            mount.transform.localEulerAngles = new Vector3(mount.transform.localEulerAngles.x, mountOverride.rotation, mount.transform.localEulerAngles.z);
+            mount.transform.localEulerAngles = new Vector3(
+                mount.transform.localEulerAngles.x,
+                mountOverride.rotation,
+                mount.transform.localEulerAngles.z
+            );
+            mount.transform.SetScale(1, 1, 1);
             mount.center = mountOverride.mountPositionTypeParsed == MountPositionType.CENTER;
             mount.side = mountOverride.mountPositionTypeParsed == MountPositionType.SIDE;
 
@@ -228,7 +233,12 @@ namespace TweaksAndFixes
             }
 
             mount.transform.position = mountOverride.positionParsed;
-            mount.transform.eulerAngles = new Vector3(mount.transform.eulerAngles.x, mountOverride.rotation, mount.transform.eulerAngles.z);
+            mount.transform.eulerAngles = new Vector3(
+                mount.transform.eulerAngles.x,
+                mountOverride.rotation,
+                mount.transform.eulerAngles.z
+            );
+            mount.transform.SetScale(1,1,1);
             mount.center = mountOverride.mountPositionTypeParsed == MountPositionType.CENTER;
             mount.side = mountOverride.mountPositionTypeParsed == MountPositionType.SIDE;
 
