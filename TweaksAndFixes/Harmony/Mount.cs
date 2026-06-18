@@ -37,83 +37,72 @@ namespace TweaksAndFixes
 
             if (_this.center)
             {
-                __result =
+                __result = __result ||
                     _this.m.Contains("center") &&
                     (_this.caliberMin == 0.0f || _this.caliberMin <= data.GetCaliberInch()) &&
                     (_this.caliberMax == 0.0f || _this.caliberMax >= data.GetCaliberInch()) &&
                     (_this.barrelsMin == 0 || !data._isGun_k__BackingField || _this.barrelsMin <= data.barrels) &&
                     (_this.barrelsMax == 0 || !data._isGun_k__BackingField || _this.barrelsMax >= data.barrels);
-                return false;
             }
-            else if (_this.side)
+            if (_this.side)
             {
-                __result =
+                __result = __result ||
                     _this.m.Contains("side") &&
                     (_this.caliberMin == 0.0f || _this.caliberMin <= data.GetCaliberInch()) &&
                     (_this.caliberMax == 0.0f || _this.caliberMax >= data.GetCaliberInch()) &&
                     (_this.barrelsMin == 0 || !data._isGun_k__BackingField || _this.barrelsMin <= data.barrels) &&
                     (_this.barrelsMax == 0 || !data._isGun_k__BackingField || _this.barrelsMax >= data.barrels);
-                return false;
             }
-            else if (_this.barbette)
+            if (_this.barbette)
             {
-                __result =
+                __result = __result ||
                     _this.m.Contains("barbette") &&
                     (_this.caliberMin == 0.0f || _this.caliberMin <= data.GetCaliberInch()) &&
                     (_this.caliberMax == 0.0f || _this.caliberMax >= data.GetCaliberInch()) &&
                     (_this.barrelsMin == 0 || !data._isGun_k__BackingField || _this.barrelsMin <= data.barrels) &&
                     (_this.barrelsMax == 0 || !data._isGun_k__BackingField || _this.barrelsMax >= data.barrels);
-                return false;
             }
-            else if (_this.casemate)
+            if (_this.casemate)
             {
-                __result =
+                __result = __result ||
                     _this.m.Contains("casemate") &&
                     (_this.caliberMin == 0.0f || _this.caliberMin <= data.GetCaliberInch()) &&
                     (_this.caliberMax == 0.0f || _this.caliberMax >= data.GetCaliberInch()) &&
                     (_this.barrelsMin == 0 || !data._isGun_k__BackingField || _this.barrelsMin <= data.barrels) &&
                     (_this.barrelsMax == 0 || !data._isGun_k__BackingField || _this.barrelsMax >= data.barrels);
-                return false;
             }
-            else if (_this.towerMain)
+            if (_this.towerMain)
             {
-                __result = _this.m.Contains("tower_main");
-                return false;
+                __result = __result || _this.m.Contains("tower_main");
             }
-            else if (_this.towerSec)
+            if (_this.towerSec)
             {
-                __result = _this.m.Contains("tower_sec");
-                return false;
+                __result = __result || _this.m.Contains("tower_sec");
             }
-            else if (_this.funnel)
+            if (_this.funnel)
             {
-                __result = _this.m.Contains("funnel");
-                return false;
+                __result = __result || _this.m.Contains("funnel");
             }
-            else if (_this.siBarbette)
+            if (_this.siBarbette)
             {
-                __result =
+                __result = __result ||
                     _this.m.Contains("si_barbette") &&
                     (_this.caliberMin == 0.0f || _this.caliberMin <= data.GetCaliberInch()) &&
                     (_this.caliberMax == 0.0f || _this.caliberMax >= data.GetCaliberInch()) &&
                     (_this.barrelsMin == 0 || !data._isGun_k__BackingField || _this.barrelsMin <= data.barrels) &&
                     (_this.barrelsMax == 0 || !data._isGun_k__BackingField || _this.barrelsMax >= data.barrels);
-                return false;
             }
-            else if (_this.subTorpedo)
+            if (_this.subTorpedo)
             {
-                __result = _this.m.Contains("sub_torpedo");
-                return false;
+                __result = __result || _this.m.Contains("sub_torpedo");
             }
-            else if (_this.deckTorpedo)
+            if (_this.deckTorpedo)
             {
-                __result = _this.m.Contains("deck_torpedo");
-                return false;
+                __result = __result || _this.m.Contains("deck_torpedo");
             }
-            else if (_this.special)
+            if (_this.special)
             {
-                __result = _this.m.Contains("special");
-                return false;
+                __result = __result || _this.m.Contains("special");
             }
 
             return false;
