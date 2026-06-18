@@ -22,6 +22,11 @@ namespace TweaksAndFixes
             if (idx == 2 && sceneState == GameManager.GameState.Constructor)
                 idx = 0;
 
+            dcaw.DesiredStormIntensity = 0;
+            dcaw.StormIntensity = 0;
+            dcaw.Storm.Intensity = 0;
+            dcaw.Storm.gameObject.active = false;
+
             switch (idx)
             {
                 // Noon & clear
