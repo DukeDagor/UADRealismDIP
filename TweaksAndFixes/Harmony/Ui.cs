@@ -138,7 +138,6 @@ namespace TweaksAndFixes
             if (GameManager.IsWorld)
             {
                 MelonCoroutines.Start(DelayedUpdateMapIcons());
-                Melon<TweaksAndFixes>.Logger.Msg($" Overrode action");
             }
 
             // if (hasLoadedPredefsAsync) return;
