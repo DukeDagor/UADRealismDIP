@@ -108,7 +108,7 @@ namespace TweaksAndFixes
 
             if (state == sceneState)
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"Skiping config: new `{state}` == current `{sceneState}`");
+                Melon<TweaksAndFixes>.Logger.Msg($"Skipping config: new `{state}` == current `{sceneState}`");
                 return;
             }
 
