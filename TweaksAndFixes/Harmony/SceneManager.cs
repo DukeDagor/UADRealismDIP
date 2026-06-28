@@ -205,6 +205,9 @@ namespace TweaksAndFixes
                     G.cam.NoiseGrain(true);
                     G.cam.MotionBlur(false);
 
+                    if (Config.Param("taf_enable_main_menu_vignette", 1) == 0)
+                        G.ui.mainMenuUi.GetChild("BgX").active = false;
+
                     LevelConstructor.name = "LevelConstructor";
                     LevelConstructor.active = true;
                     ReflectionProbesCamera.active = true;
