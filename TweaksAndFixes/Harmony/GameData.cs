@@ -311,5 +311,77 @@ namespace TweaksAndFixes
             //}
             //Debug.Log(logstr);
         }
+
+
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(GameData.LoadSharedDesigns))]
+        internal static void Postfix_LoadSharedDesigns()
+        {
+            Melon<TweaksAndFixes>.Logger.Msg(
+                $"Validating Shared Designs..."
+            );
+
+            foreach (var nation in G.GameData.playersMajor)
+            {
+                if (!G.GameData.sharedDesignsPerNation.ContainsKey(nation.Key))
+                    continue;
+
+                var list = G.GameData.sharedDesignsPerNation[nation.Key];
+
+                for (int i = list.Count - 1; i >= 0; i--)
+                {
+                    var design = list[i].Item1;
+
+                    // Most importaint check
+                    if (!G.GameData.parts.ContainsKey(design.hullName))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg(
+                            $"  Invalid Shared Design '{design.vesselName}' ({design.playerName}): " +
+                            $"Hull '{design.hullName}' does not exist!"
+                        );
+                        list.RemoveAt(i);
+                        break;
+                    }
+
+                    // For if/when new shiptypes can be added
+                    if (!G.GameData.shipTypes.ContainsKey(design.shipType))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg(
+                            $"  Invalid Shared Design '{design.vesselName}' ({design.playerName}): " +
+                            $"Ship Type '{design.shipType}' does not exist!"
+                        );
+                        list.RemoveAt(i);
+                        break;
+                    }
+
+                    // Should never trigger, but just in case
+                    if (!G.GameData.players.ContainsKey(design.playerName))
+                    {
+                        Melon<TweaksAndFixes>.Logger.Msg(
+                            $"  Invalid Shared Design '{design.vesselName}' ({design.playerName}): " +
+                            $"Player '{design.playerName}' does not exist!"
+                        );
+                        list.RemoveAt(i);
+                        break;
+                    }
+
+                    // Check the parts too
+                    foreach (var part in design.parts)
+                    {
+                        if (!G.GameData.parts.ContainsKey(part.name))
+                        {
+                            list.RemoveAt(i);
+
+                            Melon<TweaksAndFixes>.Logger.Msg(
+                                $"  Invalid Shared Design '{design.vesselName}' ({design.playerName}): " +
+                                $"Part '{part.name}' does not exist!"
+                            );
+
+                            break;
+                        }
+                    }
+                }
+            }
+        }
     }
 }
