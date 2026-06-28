@@ -223,12 +223,7 @@ namespace TweaksAndFixes
             {
                 UiM.SelectedShip = Guid.Empty;
             }
-        }
 
-        [HarmonyPostfix]
-        [HarmonyPatch(nameof(GameManager.ChangeState))]
-        internal static void Posfix_ChangeState(GameManager.GameState newState, bool raiseEnterStateEvents)
-        {
             Patch_SceneManager.ConfigureScene(newState);
         }
 

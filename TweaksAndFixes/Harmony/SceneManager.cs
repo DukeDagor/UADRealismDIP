@@ -2,6 +2,7 @@
 using Il2Cpp;
 using Il2CppNavalAction.Common;
 using MelonLoader;
+using TweaksAndFixes.Modified;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -92,6 +93,11 @@ namespace TweaksAndFixes
         {
             if (!inited)
                 return;
+
+            if (state != GameManager.GameState.MainMenu)
+                MainMenuM.ClearScene();
+            else if (state == GameManager.GameState.MainMenu)
+                MainMenuM.InitRandomScene();
 
             // Seems to cause problems, maybe?
             if (state == GameManager.GameState.Loading
@@ -192,15 +198,16 @@ namespace TweaksAndFixes
                     
                     sceneState = GameManager.GameState.MainMenu;
 
-                    G.cam.enabled = false;
-                    G.cam.lookingAt = new();
-                    G.cam.distance = 200;
-                    G.cam.distanceDesired = 200;
-                    G.cam.rotationX = 20;
-                    G.cam.rotationY = 225;
-                    UiM.SettupMainMenuCam(G.cam);
+                    LevelConstructor.GetChild("Dock").transform.localPosition = Vector3.zero;
 
-                    G.cam.distance = 100;
+                    // G.cam.enabled = false;
+                    // G.cam.lookingAt = new();
+                    // G.cam.distance = 200;
+                    // G.cam.distanceDesired = 200;
+                    // G.cam.rotationX = 20;
+                    // G.cam.rotationY = 225;
+                    // UiM.SettupMainMenuCam(G.cam);
+
                     G.cam.DepthOfField(true);
                     G.cam.NoiseGrain(true);
                     G.cam.MotionBlur(false);
