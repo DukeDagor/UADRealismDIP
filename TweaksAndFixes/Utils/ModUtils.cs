@@ -205,6 +205,33 @@ namespace TweaksAndFixes
                 FindChildrenContains(obj.transform.GetChild(i).gameObject, str, list);
         }
 
+        public static void ForeachRecursive(GameObject root, System.Func<GameObject, int> func, int maxDepth = 100)
+        {
+            List<GameObject> stack = new();
+
+            foreach (var c in root.GetChildren())
+                stack.Add(c);
+
+            while (stack.Count > 0)
+            {
+                var g = stack[0];
+                stack.Remove(g);
+
+                int res = func.Invoke(g);
+
+                // Break the loop when returning -1
+                if (res == -1)
+                    break;
+
+                // Catch deletion or skip children
+                if (g == null || res == -2)
+                    continue;
+
+                foreach (var c in g.GetChildren())
+                    stack.Add(c);
+            }
+        }
+
         public static double Lerp(double a, double b, double t, bool clamp = true)
         {
             if (clamp)
