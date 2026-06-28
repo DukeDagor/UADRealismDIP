@@ -575,6 +575,17 @@ namespace TweaksAndFixes
 
             waterAll.active = false;
 
+
+            if (Config.Param("taf_disable_all_water", 0) == 1)
+            {
+                Patch_SceneManager.LevelBattle.GetChild("opwOcean4OPW_00").active = false;
+                Patch_SceneManager.LevelConstructor.GetChild("MoveWithShip").active = false;
+                waterHC.active = false;
+                waterBC.active = false;
+                waterMC.active = false;
+                waterSC.active = false;
+            }
+
             Patch_SceneManager.SetConstructorWeather();
 
             yield return new WaitForEndOfFrame();
