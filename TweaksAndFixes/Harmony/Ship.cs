@@ -370,7 +370,8 @@ namespace TweaksAndFixes
 
         private static bool IsBattleEnd(Ship ship)
         {
-            return ship == null;
+            return ship == null
+                || Patch_SceneManager.sceneState != GameManager.GameState.Battle;
         }
 
         internal static System.Collections.IEnumerator ExplodeCharges(Ship ship, float startTime, float durration)
@@ -499,6 +500,8 @@ namespace TweaksAndFixes
             }
 
         EXIT:
+            Melon<TweaksAndFixes>.Logger.Msg($"Exiting effect");
+
             yield break;
         }
 
