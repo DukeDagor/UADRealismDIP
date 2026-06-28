@@ -611,6 +611,37 @@ namespace TweaksAndFixes
         [HarmonyPostfix]
         internal static void Postfix_Update(Ui __instance)
         {
+            if (GameManager.IsCampaign
+                && Patch_CampaignController.isLoadingNewTurn)
+            {
+                for (int i = CampaignController.Instance.CampaignData.Vessels.Count - 1; i >= 0; i--)
+                {
+                    var vessel = CampaignController.Instance.CampaignData.Vessels[i];
+
+                    if (vessel != null)
+                        continue;
+
+                    Melon<TweaksAndFixes>.Logger.Warning($"Null ship caught.");
+
+                    CampaignController.Instance.CampaignData.Vessels.RemoveAt(i);
+                }
+
+                foreach (var playerShips in CampaignController.Instance.CampaignData.VesselsByPlayer)
+                {
+                    for (int i = playerShips.Value.Count - 1; i >= 0; i--)
+                    {
+                        var vessel = playerShips.Value[i];
+
+                        if (vessel != null)
+                            continue;
+
+                        Melon<TweaksAndFixes>.Logger.Warning($"Null ship caught for player {playerShips.Key.name}.");
+
+                        playerShips.Value.RemoveAt(i);
+                    }
+                }
+            }
+
             UiM.UpdateModifications();
             Patch_GameManager.Update();
             CampaignControllerM.Update();
