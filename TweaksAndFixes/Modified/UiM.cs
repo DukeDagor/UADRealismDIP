@@ -4284,7 +4284,15 @@ namespace TweaksAndFixes
                     (_this.allowRotateY ?
                         (Input.mousePosition.x - _this.prevMousePos.x) * dt * _this.rotationSensitivityY : 0);
 
-                _this.rotationX = Mathf.Clamp(_this.rotationX, _this.limitMinRotationX, _this.limitMaxRotationX);
+
+                if (Config.Param("taf_disable_camera_restrictions", 0) == 1)
+                {
+                    _this.rotationX = Mathf.Clamp(_this.rotationX, -88f, _this.limitMaxRotationX);
+                }
+                else
+                {
+                    _this.rotationX = Mathf.Clamp(_this.rotationX, _this.limitMinRotationX, _this.limitMaxRotationX);
+                }
 
                 isRmbDrag = true;
 
@@ -4400,7 +4408,8 @@ namespace TweaksAndFixes
                 _this.distance = Mathf.Lerp(_this.distance, _this.distanceDesired, _this.zoomDampen * dt);
 
                 // Clamp lookingAt to bounds
-                if (_this.transition == null)
+                if (_this.transition == null
+                    && Config.Param("taf_disable_camera_restrictions", 0) != 1)
                 {
                     Vector3 planeCollider = _this.plane.size;
 
@@ -4551,6 +4560,11 @@ namespace TweaksAndFixes
                         _this.distanceStart = 500;
                         _this.startingRotationX = 30;
                         _this.startingRotationY = 0;
+                    }
+
+                    if (Config.Param("taf_disable_camera_restrictions", 0) == 1)
+                    {
+                        _this.distanceMax = 10000;
                     }
 
                     if (GameManager.Instance.CurrentState == GameManager.GameState.LoadingCustom)
