@@ -737,6 +737,9 @@ namespace TweaksAndFixes
                 }
             }
 
+            if (__instance.data.isHull)
+                return;
+
             if (m == Part.VisualMode.Bad || m == Part.VisualMode.ActiveBad || m == Part.VisualMode.BadOverlap)
             {
                 foreach (var visual in __instance.visualRenderers)
