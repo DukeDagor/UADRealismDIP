@@ -65,7 +65,11 @@ namespace TweaksAndFixes
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(GameManager.ToConstructor))]
-        internal static bool Prefix_ToConstructor(ref bool newShip, Ship viewShip, ref bool allowEdit, IEnumerable<Ship> allowEditMany, ShipType shipTypeNew, bool needCleanup, Player newPlayer)
+        internal static bool Prefix_ToConstructor(
+            ref bool newShip, Ship viewShip, ref bool allowEdit,
+            Il2CppSystem.Collections.Generic.IEnumerable<Ship> allowEditMany,
+            ShipType shipTypeNew, bool needCleanup, Player newPlayer
+        )
         {
             if (ignoreNextToConstructor)
             {
@@ -115,7 +119,10 @@ namespace TweaksAndFixes
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(GameManager.ToConstructor))]
-        internal static void Postfix_ToConstructor(bool newShip, Ship viewShip, bool allowEdit, IEnumerable<Ship> allowEditMany, ShipType shipTypeNew, bool needCleanup, Player newPlayer)
+        internal static void Postfix_ToConstructor(
+            bool newShip, Ship viewShip, bool allowEdit,
+            Il2CppSystem.Collections.Generic.IEnumerable<Ship> allowEditMany,
+            ShipType shipTypeNew, bool needCleanup, Player newPlayer)
         {
             allowEdit = G.ui.allowEdit;
 
@@ -153,7 +160,6 @@ namespace TweaksAndFixes
 
             Patch_Ship.LastCreatedShip = ShipM.GetActiveShip();
             UiM.UpdateShipTypeButtons(true);
-            // Melon<TweaksAndFixes>.Logger.Msg($"  Active Ship: {(Patch_Ship.LastCreatedShip == null ? "NULL" : Patch_Ship.LastCreatedShip.Name(false, false))}");
         }
 
         [HarmonyPrefix]
@@ -586,7 +592,7 @@ namespace TweaksAndFixes
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(GameManager.ToMainMenu))]
-        internal static bool Prefix_BackToCampaign()
+        internal static bool Prefix_ToMainMenu()
         {
             if (!firstLoad)
                 return true;
