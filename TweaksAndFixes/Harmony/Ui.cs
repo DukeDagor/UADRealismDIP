@@ -605,6 +605,9 @@ namespace TweaksAndFixes
             // UiM.OnConstructorShipChanged();
         }
 
+        public static bool tempMute = false;
+        public static float prevVolume = 0;
+
         [HarmonyPatch(nameof(Ui.Update))]
         [HarmonyPostfix]
         internal static void Postfix_Update(Ui __instance)
@@ -618,6 +621,24 @@ namespace TweaksAndFixes
             if (GameManager.IsWorldMap && GameManager.isScrollMove && !EventSystem.current.IsPointerOverGameObject())
             {
                 GameManager.isScrollMove = false;
+            }
+
+            if (GameManager.IsLoadingAny)
+            {
+                if (!tempMute)
+                {
+                    tempMute = true;
+                    prevVolume = G.settings.soundVolume;
+                    Melon<TweaksAndFixes>.Logger.Msg($"Mute: {prevVolume}");
+                }
+
+                G.settings.soundVolume = 0;
+            }
+            else if (tempMute)
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Unmute: {prevVolume}");
+                tempMute = false;
+                G.settings.soundVolume = prevVolume;
             }
 
             // PredefinedDesignsDataAsync.UpdatePredefLoading();
