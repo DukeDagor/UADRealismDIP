@@ -561,15 +561,20 @@ namespace TweaksAndFixes
             return uiModifications.ContainsKey(ui);
         }
 
-        /// <summary>
-        /// Re-enable the TAF_LoadGame button when the options menu (PopupMenu) is open.
-        /// Call at end of Ui.Update so it runs after any game logic that disables our button.
-        /// </summary>
+        // Re-enable the TAF_LoadGame button when the options menu (PopupMenu) is open.
+        // Call at end of Ui.Update so it runs after any game logic that disables our button.
         public static void EnsureLoadButtonEnabled()
         {
             GameObject activeWindow = GetActivePopupMenuWindow();
             if (activeWindow == null) return;
             GameObject ourBtn = activeWindow.GetChild("TAF_LoadGame");
+
+            if (GameManager.Instance.CurrentState != GameManager.GameState.World)
+            {
+                ourBtn.SetActive(false);
+                return;
+            }
+
             if (ourBtn == null)
             {
                 for (int i = 0; i < activeWindow.transform.childCount; i++)
@@ -587,10 +592,8 @@ namespace TweaksAndFixes
             }
         }
 
-        /// <summary>
-        /// Returns the Window of the currently active PopupMenu (template or clone under PopWindows).
-        /// Clone name is typically "PopupMenu(Clone)".
-        /// </summary>
+        // Returns the Window of the currently active PopupMenu (template or clone under PopWindows).
+        // Clone name is typically "PopupMenu(Clone)".
         private static GameObject GetActivePopupMenuWindow()
         {
             GameObject template = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/PopupMenu");
@@ -616,10 +619,8 @@ namespace TweaksAndFixes
             return null;
         }
 
-        /// <summary>
-        /// Add a "Load Game" button to the options menu (PopupMenu) after SaveCampaign; click opens the load-game popup.
-        /// Registers an update to keep the button enabled when the menu is shown (template or clone).
-        /// </summary>
+        // Add a "Load Game" button to the options menu (PopupMenu) after SaveCampaign; click opens the load-game popup.
+        // Registers an update to keep the button enabled when the menu is shown (template or clone).
         public static void AddLoadButton()
         {
             GameObject popupMenu = ModUtils.GetChildAtPath("Global/Ui/UiMain/Popup/PopupMenu");
