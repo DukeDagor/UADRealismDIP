@@ -2637,33 +2637,33 @@ namespace TweaksAndFixes
 
                         // Melon<TweaksAndFixes>.Logger.Msg("Confirm");
 
-                        if (GameManager.IsCampaign)
-                            MessageBoxUI.Show(
-                                Header,
-                                Text,
-                                null, false,
-                                LocalizeManager.Localize("$Ui_Popup_Generic_Yes"), LocalizeManager.Localize("$Ui_Popup_Generic_No"),
-                                new System.Action(() =>
-                                {
-                                    Melon<TweaksAndFixes>.Logger.Msg("Update");
-                                    Patch_PlayerController.updateTechsForNextClonedShips = true;
-                                    baseCall.Invoke(
-                                        new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(
-                                            System.Array.Empty<Il2CppSystem.Object>()
-                                        )
-                                    );
-                                }),
-                                new System.Action(() =>
-                                {
-                                    Melon<TweaksAndFixes>.Logger.Msg("Don't update");
-                                    baseCall.Invoke(
-                                        new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(
-                                            System.Array.Empty<Il2CppSystem.Object>()
-                                        )
-                                    );
-                                }), null, null, null, false
-                            );
-                        else
+                        // if (GameManager.IsCampaign)
+                        //     MessageBoxUI.Show(
+                        //         Header,
+                        //         Text,
+                        //         null, false,
+                        //         LocalizeManager.Localize("$Ui_Popup_Generic_Yes"), LocalizeManager.Localize("$Ui_Popup_Generic_No"),
+                        //         new System.Action(() =>
+                        //         {
+                        //             Melon<TweaksAndFixes>.Logger.Msg("Update");
+                        //             Patch_PlayerController.updateTechsForNextClonedShips = true;
+                        //             baseCall.Invoke(
+                        //                 new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(
+                        //                     System.Array.Empty<Il2CppSystem.Object>()
+                        //                 )
+                        //             );
+                        //         }),
+                        //         new System.Action(() =>
+                        //         {
+                        //             Melon<TweaksAndFixes>.Logger.Msg("Don't update");
+                        //             baseCall.Invoke(
+                        //                 new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(
+                        //                     System.Array.Empty<Il2CppSystem.Object>()
+                        //                 )
+                        //             );
+                        //         }), null, null, null, false
+                        //     );
+                        // else
                             baseCall.Invoke(
                                 new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2CppSystem.Object>(
                                     System.Array.Empty<Il2CppSystem.Object>()
