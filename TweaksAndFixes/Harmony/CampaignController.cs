@@ -668,7 +668,7 @@ namespace TweaksAndFixes
             if (!GameManager.IsMainMenu)
                 return;
 
-            PredefinedDesignsData.AddUIforBSG();
+            // PredefinedDesignsData.AddUIforBSG();
         }
     }
 
