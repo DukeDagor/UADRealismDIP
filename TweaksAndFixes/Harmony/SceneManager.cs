@@ -468,22 +468,20 @@ namespace TweaksAndFixes
     {
         public static int allowUpdate = 0;
 
-        [HarmonyPatch(nameof(DayCycleAndWeather.LateUpdate))]
-        [HarmonyPrefix]
-        internal static bool Prefix_LateUpdate(DayCycleAndWeather __instance)
-        {
-            if (Patch_SceneManager.sceneState != GameManager.GameState.Battle && allowUpdate == 0)
-                return false;
-        
-            if (allowUpdate > 0)
-            {
-                allowUpdate--;
-            }
-
-            return true;
-        }
-
-        public static float lerpF = 0;
+        // [HarmonyPatch(nameof(DayCycleAndWeather.LateUpdate))]
+        // [HarmonyPrefix]
+        // internal static bool Prefix_LateUpdate(DayCycleAndWeather __instance)
+        // {
+        //     if (Patch_SceneManager.sceneState != GameManager.GameState.Battle && allowUpdate == 0)
+        //         return false;
+        // 
+        //     if (allowUpdate > 0)
+        //     {
+        //         allowUpdate--;
+        //     }
+        // 
+        //     return true;
+        // }
 
         [HarmonyPatch(nameof(DayCycleAndWeather.UpdateCycle))]
         [HarmonyPostfix]
