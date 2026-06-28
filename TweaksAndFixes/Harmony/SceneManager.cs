@@ -162,6 +162,10 @@ namespace TweaksAndFixes
                     G.sound.Stop(sfx.audio.gameObject);
                 }
 
+                DecalsManager.Instance().parentsArr.Clear();
+                DecalsManager.Instance().enabled = false;
+                DecalsManager.Instance().enabled = true;
+
                 hasCleanedUpBattle = true;
             }
 
