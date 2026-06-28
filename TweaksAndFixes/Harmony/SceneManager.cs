@@ -149,6 +149,10 @@ namespace TweaksAndFixes
                     if (sfx.group == "music")
                         continue;
 
+                    // Seems to get reused, rather than duplicated
+                    if (sfx.audio.name == "torpedo_engine:Torpedo_Engine")
+                        continue;
+
                     toDelete.Add(sfx);
                 }
 
