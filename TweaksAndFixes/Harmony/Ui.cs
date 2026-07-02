@@ -125,7 +125,7 @@ namespace TweaksAndFixes
             // yield return new WaitForEndOfFrame();
             Melon<TweaksAndFixes>.Logger.Msg($" Update map icons");
             G.cam.CampaignModePositionChanged = true;
-            G.cam.CampaignMapFovPercents = (5 - G.cam.MinFov) / (G.cam.MaxFov - G.cam.MinFov);
+            G.cam.CampaignMapFovPercents = (4.5f - G.cam.MinFov) / (G.cam.MaxFov - G.cam.MinFov);
             CampaignMap.Instance.UIMap.LateUpdate();
         }
 
@@ -135,9 +135,11 @@ namespace TweaksAndFixes
         {
             Melon<TweaksAndFixes>.Logger.Msg($"Hide loading screen");
 
-            if (GameManager.IsWorld)
+            if (GameManager.IsWorld
+                && Patch_SceneManager.wasInMainMenu)
             {
                 MelonCoroutines.Start(DelayedUpdateMapIcons());
+                Patch_SceneManager.wasInMainMenu = false;
             }
 
             // if (hasLoadedPredefsAsync) return;
