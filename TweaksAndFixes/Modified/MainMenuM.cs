@@ -93,7 +93,7 @@ namespace TweaksAndFixes.Modified
 
             public bool Fits(VisualShip ship)
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"Fits: {ship.root.name} | {maxSize} / {ship.size}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"Fits: {ship.root.name} | {maxSize} / {ship.size}");
 
                 switch (type)
                 {
@@ -182,14 +182,14 @@ namespace TweaksAndFixes.Modified
 
             hull.transform.SetScale(hullData.scale, hullData.scale, hullData.scale);
             
-            Melon<TweaksAndFixes>.Logger.Msg($"Section Bounds: {hullData.sectionsMin} / {hullData.sectionsMax}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"Section Bounds: {hullData.sectionsMin} / {hullData.sectionsMax}");
 
-            Melon<TweaksAndFixes>.Logger.Msg($"Tonnage: {design.tonnage}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"Tonnage: {design.tonnage}");
 
             var tonnageRatio =
                 (design.tonnage - hullData.tonnageMin) / (hullData.tonnageMax - hullData.tonnageMin);
 
-            Melon<TweaksAndFixes>.Logger.Msg($"Tonnage ratio: {tonnageRatio}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"Tonnage ratio: {tonnageRatio}");
 
             int sectionsA = hullData.sectionsMin + (int)(tonnageRatio * (hullData.sectionsMax - hullData.sectionsMin) - 0.025f);
 
@@ -198,7 +198,7 @@ namespace TweaksAndFixes.Modified
                 Mathf.InverseLerp(hullData.tonnageMin, hullData.tonnageMax, design.tonnage)
             ));
 
-            Melon<TweaksAndFixes>.Logger.Msg($"Sections: {sectionsA} -> {sections}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"Sections: {sectionsA} -> {sections}");
 
             // Obj, len
             List<Tuple<GameObject, Bounds>> sectionBounds = new();
@@ -226,13 +226,13 @@ namespace TweaksAndFixes.Modified
 
                     foreach (var varient in v.transform.GetChildren())
                     {
-                        Melon<TweaksAndFixes>.Logger.Msg($"Var: {varient.name}");
-
-                        if (hullData.paramx["var"].Contains(varient.name))
-                            Melon<TweaksAndFixes>.Logger.Msg($"  Desired");
-
-                        if (varient.active)
-                            Melon<TweaksAndFixes>.Logger.Msg($"  Active");
+                        // Melon<TweaksAndFixes>.Logger.Msg($"Var: {varient.name}");
+                        // 
+                        // if (hullData.paramx["var"].Contains(varient.name))
+                        //     Melon<TweaksAndFixes>.Logger.Msg($"  Desired");
+                        // 
+                        // if (varient.active)
+                        //     Melon<TweaksAndFixes>.Logger.Msg($"  Active");
 
                         if (hullData.paramx["var"].Contains(varient.name))
                             desired.Add(varient);
@@ -356,7 +356,7 @@ namespace TweaksAndFixes.Modified
                 totalLength += entry.Item2.size.z;
                 allSections.Add(new(newSec, entry.Item2));
 
-                Melon<TweaksAndFixes>.Logger.Msg($"New: {i} | {entry.Item1.name}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"New: {i} | {entry.Item1.name}");
             }
 
             allSections.Add(new(stern.Item1, stern.Item2));
@@ -367,7 +367,7 @@ namespace TweaksAndFixes.Modified
 
             float curr = -totalLength / 2;
 
-            Melon<TweaksAndFixes>.Logger.Msg($"Tl: {totalLength} | Root: {curr}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"Tl: {totalLength} | Root: {curr}");
 
             foreach (var section in allSections)
             {
@@ -662,14 +662,14 @@ namespace TweaksAndFixes.Modified
             {
                 if (maxDepth-- == 0)
                 {
-                    Melon<TweaksAndFixes>.Logger.Msg($"Failed after 10 attempts!");
+                    Melon<TweaksAndFixes>.Logger.Msg($"Failed to find valid design after 10 attempts!");
                     return;
                 }
 
                 var file = designs[UnityEngine.Random.Range(0, designs.Length)];
 
                 var design = Util.DeserializeObjectByte<Ship.Store>(File.ReadAllBytes(file));
-                Melon<TweaksAndFixes>.Logger.Msg($"Chose: {design.vesselName}");
+                Melon<TweaksAndFixes>.Logger.Msg($"Attempting to display {design.vesselName}");
 
                 s = MakeVisualShip(design);
             }

@@ -310,7 +310,7 @@ namespace TweaksAndFixes
 
             if (GameManager.IsCampaign)
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"Unload Campaign");
+                // Melon<TweaksAndFixes>.Logger.Msg($"Unload Campaign");
                 GameManager.Instance.UnloadCampaign();
             }
 
@@ -318,7 +318,7 @@ namespace TweaksAndFixes
 
             string currScene = SceneManager.GetActiveScene().name;
 
-            Melon<TweaksAndFixes>.Logger.Msg($"Current scene: {currScene}");
+            // Melon<TweaksAndFixes>.Logger.Msg($"Current scene: {currScene}");
             if (currScene == G.level.mainMenuScene)
                 yield break;
 
@@ -328,7 +328,7 @@ namespace TweaksAndFixes
             //     SceneManager.LoadScene(G.level.emptyScene);
             Resources.UnloadUnusedAssets();
 
-            Melon<TweaksAndFixes>.Logger.Msg($"Loaded empty scene");
+            // Melon<TweaksAndFixes>.Logger.Msg($"Loaded empty scene");
 
             yield return new WaitForEndOfFrame();
 
@@ -343,7 +343,7 @@ namespace TweaksAndFixes
 
             yield return new WaitForEndOfFrame();
 
-            Melon<TweaksAndFixes>.Logger.Msg($"Caching constructor objects");
+            // Melon<TweaksAndFixes>.Logger.Msg($"Caching constructor objects");
             Patch_SceneManager.bypass = true;
             SceneManager.LoadScene(G.level.constructorScene);
 
@@ -356,7 +356,7 @@ namespace TweaksAndFixes
             {
                 if (go == null) continue;
 
-                Melon<TweaksAndFixes>.Logger.Msg($"  {go.name}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"  {go.name}");
                 go.active = false;
                 if (go.name == "LevelConstructor")
                 {
@@ -383,7 +383,7 @@ namespace TweaksAndFixes
 
             yield return new WaitForEndOfFrame();
 
-            Melon<TweaksAndFixes>.Logger.Msg($"Caching campaign objects");
+            // Melon<TweaksAndFixes>.Logger.Msg($"Caching campaign objects");
             SceneManager.LoadScene(G.level.worldScene);
 
             yield return new WaitForEndOfFrame();
@@ -396,7 +396,7 @@ namespace TweaksAndFixes
 
             foreach (var go in SceneManager.GetActiveScene().GetRootGameObjects())
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"  {go.name}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"  {go.name}");
                 go.active = false;
                 if (go.name == "Mesh")
                 {
@@ -442,7 +442,7 @@ namespace TweaksAndFixes
 
             yield return new WaitForEndOfFrame();
 
-            Melon<TweaksAndFixes>.Logger.Msg($"Loading base scene");
+            // Melon<TweaksAndFixes>.Logger.Msg($"Loading base scene");
             SceneManager.LoadScene(G.level.battleScene);
 
             yield return new WaitForEndOfFrame();
@@ -453,7 +453,7 @@ namespace TweaksAndFixes
 
             foreach (var go in SceneManager.GetActiveScene().GetRootGameObjects())
             {
-                Melon<TweaksAndFixes>.Logger.Msg($"  {go.name}");
+                // Melon<TweaksAndFixes>.Logger.Msg($"  {go.name}");
                 if (go.name == "Day cycle & weather")
                 {
                     DayCycleAndWeatherO = go;
