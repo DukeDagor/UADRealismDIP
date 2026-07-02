@@ -184,6 +184,7 @@ namespace TweaksAndFixes
             Mesh0.active = false;
             Mesh2.active = false;
             BordersMesh.active = false;
+            LevelConstructor.GetChild("Probes").active = true;
 
             switch (state)
             {
@@ -215,6 +216,7 @@ namespace TweaksAndFixes
                     if (Config.Param("taf_enable_main_menu_vignette", 1) == 0)
                         G.ui.mainMenuUi.GetChild("BgX").active = false;
 
+                    LevelConstructor.GetChild("Probes").active = false;
                     LevelConstructor.name = "LevelConstructor";
                     LevelConstructor.active = true;
                     ReflectionProbesCamera.active = true;
