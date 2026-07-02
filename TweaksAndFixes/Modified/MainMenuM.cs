@@ -161,9 +161,6 @@ namespace TweaksAndFixes.Modified
                 return null;
             }
 
-            var n0 = new Il2CppSystem.Nullable<int>(0);
-            var dummy = new Ship();
-
             var root = new GameObject();
             root.name = $"{design.id}";
             root.transform.SetParent(shipsContainer, false);
@@ -175,10 +172,8 @@ namespace TweaksAndFixes.Modified
             );
             root.transform.localPosition = Vector3.zero;
 
-            Part.GetModelNameScale(hullData, dummy, n0);
             var hullTemplate = Util.ResourcesLoad<GameObject>(hullData.model);
             var hull = GameObject.Instantiate(hullTemplate, root.transform, false);
-            // Resources.UnloadAsset(hullTemplate);
 
             hull.transform.SetScale(hullData.scale, hullData.scale, hullData.scale);
             
@@ -519,11 +514,8 @@ namespace TweaksAndFixes.Modified
                     continue;
                 }
 
-                if (!data.isWeapon)
-                    Part.GetModelNameScale(data, dummy, n0);
                 var modelTemplate = Util.ResourcesLoad<GameObject>(modelName);
                 var model = GameObject.Instantiate(modelTemplate, root.transform, false);
-                // Resources.UnloadAsset(modelTemplate);
 
                 model.transform.localPosition = part.position + new Vector3(0, 0, root.transform.position.z);
                 model.transform.rotation = part.rotation;
