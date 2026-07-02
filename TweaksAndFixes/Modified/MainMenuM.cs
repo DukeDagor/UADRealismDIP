@@ -616,6 +616,14 @@ namespace TweaksAndFixes.Modified
 
             // Hide container in Ship.UnloadModel or EnterContstructor
 
+            G.cam.enabled = false;
+            G.cam.lookingAt = new();
+            G.cam.distance = 200;
+            G.cam.distanceDesired = 200;
+            G.cam.rotationX = 20;
+            G.cam.rotationY = 225;
+            UiM.SettupMainMenuCam(G.cam);
+
             if (!inited)
             {
                 shipsContainer.name = "DecorativeShips";
@@ -688,7 +696,7 @@ namespace TweaksAndFixes.Modified
             G.cam.lookingAt = s.root.transform.position;
             G.cam.distance = 200;
             G.cam.distanceDesired = 200;
-            G.cam.rotationX = 20;
+            G.cam.rotationX = 40;
             G.cam.rotationY = 225;
             UiM.SettupMainMenuCam(G.cam);
 
