@@ -291,6 +291,7 @@ namespace TweaksAndFixes.Modified
 
                     b.center /= g.transform.lossyScale.z;
                     b.size /= g.transform.lossyScale.z;
+                    b.size /= g.transform.localScale.z;
 
                     // Melon<TweaksAndFixes>.Logger.Msg($"  {g.name}: {b.center.z} | {b.size.z}");
 
