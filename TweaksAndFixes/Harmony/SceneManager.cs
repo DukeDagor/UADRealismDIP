@@ -247,6 +247,13 @@ namespace TweaksAndFixes
                     G.cam.NoiseGrain(false);
                     G.cam.MotionBlur(true);
 
+                    G.cam.lookingAt = new();
+                    G.cam.distance = 200;
+                    G.cam.distanceDesired = 200;
+                    G.cam.rotationX = 45;
+                    G.cam.rotationY = 270;
+                    UiM.SettupMainMenuCam(G.cam);
+
                     LevelConstructor.name = "LevelConstructor";
                     LevelConstructor.active = true;
                     ReflectionProbesCamera.active = true;
