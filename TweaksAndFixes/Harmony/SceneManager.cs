@@ -84,8 +84,10 @@ namespace TweaksAndFixes
 
             dcaw.LateUpdate();
         }
+
         public static GameManager.GameState sceneState;
         public static bool hasCleanedUpBattle = true;
+        public static bool wasInMainMenu = false;
 
         public static void ConfigureScene(GameManager.GameState state)
         {
@@ -109,6 +111,9 @@ namespace TweaksAndFixes
                 || state == GameManager.GameState.CustomBattleSetup
                 || state == GameManager.GameState.AcademyMissionSelect)
                 state = GameManager.GameState.MainMenu;
+
+            if (state == GameManager.GameState.MainMenu)
+                wasInMainMenu = true;
 
             if (state == sceneState)
             {
