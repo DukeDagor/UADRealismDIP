@@ -177,7 +177,7 @@ namespace TweaksAndFixes.Harmony
                             viewOnMapObj.GetComponent<Button>().interactable = true;
                         }
 
-                        if (selectedCount < 0 || !isOurs)
+                        if (selectedCount < 0)
                         {
                             setRoleObj.GetComponent<Button>().interactable = false;
                         }
