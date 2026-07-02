@@ -232,6 +232,16 @@ namespace TweaksAndFixes
             }
         }
 
+        // Only checks the X & Z values
+        public static bool Bounds2DContains(Bounds b, Vector3 p)
+        {
+            if (p.x > b.min.x && p.z > b.min.z
+                && p.x < b.max.x && p.z < b.max.z)
+                return true;
+
+            return false;
+        }
+
         public static double Lerp(double a, double b, double t, bool clamp = true)
         {
             if (clamp)
