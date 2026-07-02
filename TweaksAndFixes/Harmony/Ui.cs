@@ -3098,6 +3098,12 @@ namespace TweaksAndFixes
         {
             //Melon<TweaksAndFixes>.Logger.Msg($"{WorldCampaign.instance}");
 
+            if (__instance.GetChild("WorldEx") == null)
+                return;
+
+            if (__instance.GetChild("WorldEx").GetChild("Zones") == null)
+                return;
+
             foreach (var child in __instance.GetChild("WorldEx").GetChild("Zones").GetChildren())
             {
                 //Melon<TweaksAndFixes>.Logger.Msg($"  {child.name}");
