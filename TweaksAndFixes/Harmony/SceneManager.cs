@@ -188,6 +188,7 @@ namespace TweaksAndFixes
             Mesh2.active = false;
             BordersMesh.active = false;
             LevelConstructor.GetChild("Probes").active = true;
+            LevelBattle.GetChild("WaterLevel").active = true;
 
             switch (state)
             {
@@ -306,7 +307,8 @@ namespace TweaksAndFixes
                     G.cam.DepthOfField(false);
                     G.cam.NoiseGrain(false);
                     G.cam.MotionBlur(false);
-                    
+
+                    LevelBattle.GetChild("WaterLevel").active = false;
                     Mesh0.active = true;
                     Mesh2.active = true;
                     BordersMesh.active = true;
