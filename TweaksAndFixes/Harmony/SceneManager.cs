@@ -28,6 +28,8 @@ namespace TweaksAndFixes
             dcaw.Storm.Intensity = 0;
             dcaw.Storm.gameObject.active = false;
 
+            Patch_DayCycleAndWeather.inited = true;
+
             switch (idx)
             {
                 // Noon & clear
@@ -37,7 +39,6 @@ namespace TweaksAndFixes
 
                     dcaw.SetDaytime(DayCycleAndWeather.TimesOfDay.Day);
                     dcaw.SetWeather(DayCycleAndWeather.WeatherType.Clear);
-                    Patch_DayCycleAndWeather.allowUpdate = 1;
                     dcaw.LateUpdate();
                     break;
 
@@ -48,7 +49,6 @@ namespace TweaksAndFixes
 
                     dcaw.SetDaytime(DayCycleAndWeather.TimesOfDay.Day);
                     dcaw.SetWeather(DayCycleAndWeather.WeatherType.Clear);
-                    Patch_DayCycleAndWeather.allowUpdate = 1;
                     dcaw.LateUpdate();
                     break;
 
@@ -58,7 +58,6 @@ namespace TweaksAndFixes
                     dcaw.InitWeatherStateFromTime();
                     dcaw.SetDaytime(DayCycleAndWeather.TimesOfDay.Day);
                     dcaw.SetWeather(DayCycleAndWeather.WeatherType.Overcast);
-                    Patch_DayCycleAndWeather.allowUpdate = 1;
                     dcaw.LateUpdate();
                     HeightVolumetricFog.Instance.fogColorBackFar += new Color(0.2f, 0.2f, 0.2f, 0.0f);
                     HeightVolumetricFog.Instance.fogColorBackNear += new Color(0.2f, 0.2f, 0.2f, 0.0f);
@@ -67,7 +66,6 @@ namespace TweaksAndFixes
 
                     break;
             }
-
         }
 
         public static void SetBattleWeather()
@@ -475,22 +473,14 @@ namespace TweaksAndFixes
     [HarmonyPatch(typeof(DayCycleAndWeather))]
     internal class Patch_DayCycleAndWeather
     {
-        public static int allowUpdate = 0;
+        public static bool inited = false;
 
-        // [HarmonyPatch(nameof(DayCycleAndWeather.LateUpdate))]
-        // [HarmonyPrefix]
-        // internal static bool Prefix_LateUpdate(DayCycleAndWeather __instance)
-        // {
-        //     if (Patch_SceneManager.sceneState != GameManager.GameState.Battle && allowUpdate == 0)
-        //         return false;
-        // 
-        //     if (allowUpdate > 0)
-        //     {
-        //         allowUpdate--;
-        //     }
-        // 
-        //     return true;
-        // }
+        [HarmonyPatch(nameof(DayCycleAndWeather.LateUpdate))]
+        [HarmonyPrefix]
+        internal static bool Prefix_LateUpdate(DayCycleAndWeather __instance)
+        {
+            return inited;
+        }
 
         [HarmonyPatch(nameof(DayCycleAndWeather.UpdateCycle))]
         [HarmonyPostfix]
