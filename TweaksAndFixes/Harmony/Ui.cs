@@ -742,6 +742,7 @@ namespace TweaksAndFixes
                 {
                     tempMute = true;
                     prevVolume = G.settings.soundVolume;
+                    G.sound.OnVolumeChanged();
                     Melon<TweaksAndFixes>.Logger.Msg($"Mute: {prevVolume}");
                 }
 
@@ -752,6 +753,7 @@ namespace TweaksAndFixes
                 Melon<TweaksAndFixes>.Logger.Msg($"Unmute: {prevVolume}");
                 tempMute = false;
                 G.settings.soundVolume = prevVolume;
+                G.sound.OnVolumeChanged();
             }
 
             // PredefinedDesignsDataAsync.UpdatePredefLoading();
