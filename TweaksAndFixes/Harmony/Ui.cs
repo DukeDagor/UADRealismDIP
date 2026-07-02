@@ -606,13 +606,28 @@ namespace TweaksAndFixes
             // UiM.OnConstructorShipChanged();
         }
 
+        private static bool ResolutionEquals(Resolution a, Resolution b)
+        {
+            return a.width == b.width && a.height == b.height;
+        }
+
         public static bool tempMute = false;
         public static float prevVolume = 0;
+        public static Vector3 pastPosChecked = Vector3.zero;
 
         [HarmonyPatch(nameof(Ui.Update))]
         [HarmonyPostfix]
         internal static void Postfix_Update(Ui __instance)
         {
+            if (G.settings.filterdResolution.Count > G.settings.resolution &&
+                !ResolutionEquals(
+                G.settings.filterdResolution[G.settings.resolution],
+                UnityEngine.Screen.currentResolution))
+            {
+                Melon<TweaksAndFixes>.Logger.Msg($"Resetting resolution...");
+                G.settings.ApplyResolution();
+            }
+
             if (GameManager.IsCampaign
                 && Patch_CampaignController.isLoadingNewTurn)
             {
